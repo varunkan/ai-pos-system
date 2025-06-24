@@ -475,7 +475,6 @@ class _ServerSelectionScreenState extends State<ServerSelectionScreen> {
     
     return score.clamp(0.0, 1.0);
   }
-}
 
   Widget _buildServerGrid(int crossAxisCount, double childAspectRatio, double spacing) {
     return GridView.builder(
@@ -655,7 +654,7 @@ class _ServerSelectionScreenState extends State<ServerSelectionScreen> {
               // Determine if this is the current server
               final isCurrentServer = Provider.of<UserService>(context, listen: false).currentUser?.id == serverUser.id;
               
-                             return Container(
+              return Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   border: isCurrentServer ? Border.all(
@@ -665,234 +664,235 @@ class _ServerSelectionScreenState extends State<ServerSelectionScreen> {
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(responsiveParams.padding),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Server avatar with enhanced styling
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isCurrentServer ? Colors.amber : Theme.of(context).primaryColor).withOpacity(0.3),
-                            blurRadius: responsiveParams.shadowBlur,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: isCurrentServer ? Colors.amber.shade600 : Theme.of(context).primaryColor,
-                            radius: responsiveParams.avatarRadius,
-                            child: Text(
-                              serverUser.name[0].toUpperCase(),
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: responsiveParams.avatarTextSize,
-                              ),
-                            ),
-                          ),
-                          if (isCurrentServer)
-                            Positioned(
-                              top: 0,
-                              right: 0,
-                              child: Container(
-                                width: responsiveParams.currentIndicatorSize,
-                                height: responsiveParams.currentIndicatorSize,
-                                decoration: BoxDecoration(
-                                  color: Colors.green,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2),
-                                ),
-                                child: Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: responsiveParams.currentIndicatorSize * 0.6,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    
-                    SizedBox(height: responsiveParams.verticalSpacing),
-                    
-                    // Server name with current indicator
-                    Flexible(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            serverUser.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: responsiveParams.nameSize,
-                              color: isCurrentServer ? Colors.amber.shade700 : Colors.black87,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (isCurrentServer) ...[
-                            SizedBox(height: responsiveParams.verticalSpacing * 0.5),
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: responsiveParams.badgeHorizontalPadding,
-                                vertical: responsiveParams.badgeVerticalPadding,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.amber.shade100,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.amber.shade300),
-                              ),
-                              child: Text(
-                                'YOU',
-                                style: TextStyle(
-                                  color: Colors.amber.shade700,
-                                  fontSize: responsiveParams.badgeTextSize,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Server avatar with enhanced styling
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (isCurrentServer ? Colors.amber : Theme.of(context).primaryColor).withOpacity(0.3),
+                              blurRadius: responsiveParams.shadowBlur,
+                              offset: const Offset(0, 4),
                             ),
                           ],
-                        ],
-                      ),
-                    ),
-                    
-                    SizedBox(height: responsiveParams.verticalSpacing),
-                    
-                    // Server role badge
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: responsiveParams.badgeHorizontalPadding,
-                        vertical: responsiveParams.badgeVerticalPadding,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade100,
-                        borderRadius: BorderRadius.circular(responsiveParams.badgeBorderRadius),
-                        border: Border.all(color: Colors.blue.shade300),
-                      ),
-                      child: Text(
-                        'Server',
-                        style: TextStyle(
-                          color: Colors.blue.shade700,
-                          fontSize: responsiveParams.badgeTextSize,
-                          fontWeight: FontWeight.w600,
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: isCurrentServer ? Colors.amber.shade600 : Theme.of(context).primaryColor,
+                              radius: responsiveParams.avatarRadius,
+                              child: Text(
+                                serverUser.name[0].toUpperCase(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: responsiveParams.avatarTextSize,
+                                ),
+                              ),
+                            ),
+                            if (isCurrentServer)
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: Container(
+                                  width: responsiveParams.currentIndicatorSize,
+                                  height: responsiveParams.currentIndicatorSize,
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                  ),
+                                  child: Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: responsiveParams.currentIndicatorSize * 0.6,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                    ),
-                    
-                    SizedBox(height: responsiveParams.verticalSpacing),
-                    
-                    // Active tables display
-                    if (activeTables.isNotEmpty) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: responsiveParams.containerHorizontalPadding,
-                          vertical: responsiveParams.containerVerticalPadding,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(responsiveParams.containerBorderRadius),
-                          border: Border.all(color: Colors.green.shade200),
-                        ),
+                      
+                      SizedBox(height: responsiveParams.verticalSpacing),
+                      
+                      // Server name with current indicator
+                      Flexible(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Active Tables',
+                              serverUser.name,
                               style: TextStyle(
-                                color: Colors.green.shade700,
-                                fontSize: responsiveParams.tableTextSize,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.bold,
+                                fontSize: responsiveParams.nameSize,
+                                color: isCurrentServer ? Colors.amber.shade700 : Colors.black87,
                               ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            SizedBox(height: responsiveParams.verticalSpacing * 0.5),
-                            Wrap(
-                              spacing: 4,
-                              runSpacing: 2,
-                              children: activeTables.take(6).map((table) {
-                                return Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: responsiveParams.tableChipHorizontalPadding,
-                                    vertical: responsiveParams.tableChipVerticalPadding,
+                            if (isCurrentServer) ...[
+                              SizedBox(height: responsiveParams.verticalSpacing * 0.5),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: responsiveParams.badgeHorizontalPadding,
+                                  vertical: responsiveParams.badgeVerticalPadding,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.amber.shade300),
+                                ),
+                                child: Text(
+                                  'YOU',
+                                  style: TextStyle(
+                                    color: Colors.amber.shade700,
+                                    fontSize: responsiveParams.badgeTextSize,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: table.status == restaurant_table.TableStatus.occupied 
-                                        ? Colors.orange.shade100 
-                                        : Colors.blue.shade100,
-                                    borderRadius: BorderRadius.circular(responsiveParams.tableChipBorderRadius),
-                                    border: Border.all(
-                                      color: table.status == restaurant_table.TableStatus.occupied 
-                                          ? Colors.orange.shade300 
-                                          : Colors.blue.shade300,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'T${table.number}',
-                                    style: TextStyle(
-                                      color: table.status == restaurant_table.TableStatus.occupied 
-                                          ? Colors.orange.shade700 
-                                          : Colors.blue.shade700,
-                                      fontSize: responsiveParams.tableChipTextSize,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            if (activeTables.length > 6) ...[
-                              SizedBox(height: responsiveParams.verticalSpacing * 0.3),
-                              Text(
-                                '+${activeTables.length - 6} more',
-                                style: TextStyle(
-                                  color: Colors.green.shade600,
-                                  fontSize: responsiveParams.tableChipTextSize,
-                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ],
                         ),
                       ),
-                    ] else ...[
-                      // No active tables
+                      
+                      SizedBox(height: responsiveParams.verticalSpacing),
+                      
+                      // Server role badge
                       Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: responsiveParams.containerHorizontalPadding, 
-                          vertical: responsiveParams.containerVerticalPadding,
+                          horizontal: responsiveParams.badgeHorizontalPadding,
+                          vertical: responsiveParams.badgeVerticalPadding,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(responsiveParams.containerBorderRadius),
-                          border: Border.all(color: Colors.grey.shade300),
+                          color: Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(responsiveParams.badgeBorderRadius),
+                          border: Border.all(color: Colors.blue.shade300),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.check_circle_outline,
-                              size: responsiveParams.iconSize,
-                              color: Colors.grey.shade600,
-                            ),
-                            SizedBox(width: responsiveParams.verticalSpacing * 0.5),
-                            Text(
-                              'No active tables',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: responsiveParams.tableTextSize,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          'Server',
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            fontSize: responsiveParams.badgeTextSize,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
+                      
+                      SizedBox(height: responsiveParams.verticalSpacing),
+                      
+                      // Active tables display
+                      if (activeTables.isNotEmpty) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: responsiveParams.containerHorizontalPadding,
+                            vertical: responsiveParams.containerVerticalPadding,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(responsiveParams.containerBorderRadius),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Active Tables',
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: responsiveParams.tableTextSize,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: responsiveParams.verticalSpacing * 0.5),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 2,
+                                children: activeTables.take(6).map((table) {
+                                  return Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: responsiveParams.tableChipHorizontalPadding,
+                                      vertical: responsiveParams.tableChipVerticalPadding,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: table.status == restaurant_table.TableStatus.occupied 
+                                          ? Colors.orange.shade100 
+                                          : Colors.blue.shade100,
+                                      borderRadius: BorderRadius.circular(responsiveParams.tableChipBorderRadius),
+                                      border: Border.all(
+                                        color: table.status == restaurant_table.TableStatus.occupied 
+                                            ? Colors.orange.shade300 
+                                            : Colors.blue.shade300,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'T${table.number}',
+                                      style: TextStyle(
+                                        color: table.status == restaurant_table.TableStatus.occupied 
+                                            ? Colors.orange.shade700 
+                                            : Colors.blue.shade700,
+                                        fontSize: responsiveParams.tableChipTextSize,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              if (activeTables.length > 6) ...[
+                                SizedBox(height: responsiveParams.verticalSpacing * 0.3),
+                                Text(
+                                  '+${activeTables.length - 6} more',
+                                  style: TextStyle(
+                                    color: Colors.green.shade600,
+                                    fontSize: responsiveParams.tableChipTextSize,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        // No active tables
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: responsiveParams.containerHorizontalPadding, 
+                            vertical: responsiveParams.containerVerticalPadding,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(responsiveParams.containerBorderRadius),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline,
+                                size: responsiveParams.iconSize,
+                                color: Colors.grey.shade600,
+                              ),
+                              SizedBox(width: responsiveParams.verticalSpacing * 0.5),
+                              Text(
+                                'No active tables',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: responsiveParams.tableTextSize,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               );
             },
