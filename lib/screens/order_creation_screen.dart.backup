@@ -14,7 +14,6 @@ import '../services/printer_assignment_service.dart';
 
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_dialog.dart';
-import '../widgets/menu_categories_panel.dart';
 
 import '../widgets/universal_navigation.dart';
 import '../screens/checkout_screen.dart';
@@ -509,30 +508,16 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Categories Panel (Left)
-        Container(
-          width: 200,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            border: Border(
-              right: BorderSide(
-                color: Colors.grey.shade300,
-                width: 1,
-              ),
-            ),
-          ),
-          child: _buildCategoriesPanel(),
-        ),
-        // Menu Items Panel (Center)
+        // Order Panel (Left)
         Expanded(
           flex: 2,
-          child: _buildMenuPanel(),
+          child: _buildOrderPanel(),
         ),
         const VerticalDivider(width: 1),
-        // Order Panel (Right)
+        // Menu Panel (Right)
         Expanded(
-          flex: 1,
-          child: _buildOrderPanel(),
+          flex: 3,
+          child: _buildMenuPanel(),
         ),
       ],
     );
@@ -1033,6 +1018,8 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
           const Divider(height: 1),
           _buildSearchBar(),
           const Divider(height: 1),
+          _buildCategoriesTabs(),
+          const Divider(height: 1),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -1053,15 +1040,15 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
             color: Theme.of(context).primaryColor,
           ),
           const SizedBox(width: 12),
-          Text(
-            _selectedCategory?.name ?? 'Menu Items',
-            style: const TextStyle(
+          const Text(
+            'Menu Items',
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const Spacer(),
-          if (_menuItems.isNotEmpty)
+          if (_selectedCategory != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -1069,7 +1056,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                '${_menuItems.length} items',
+                _selectedCategory!.name,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.w600,
@@ -1166,49 +1153,19 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   }
 
   Widget _buildMenuItems() {
-    if (_selectedCategory == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.restaurant_menu_outlined,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Select a category',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose a category from the left to view menu items',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
     if (_filteredMenuItems.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _searchQuery.isNotEmpty ? Icons.search_off : Icons.restaurant_outlined,
+              Icons.search_off,
               size: 64,
               color: Colors.grey.shade300,
             ),
             const SizedBox(height: 16),
             Text(
-              _searchQuery.isNotEmpty ? 'No items found' : 'No items in this category',
+              _searchQuery.isNotEmpty ? 'No items found' : 'No menu items available',
               style: TextStyle(
                 color: Colors.grey.shade500,
                 fontSize: 16,
@@ -1222,16 +1179,6 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                   color: Colors.grey.shade400,
                   fontSize: 12,
                 ),
-              ),
-            ] else ...[
-              const SizedBox(height: 8),
-              Text(
-                'Add menu items to this category in admin panel',
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
               ),
             ],
           ],
@@ -1997,24 +1944,10 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         _isLoading = true;
       });
 
-      // Create cancellation history entry
-      final cancellationHistory = OrderHistory(
-        id: const Uuid().v4(),
-        status: OrderStatus.cancelled,
-        updatedBy: widget.user.name,
-        timestamp: DateTime.now(),
-        notes: 'Order cancelled by ${widget.user.name}',
-      );
-
-      // Add cancellation history to the order
-      final updatedHistory = List<OrderHistory>.from(_currentOrder!.history);
-      updatedHistory.add(cancellationHistory);
-
       // Mark order as cancelled
       final cancelledOrder = _currentOrder!.copyWith(
         status: OrderStatus.cancelled,
         completedTime: DateTime.now(),
-        history: updatedHistory,
       );
 
       // Save the cancelled order
@@ -2051,126 +1984,5 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         });
       }
     }
-  }
-
-  Widget _buildCategoriesPanel() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Categories Header
-        Container(
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Text(
-            'Categories',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        // Categories List
-        Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _buildCategoriesList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategoriesList() {
-    if (_categories.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.category_outlined,
-              size: 48,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No categories',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Add categories in admin panel',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: _categories.length,
-      itemBuilder: (context, index) {
-        final category = _categories[index];
-        final isSelected = _selectedCategory?.id == category.id;
-        
-        return InkWell(
-          onTap: () => _onCategorySelected(category),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected 
-                  ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
-                  : Colors.transparent,
-              border: Border(
-                left: BorderSide(
-                  color: isSelected 
-                      ? Theme.of(context).primaryColor
-                      : Colors.transparent,
-                  width: 3,
-                ),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.category,
-                  size: 20,
-                  color: isSelected 
-                      ? Theme.of(context).primaryColor
-                      : Colors.grey.shade600,
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    category.name,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected 
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey.shade700,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 } 

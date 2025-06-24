@@ -6,6 +6,7 @@ import '../services/table_service.dart';
 import '../widgets/user_profile_card.dart';
 import '../widgets/action_card.dart';
 import '../widgets/error_dialog.dart';
+import '../widgets/universal_navigation.dart';
 import 'categories_screen.dart';
 import 'tables_screen.dart';
 import 'add_menu_item_screen.dart';
@@ -43,25 +44,18 @@ class UserActionScreen extends StatelessWidget {
 
   /// Builds the app bar with user info and settings button.
   PreferredSizeWidget _buildAppBar(BuildContext context, bool isAdmin) {
-    return AppBar(
-      title: Text('Welcome, ${user.name}'),
-      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      automaticallyImplyLeading: false,
-      actions: [
-        // Logout button to return to main screen
-        IconButton(
-          icon: const Icon(Icons.logout),
-          onPressed: () => _logout(context),
-          tooltip: 'Back to Main Screen',
-        ),
+    return UniversalAppBar(
+      currentUser: user,
+      title: 'Welcome, ${user.name}',
+      additionalActions: [
         if (isAdmin)
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => _navigateToSettings(context),
             tooltip: 'Settings',
           ),
-        const SizedBox(width: 16),
       ],
+      showQuickActions: true, // Show all quick actions since this is the main hub
     );
   }
 

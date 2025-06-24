@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ai_pos_system/models/menu_item.dart';
-import 'package:ai_pos_system/models/category.dart' as pos_category;
-import 'package:ai_pos_system/services/menu_service.dart';
-import 'package:ai_pos_system/widgets/loading_overlay.dart';
-import 'package:ai_pos_system/widgets/back_button.dart';
-import 'package:ai_pos_system/widgets/error_dialog.dart';
-import 'package:ai_pos_system/widgets/confirmation_dialog.dart';
+import '../models/menu_item.dart';
+import '../models/category.dart';
+
+import '../services/menu_service.dart';
+import '../widgets/universal_navigation.dart';
+import '../widgets/loading_overlay.dart';
+import '../widgets/error_dialog.dart';
+import '../widgets/confirmation_dialog.dart';
+
 
 class ManageMenuItemsScreen extends StatefulWidget {
   const ManageMenuItemsScreen({super.key});
@@ -17,7 +19,7 @@ class ManageMenuItemsScreen extends StatefulWidget {
 
 class _ManageMenuItemsScreenState extends State<ManageMenuItemsScreen> {
   List<MenuItem> _menuItems = [];
-  List<pos_category.Category> _categories = [];
+  List<Category> _categories = [];
   bool _isLoading = true;
   String? _error;
 
@@ -101,10 +103,10 @@ class _ManageMenuItemsScreenState extends State<ManageMenuItemsScreen> {
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Manage Menu Items'),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          actions: [
+        appBar: UniversalAppBar(
+          currentUser: null, // This screen doesn't have user context
+          title: 'Manage Menu Items',
+          additionalActions: [
             IconButton(
               icon: const Icon(Icons.add),
               onPressed: () async {
@@ -115,10 +117,8 @@ class _ManageMenuItemsScreenState extends State<ManageMenuItemsScreen> {
               },
               tooltip: 'Add Menu Item',
             ),
-            const SizedBox(width: 8),
-            const CustomBackButton(),
-            const SizedBox(width: 16),
           ],
+          showQuickActions: false, // Disable quick actions for this admin screen
         ),
         body: _error != null
             ? _buildErrorState(_error!)
@@ -212,7 +212,7 @@ class _ManageMenuItemsScreenState extends State<ManageMenuItemsScreen> {
   Widget _buildMenuItemTile(MenuItem item) {
     final category = _categories.firstWhere(
       (cat) => cat.id == item.categoryId,
-      orElse: () => pos_category.Category(name: 'Unknown'),
+                              orElse: () => Category(name: 'Unknown'),
     );
 
     return Card(

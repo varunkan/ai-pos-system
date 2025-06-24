@@ -10,6 +10,7 @@ import '../services/table_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/back_button.dart';
 import '../widgets/error_dialog.dart';
+import 'printer_selection_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final Order order;
@@ -284,11 +285,37 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final updatedOrder = widget.order.copyWith(tipAmount: _tipAmount);
     final printingService = Provider.of<PrintingService>(context, listen: false);
     
-    await printingService.showPrintPreview(
-      context,
-      updatedOrder,
-      isKitchenTicket: false,
-    );
+    // Print receipt directly if printer is connected
+    if (printingService.isConnected) {
+      try {
+        await printingService.printReceipt(updatedOrder);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Receipt printed successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to print receipt: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } else {
+      // Navigate to printer settings if no printer connected
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PrinterSelectionScreen(user: widget.user),
+        ),
+      );
+    }
   }
 
   @override

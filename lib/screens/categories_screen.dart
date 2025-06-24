@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ai_pos_system/models/category.dart' as pos_category;
-import 'package:ai_pos_system/models/user.dart';
-import 'package:ai_pos_system/models/table.dart' as restaurant_table;
-import 'package:ai_pos_system/models/menu_item.dart';
-import 'package:ai_pos_system/services/menu_service.dart';
-import 'package:ai_pos_system/widgets/loading_overlay.dart';
-import 'package:ai_pos_system/widgets/back_button.dart';
+import '../models/category.dart';
+import '../models/menu_item.dart';
+import '../models/user.dart';
+import '../models/table.dart' as restaurant_table;
+import '../services/menu_service.dart';
+import '../widgets/universal_navigation.dart';
+import '../widgets/loading_overlay.dart';
 
 class CategoriesScreen extends StatefulWidget {
   final User? user;
@@ -19,8 +19,8 @@ class CategoriesScreen extends StatefulWidget {
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
-  List<pos_category.Category> _categories = [];
-  pos_category.Category? _selectedCategory;
+  List<Category> _categories = [];
+  Category? _selectedCategory;
   bool _isLoading = true;
   String? _error;
 
@@ -56,20 +56,17 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.table != null
+        appBar: UniversalAppBar(
+          currentUser: widget.user,
+          title: widget.table != null
               ? 'Menu for ${widget.table!.displayName}'
-              : 'Menu Categories'),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          actions: [
+              : 'Menu Categories',
+          additionalActions: [
             if (widget.user != null)
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text("Done"),
               ),
-            const SizedBox(width: 8),
-            const CustomBackButton(),
-            const SizedBox(width: 16),
           ],
         ),
         body: _error != null
@@ -212,7 +209,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
   }
 
-  Widget _buildItemGrid(pos_category.Category category) {
+  Widget _buildItemGrid(Category category) {
     final menuService = Provider.of<MenuService>(context, listen: false);
     final itemsFuture = menuService.getMenuItemsByCategoryId(category.id);
 
@@ -441,7 +438,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
 /// Reusable card widget for displaying a category.
 class CategoryCard extends StatelessWidget {
-  final pos_category.Category category;
+  final Category category;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -537,7 +534,7 @@ class _MenuItemCard extends StatelessWidget {
 }
 
 class CategoryItem extends StatelessWidget {
-  final pos_category.Category category;
+  final Category category;
   final VoidCallback? onTap;
   final bool isSelected;
 

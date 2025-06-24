@@ -1,5 +1,5 @@
 import 'package:uuid/uuid.dart';
-import 'package:flutter/foundation.dart';
+
 import 'dart:convert';
 
 /// Represents a menu item in the POS system.
@@ -219,7 +219,7 @@ class MenuItem {
         createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
         updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? '') ?? DateTime.now(),
       );
-    } catch (e, stack) {
+    } catch (e) {
       // Return a default MenuItem instead of rethrowing
       return MenuItem(
         id: json['id']?.toString() ?? '',

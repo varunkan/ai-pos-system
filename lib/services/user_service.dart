@@ -12,6 +12,7 @@ class UserService with ChangeNotifier {
   final SharedPreferences _prefs;
   final DatabaseService _databaseService;
   List<User> _users = [];
+  User? _currentUser;
   static const String _usersKey = 'users';
 
   UserService(this._prefs, this._databaseService) {
@@ -250,6 +251,13 @@ class UserService with ChangeNotifier {
 
   List<User> get users {
     return _users;
+  }
+
+  User? get currentUser => _currentUser;
+
+  void setCurrentUser(User? user) {
+    _currentUser = user;
+    notifyListeners();
   }
 
   Future<List<User>> getUsers() async {

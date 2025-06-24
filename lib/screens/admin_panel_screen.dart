@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ai_pos_system/models/user.dart';
-import 'package:ai_pos_system/models/menu_item.dart';
-import 'package:ai_pos_system/models/category.dart' as pos_category;
-import 'package:ai_pos_system/services/user_service.dart';
-import 'package:ai_pos_system/services/menu_service.dart';
-import 'package:ai_pos_system/services/table_service.dart';
-import 'package:ai_pos_system/widgets/loading_overlay.dart';
-import 'package:ai_pos_system/widgets/error_dialog.dart';
-import 'package:ai_pos_system/widgets/confirmation_dialog.dart';
-import 'package:ai_pos_system/widgets/form_field.dart';
-import 'package:ai_pos_system/widgets/back_button.dart';
+import '../models/user.dart';
+import '../models/category.dart';
+import '../models/menu_item.dart';
+
+import '../models/reservation.dart';
+import '../services/menu_service.dart';
+import '../services/table_service.dart';
+import '../services/printer_assignment_service.dart';
+
+import '../services/reservation_service.dart';
+import '../services/user_service.dart';
+import '../widgets/universal_navigation.dart';
+import '../widgets/loading_overlay.dart';
+import '../widgets/error_dialog.dart';
+import '../widgets/confirmation_dialog.dart';
+import '../widgets/form_field.dart';
+import '../screens/reservations_screen.dart';
+import '../screens/printer_assignment_screen.dart';
 
 enum UserManagementView { addUser, existingUsers }
 
@@ -27,7 +34,7 @@ class AdminPanelScreen extends StatefulWidget {
 class _AdminPanelScreenState extends State<AdminPanelScreen> {
   int _selectedIndex = 0;
   UserManagementView _userManagementView = UserManagementView.addUser;
-  List<pos_category.Category> _categories = [];
+  List<Category> _categories = [];
   List<MenuItem> _menuItems = [];
   bool _isLoading = true;
 
@@ -70,51 +77,214 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   Future<void> _addCategory() async {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
+    final TextEditingController sortOrderController = TextEditingController();
+    bool isActive = true;
+    IconData selectedIcon = Icons.restaurant_menu;
+    Color selectedColor = Colors.blue;
 
-    final result = await showDialog<Map<String, String>>(
+    // Pre-defined restaurant category options
+    final categoryTemplates = [
+      {'name': 'Appetizers', 'icon': Icons.local_dining, 'color': Colors.orange},
+      {'name': 'Main Courses', 'icon': Icons.dinner_dining, 'color': Colors.red},
+      {'name': 'Desserts', 'icon': Icons.cake, 'color': Colors.pink},
+      {'name': 'Beverages', 'icon': Icons.local_drink, 'color': Colors.blue},
+      {'name': 'Salads', 'icon': Icons.eco, 'color': Colors.green},
+      {'name': 'Soups', 'icon': Icons.soup_kitchen, 'color': Colors.amber},
+      {'name': 'Seafood', 'icon': Icons.set_meal, 'color': Colors.teal},
+      {'name': 'Vegetarian', 'icon': Icons.grass, 'color': Colors.lightGreen},
+      {'name': 'Kids Menu', 'icon': Icons.child_friendly, 'color': Colors.purple},
+      {'name': 'Specials', 'icon': Icons.star, 'color': Colors.deepOrange},
+    ];
+
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Category'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppFormField(
-              label: 'Category Name',
-              hint: 'Enter category name',
-              controller: nameController,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Category name is required';
-                }
-                return null;
-              },
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.category, color: Theme.of(context).primaryColor),
+              const SizedBox(width: 8),
+              const Text('Add New Category'),
+            ],
+          ),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.4,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Quick templates section
+                  const Text(
+                    'Quick Templates',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: categoryTemplates.map((template) {
+                      return InkWell(
+                        onTap: () {
+                          nameController.text = template['name'] as String;
+                          selectedIcon = template['icon'] as IconData;
+                          selectedColor = template['color'] as Color;
+                          setState(() {});
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: (template['color'] as Color).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: (template['color'] as Color).withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(template['icon'] as IconData, 
+                                   size: 16, color: template['color'] as Color),
+                              const SizedBox(width: 4),
+                              Text(template['name'] as String,
+                                   style: TextStyle(color: template['color'] as Color, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  AppFormField(
+                    label: 'Category Name *',
+                    hint: 'Enter category name',
+                    controller: nameController,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Category name is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  AppFormField(
+                    label: 'Description',
+                    hint: 'Brief description of this category',
+                    controller: descriptionController,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  AppFormField(
+                    label: 'Sort Order',
+                    hint: 'Display order (1, 2, 3...)',
+                    controller: sortOrderController,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Icon and color selection
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Icon', style: TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(selectedIcon, color: selectedColor),
+                                  const SizedBox(width: 8),
+                                  const Text('Selected Icon'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Color', style: TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: selectedColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Selected Color'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Active toggle
+                  Row(
+                    children: [
+                      Switch(
+                        value: isActive,
+                        onChanged: (value) {
+                          isActive = value;
+                          setState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Active Category'),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            AppFormField(
-              label: 'Description',
-              hint: 'Enter description (optional)',
-              controller: descriptionController,
-              maxLines: 3,
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                if (nameController.text.trim().isNotEmpty) {
+                  Navigator.of(context).pop({
+                    'name': nameController.text.trim(),
+                    'description': descriptionController.text.trim(),
+                    'sortOrder': int.tryParse(sortOrderController.text) ?? _categories.length,
+                    'isActive': isActive,
+                    'icon': selectedIcon.codePoint,
+                    'color': selectedColor.value,
+                  });
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Create Category'),
             ),
           ],
         ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.trim().isNotEmpty) {
-                Navigator.of(context).pop({
-                  'name': nameController.text.trim(),
-                  'description': descriptionController.text.trim(),
-                });
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
       ),
     );
 
@@ -125,18 +295,27 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
       try {
         final menuService = Provider.of<MenuService>(context, listen: false);
-        final newCategory = pos_category.Category(
+        final newCategory = Category(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           name: result['name']!,
           description: result['description']!.isEmpty ? null : result['description']!,
-          sortOrder: _categories.length,
+          sortOrder: result['sortOrder'] as int,
+          isActive: result['isActive'] as bool,
+          iconCodePoint: result['icon'] as int?,
+          colorValue: result['color'] as int?,
         );
         await menuService.saveCategory(newCategory);
         await _loadData();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Category "${result['name']}" added successfully'),
+              content: Row(
+                children: [
+                  Icon(newCategory.icon, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text('Category "${result['name']}" created successfully!'),
+                ],
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -155,7 +334,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
-  Future<void> _editCategory(pos_category.Category category) async {
+  Future<void> _editCategory(Category category) async {
     final TextEditingController nameController = TextEditingController(text: category.name);
     final TextEditingController descriptionController = TextEditingController(text: category.description ?? '');
 
@@ -241,7 +420,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
-  Future<void> _deleteCategory(pos_category.Category category) async {
+  Future<void> _deleteCategory(Category category) async {
     // Check if category has menu items
     final itemsInCategory = _menuItems.where((item) => item.categoryId == category.id).toList();
     
@@ -696,8 +875,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               label: 'Users',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.analytics),
-              label: 'Analytics',
+              icon: Icon(Icons.event_seat),
+              label: 'Reservations',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.print),
+              label: 'Printers',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),
@@ -710,18 +893,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: const Text('Admin Panel'),
-      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      actions: [
+    return UniversalAppBar(
+      currentUser: widget.user,
+      title: 'Admin Panel',
+      additionalActions: [
         IconButton(
           icon: const Icon(Icons.refresh),
           onPressed: _loadData,
           tooltip: 'Refresh',
         ),
-        const SizedBox(width: 8),
-        const CustomBackButton(),
-        const SizedBox(width: 16),
       ],
     );
   }
@@ -736,8 +916,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       case 2:
         return _buildManageUsersTab();
       case 3:
-        return _buildAnalyticsTab();
+        return _buildReservationsTab();
       case 4:
+        return _buildPrinterAssignmentsTab();
+      case 5:
         return _buildSettingsTab();
       default:
         return _buildCategoriesTab();
@@ -769,68 +951,145 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          child: Text(
-                            category.name[0].toUpperCase(),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      elevation: 2,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: category.color.withOpacity(0.3),
+                            width: 1.5,
                           ),
                         ),
-                        title: Text(
-                          category.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (category.description != null)
-                              Text(category.description!),
-                            Text(
-                              '$itemCount item${itemCount == 1 ? '' : 's'}',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
+                        child: ListTile(
+                          leading: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: category.color.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(25),
+                              border: Border.all(color: category.color.withOpacity(0.3)),
                             ),
-                          ],
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (value) {
-                            switch (value) {
-                              case 'edit':
-                                _editCategory(category);
-                                break;
-                              case 'delete':
-                                _deleteCategory(category);
-                                break;
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: Row(
+                            child: Icon(
+                              category.icon,
+                              color: category.color,
+                              size: 24,
+                            ),
+                          ),
+                          title: Row(
+                            children: [
+                              Text(
+                                category.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: category.color.withOpacity(0.8),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              if (!category.isActive)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade100,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    'INACTIVE',
+                                    style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (category.description != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    category.description!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
+                              Row(
                                 children: [
-                                  Icon(Icons.edit),
-                                  SizedBox(width: 8),
-                                  Text('Edit'),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: category.color.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '$itemCount item${itemCount == 1 ? '' : 's'}',
+                                      style: TextStyle(
+                                        color: category.color,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Order: ${category.sortOrder}',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.delete, color: Colors.red),
-                                  SizedBox(width: 8),
-                                  Text('Delete', style: TextStyle(color: Colors.red)),
-                                ],
+                            ],
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) {
+                              switch (value) {
+                                case 'edit':
+                                  _editCategory(category);
+                                  break;
+                                case 'delete':
+                                  _deleteCategory(category);
+                                  break;
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit),
+                                    SizedBox(width: 8),
+                                    Text('Edit'),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete, color: Colors.red),
+                                    SizedBox(width: 8),
+                                    Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -871,28 +1130,41 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     final items = itemsByCategory[category.id] ?? [];
 
                     return ExpansionTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: category.color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: category.color.withOpacity(0.3)),
+                        ),
+                        child: Icon(
+                          category.icon,
+                          color: category.color,
+                          size: 20,
+                        ),
+                      ),
                       title: Row(
                         children: [
-                          Icon(
-                            Icons.category,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
                           Text(
                             category.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: category.color.withOpacity(0.8),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer,
+                              color: category.color.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: category.color.withOpacity(0.3)),
                             ),
                             child: Text(
-                              '${items.length}',
+                              '${items.length} item${items.length == 1 ? '' : 's'}',
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                color: category.color,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -925,7 +1197,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   Widget _buildMenuItemTile(MenuItem item) {
     final category = _categories.firstWhere(
       (cat) => cat.id == item.categoryId,
-      orElse: () => pos_category.Category(
+                              orElse: () => Category(
         id: 'unknown',
         name: 'Unknown Category',
         sortOrder: 0,
@@ -934,46 +1206,144 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-          child: Text(
-            item.name[0].toUpperCase(),
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
-              fontWeight: FontWeight.bold,
+      elevation: 1,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: category.color.withOpacity(0.2)),
+        ),
+        child: ListTile(
+          leading: Container(
+            width: 45,
+            height: 45,
+            decoration: BoxDecoration(
+              color: category.color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(22.5),
+              border: Border.all(color: category.color.withOpacity(0.3)),
             ),
-          ),
-        ),
-        title: Text(
-          item.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.description != null) Text(item.description),
-            Row(
+            child: Stack(
               children: [
-                Text(
-                  '\$${item.price.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
+                Center(
+                  child: Text(
+                    item.name[0].toUpperCase(),
+                    style: TextStyle(
+                      color: category.color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Text(
-                  '${category.name}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.secondary,
-                    fontSize: 12,
+                Positioned(
+                  bottom: 2,
+                  right: 2,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: category.color,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      category.icon,
+                      color: Colors.white,
+                      size: 10,
+                    ),
                   ),
                 ),
               ],
             ),
-          ],
+          ),
+        title: Text(
+          item.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (item.description != null) 
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    item.description!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '\$${item.price.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: category.color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      category.name,
+                      style: TextStyle(
+                        color: category.color,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (item.isAvailable)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'AVAILABLE',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'UNAVAILABLE',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             switch (value) {
@@ -1007,6 +1377,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -1076,32 +1447,420 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  Widget _buildAnalyticsTab() {
-    return Center(
+  Widget _buildReservationsTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.analytics,
-            size: 64,
-            color: Colors.grey,
-          ),
-          const SizedBox(height: 16),
           Text(
-            'Analytics Coming Soon',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+            'Table Reservations',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
-            'Sales reports, inventory tracking, and performance metrics will be available here.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey.shade500,
+            'Manage table bookings and reservations',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          
+          // Quick stats
+          Consumer<ReservationService>(
+            builder: (context, reservationService, child) {
+              final todaysReservations = reservationService.todaysReservations;
+              final upcomingReservations = reservationService.getUpcomingReservations();
+              
+              return Row(
+                children: [
+                  Expanded(
+                    child: _buildStatsCard(
+                      'Today\'s Bookings',
+                      todaysReservations.length.toString(),
+                      Icons.today,
+                      Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStatsCard(
+                      'Upcoming',
+                      upcomingReservations.length.toString(),
+                      Icons.schedule,
+                      Colors.green,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ReservationsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.event_seat),
+                  label: const Text('Manage Reservations'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                 ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Today's reservations preview
+          Expanded(
+            child: Consumer<ReservationService>(
+              builder: (context, reservationService, child) {
+                final todaysReservations = reservationService.todaysReservations;
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Today\'s Reservations',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Expanded(
+                      child: todaysReservations.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.event_busy,
+                                    size: 64,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No reservations for today',
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          color: Colors.grey,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: todaysReservations.length,
+                              itemBuilder: (context, index) {
+                                final reservation = todaysReservations[index];
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: reservation.status.color,
+                                      child: Text(
+                                        reservation.customerName[0].toUpperCase(),
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      reservation.customerName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('${reservation.formattedTime} • Party of ${reservation.partySize}'),
+                                        Text(
+                                          reservation.status.displayName,
+                                          style: TextStyle(
+                                            color: reservation.status.color,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    trailing: const Icon(Icons.chevron_right),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const ReservationsScreen(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrinterAssignmentsTab() {
+    return Column(
+      children: [
+        _buildTabHeader(
+          title: 'Printer Assignments',
+          subtitle: 'Configure kitchen printer routing for menu items',
+          onAddPressed: () => _navigateToPrinterAssignments(),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Quick Info Cards
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildInfoCard(
+                        'Category Assignment',
+                        'Route entire categories to specific printers',
+                        Icons.category,
+                        Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildInfoCard(
+                        'Menu Item Assignment',
+                        'Route specific items to designated printers',
+                        Icons.restaurant_menu,
+                        Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                
+                // Action Button
+                ElevatedButton.icon(
+                  onPressed: () => _navigateToPrinterAssignments(),
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Manage Printer Assignments'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    textStyle: const TextStyle(fontSize: 16),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Benefits List
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Benefits of Printer Assignments',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildBenefitItem('Appetizers print to appetizer station'),
+                      _buildBenefitItem('Main courses print to grill station'),
+                      _buildBenefitItem('Desserts print to dessert station'),
+                      _buildBenefitItem('Same order number across all stations'),
+                      _buildBenefitItem('Improved kitchen workflow efficiency'),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Current Assignments Preview
+                Consumer<PrinterAssignmentService>(
+                  builder: (context, assignmentService, child) {
+                    final stats = assignmentService.getAssignmentStats();
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Current Assignment Status',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildStatChip('Total', stats['totalAssignments'], Colors.blue),
+                              _buildStatChip('Categories', stats['categoryAssignments'], Colors.green),
+                              _buildStatChip('Items', stats['menuItemAssignments'], Colors.orange),
+                              _buildStatChip('Printers', stats['uniquePrinters'], Colors.purple),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoCard(String title, String description, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 48, color: color),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBenefitItem(String benefit) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, size: 16, color: Colors.blue.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              benefit,
+              style: TextStyle(color: Colors.blue.shade800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatChip(String label, int value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value.toString(),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToPrinterAssignments() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const PrinterAssignmentScreen(),
       ),
     );
   }

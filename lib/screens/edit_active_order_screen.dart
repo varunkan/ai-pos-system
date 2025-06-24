@@ -2,22 +2,24 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ai_pos_system/models/order.dart';
-import 'package:ai_pos_system/models/menu_item.dart';
-import 'package:ai_pos_system/models/table.dart' as restaurant_table;
-import 'package:ai_pos_system/services/order_service.dart';
-import 'package:ai_pos_system/services/menu_service.dart';
-import 'package:ai_pos_system/services/table_service.dart';
-import 'package:ai_pos_system/services/printing_service.dart';
-import 'package:ai_pos_system/services/database_service.dart';
-import 'package:ai_pos_system/widgets/confirmation_dialog.dart';
-import 'package:ai_pos_system/widgets/error_dialog.dart';
-import 'package:ai_pos_system/widgets/loading_overlay.dart';
-import 'package:ai_pos_system/models/category.dart' as pos_category;
-import 'package:ai_pos_system/models/user.dart';
-import 'package:ai_pos_system/widgets/back_button.dart';
-import 'package:ai_pos_system/screens/checkout_screen.dart';
-import 'package:ai_pos_system/screens/order_type_selection_screen.dart';
+import '../models/order.dart';
+import '../models/menu_item.dart';
+import '../models/table.dart' as restaurant_table;
+import '../models/category.dart' as pos_category;
+import '../models/user.dart';
+import '../services/order_service.dart';
+import '../services/menu_service.dart';
+import '../services/table_service.dart';
+import '../services/printing_service.dart';
+import '../services/printer_assignment_service.dart';
+import '../services/database_service.dart';
+import '../widgets/confirmation_dialog.dart';
+import '../widgets/error_dialog.dart';
+import '../widgets/loading_overlay.dart';
+import '../widgets/universal_navigation.dart';
+import '../screens/checkout_screen.dart';
+
+import 'package:uuid/uuid.dart';
 
 class EditActiveOrderScreen extends StatefulWidget {
   final Order order;
@@ -36,6 +38,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   bool _isLoading = true;
   String? _error;
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _chefNotesController = TextEditingController();
   String _searchQuery = '';
 
   // Local order state that can be modified
@@ -57,6 +60,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _chefNotesController.dispose();
     super.dispose();
   }
 
@@ -315,7 +319,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   }
 
   Future<void> _sendToKitchen() async {
-    print('DEBUG: Starting _sendToKitchen method');
+
     
     // Get items that haven't been sent to kitchen yet
     final newItems = _currentOrder.items.where((item) => item.sentToKitchen == false).toList();
@@ -338,7 +342,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
     }
 
     try {
-      print('DEBUG: Updating items and saving order...');
+
       
       // Update items to mark as sent to kitchen
       final updatedItems = _currentOrder.items.map((item) =>
@@ -352,16 +356,16 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       );
       
       // Save order directly to database to avoid Provider notification crashes
-      print('DEBUG: About to save order directly to database...');
+      
       final databaseService = Provider.of<DatabaseService>(context, listen: false);
       await _saveOrderDirectly(_currentOrder, databaseService);
-      print('DEBUG: Order saved directly to database successfully');
       
-      print('DEBUG: Order saved successfully - ${_currentOrder.orderNumber}');
+      
+      
       
       // Show success message and stay in screen
       if (mounted) {
-        print('DEBUG: Showing success message and staying in screen');
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${newItems.length} items sent to kitchen successfully!'),
@@ -377,7 +381,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       }
 
     } catch (e) {
-      print('DEBUG: Error occurred: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -388,28 +392,28 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         );
       }
     } finally {
-      print('DEBUG: Stopping spinner and cleaning up');
+
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-      print('DEBUG: _sendToKitchen completed');
+  
     }
   }
 
   /// Saves order directly to database without triggering OrderService listeners
   Future<void> _saveOrderDirectly(Order order, DatabaseService databaseService) async {
-    print('DEBUG: Starting direct database save for order: ${order.id}');
+
     
     try {
       final orderData = _orderToMap(order);
-      print('DEBUG: Order data prepared, starting transaction');
+
       
       // Save order in a transaction
       await databaseService.database.then((db) async {
         await db.transaction((txn) async {
-          print('DEBUG: Transaction started');
+  
         // Use INSERT OR REPLACE to handle potential ID conflicts
         await txn.rawInsert('''
           INSERT OR REPLACE INTO orders (
@@ -485,15 +489,15 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
           ]);
         }
         
-        print('DEBUG: All order items saved successfully');
+
       });
       
-      print('DEBUG: Transaction completed successfully');
+      
     });
     
-    print('DEBUG: Direct database save completed for order: ${order.orderNumber}');
+    
     } catch (e) {
-      print('DEBUG: Error in direct database save: $e');
+      
       rethrow;
     }
   }
@@ -667,19 +671,32 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
     );
   }
 
-  /// Print kitchen ticket
+  /// Print kitchen ticket with segregated printing
   Future<void> _printKitchenTicket() async {
     try {
       final printingService = Provider.of<PrintingService>(context, listen: false);
-      await printingService.printKitchenTicket(_currentOrder);
+      final printerAssignmentService = Provider.of<PrinterAssignmentService>(context, listen: false);
       
+      // Segregate items by printer assignments
+      final itemsByPrinter = await printingService.segregateOrderItems(
+        _currentOrder,
+        printerAssignmentService,
+      );
+      
+      // Print to segregated printers
+      await printingService.printOrderSegregated(_currentOrder, itemsByPrinter);
+      
+      // Show success message with printer details
+      final printerCount = itemsByPrinter.length;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kitchen ticket printed successfully'),
+        SnackBar(
+          content: Text('Kitchen tickets printed to $printerCount printer${printerCount == 1 ? '' : 's'} successfully'),
           backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
         ),
       );
     } catch (e) {
+      debugPrint('Error printing kitchen ticket: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error printing ticket: $e'),
@@ -959,16 +976,28 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
     );
   }
 
-  /// Reprint kitchen ticket
+  /// Reprint kitchen ticket with segregated printing
   Future<void> _reprintKitchenTicket() async {
     try {
       final printingService = Provider.of<PrintingService>(context, listen: false);
-      await printingService.printKitchenTicket(widget.order);
+      final printerAssignmentService = Provider.of<PrinterAssignmentService>(context, listen: false);
       
+      // Segregate items by printer assignments
+      final itemsByPrinter = await printingService.segregateOrderItems(
+        widget.order,
+        printerAssignmentService,
+      );
+      
+      // Print to segregated printers
+      await printingService.printOrderSegregated(widget.order, itemsByPrinter);
+      
+      // Show success message with printer details
+      final printerCount = itemsByPrinter.length;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kitchen ticket reprinted'),
+        SnackBar(
+          content: Text('Kitchen tickets reprinted to $printerCount printer${printerCount == 1 ? '' : 's'}'),
           backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -1317,46 +1346,33 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Order #${widget.order.orderNumber}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+    return UniversalAppBar(
+      currentUser: widget.user,
+      title: 'Edit Order #${widget.order.orderNumber} - ${widget.order.type == OrderType.dineIn ? 'Dine-In' : 'Takeout'}',
+      additionalActions: [
+        // Chef notes quick access
+        IconButton(
+          icon: Stack(
+            children: [
+              const Icon(Icons.restaurant, color: Colors.orange),
+              if (_currentOrder.notes.any((note) => note.isInternal))
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Text(
-            widget.order.type == OrderType.dineIn ? 'Dine-In' : 'Takeout',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 14,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            'Server: ${widget.user.name}',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-      backgroundColor: Colors.white,
-      elevation: 2,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      actions: [
+          onPressed: _showChefNotesDialog,
+          tooltip: 'Chef Notes',
+        ),
         // Admin actions
         if (widget.user.isAdmin) ...[
           PopupMenuButton<String>(
@@ -1383,8 +1399,23 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
             ],
           ),
         ],
-        const CustomBackButton(),
-        const SizedBox(width: 16),
+        // Server info
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            'Server: ${widget.user.name}',
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1397,7 +1428,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   }) {
     // Add debug logging for Send button rendering
     if (label == 'Send') {
-      print('DEBUG: Rendering Send button - _isLoading: $_isLoading');
+      
     }
     
     return ElevatedButton.icon(
@@ -1591,21 +1622,19 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
               ),
               const SizedBox(width: 12),
               
-              // Close table button (Dine-in only, Admin only)
-              if (_currentOrder.type == OrderType.dineIn && widget.user.isAdmin) ...[
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: hasAnyItems ? _closeTable : null,
-                    icon: const Icon(Icons.close, size: 16),
-                    label: const Text('Close'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: hasAnyItems ? Colors.red : Colors.grey,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
+              // Cancel Order button
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: hasAnyItems ? _cancelOrder : null,
+                  icon: const Icon(Icons.cancel, size: 16),
+                  label: const Text('Cancel'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: hasAnyItems ? Colors.red : Colors.grey,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ],
@@ -1813,6 +1842,8 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
     final isVoided = item.voided == true;
     final isComped = item.comped == true;
     final hasDiscount = item.discountPercentage != null || item.discountAmount != null;
+    final hasChefNotes = item.notes?.isNotEmpty == true;
+    final hasSpecialInstructions = item.specialInstructions?.isNotEmpty == true;
     
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1962,6 +1993,82 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
                       ),
                     ),
                   ],
+                  
+                  // Chef Notes Display
+                  if (hasChefNotes) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.orange.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.restaurant,
+                            size: 12,
+                            color: Colors.orange.shade700,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Chef: ',
+                            style: TextStyle(
+                              color: Colors.orange.shade700,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              item.notes!,
+                              style: TextStyle(
+                                color: Colors.orange.shade700,
+                                fontSize: 10,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  
+                  // Special Instructions Display
+                  if (hasSpecialInstructions) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.note,
+                            size: 12,
+                            color: Colors.blue.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              item.specialInstructions!,
+                              style: TextStyle(
+                                color: Colors.blue.shade700,
+                                fontSize: 10,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1981,37 +2088,64 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
                            item.sentToKitchen ? Colors.grey.shade600 : Colors.green,
                   ),
                 ),
-                // Admin action buttons
-                if (widget.user.isAdmin && !isVoided) ...[
+                // Chef notes and action buttons
+                if (!isVoided) ...[
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Chef Notes Button
                       IconButton(
-                        onPressed: () => _voidItem(item),
-                        icon: const Icon(Icons.block, size: 14),
-                        color: Colors.red.shade400,
+                        onPressed: () => _showItemChefNotesDialog(item),
+                        icon: Icon(
+                          Icons.restaurant,
+                          size: 14,
+                          color: hasChefNotes ? Colors.orange.shade700 : Colors.grey.shade400,
+                        ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                        tooltip: 'Void Item',
+                        tooltip: 'Chef Notes',
                       ),
-                      if (!isComped)
+                      // Special Instructions Button  
+                      IconButton(
+                        onPressed: () => _showItemInstructionsDialog(item),
+                        icon: Icon(
+                          Icons.note,
+                          size: 14,
+                          color: hasSpecialInstructions ? Colors.blue.shade700 : Colors.grey.shade400,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Special Instructions',
+                      ),
+                      // Admin action buttons
+                      if (widget.user.isAdmin) ...[
                         IconButton(
-                          onPressed: () => _compItem(item),
-                          icon: const Icon(Icons.free_breakfast, size: 14),
-                          color: Colors.green.shade400,
+                          onPressed: () => _voidItem(item),
+                          icon: const Icon(Icons.block, size: 14),
+                          color: Colors.red.shade400,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          tooltip: 'Comp Item',
+                          tooltip: 'Void Item',
                         ),
-                      if (!hasDiscount)
-                        IconButton(
-                          onPressed: () => _applyDiscount(item),
-                          icon: const Icon(Icons.discount, size: 14),
-                          color: Colors.blue.shade400,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: 'Apply Discount',
-                        ),
+                        if (!isComped)
+                          IconButton(
+                            onPressed: () => _compItem(item),
+                            icon: const Icon(Icons.free_breakfast, size: 14),
+                            color: Colors.green.shade400,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Comp Item',
+                          ),
+                        if (!hasDiscount)
+                          IconButton(
+                            onPressed: () => _applyDiscount(item),
+                            icon: const Icon(Icons.discount, size: 14),
+                            color: Colors.blue.shade400,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Apply Discount',
+                          ),
+                      ],
                     ],
                   ),
                 ],
@@ -2091,12 +2225,8 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   }
 
   Widget _buildOrderSummary() {
-    final subtotal = _currentOrder.subtotal;
-    final discountAmount = _currentOrder.discountAmount ?? 0.0;
-    final gratuityAmount = _currentOrder.gratuityAmount ?? 0.0;
-    final subtotalAfterDiscount = subtotal - discountAmount;
-    final tax = subtotalAfterDiscount * 0.08;
-    final total = subtotalAfterDiscount + tax + gratuityAmount;
+    final discount = _currentOrder.discountAmount ?? 0.0;
+    final gratuity = _currentOrder.gratuityAmount ?? 0.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -2112,16 +2242,17 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       ),
       child: Column(
         children: [
-          _buildSummaryRow('Subtotal', subtotal),
-          if (discountAmount > 0) ...[
-            const SizedBox(height: 4),
-            _buildSummaryRow('Discount', -discountAmount, isDiscount: true),
+          _buildSummaryRow('Subtotal', '\$${_currentOrder.subtotal.toStringAsFixed(2)}'),
+          const SizedBox(height: 8),
+          if (discount > 0) ...[
+            _buildSummaryRow('Discount', '-\$${discount.toStringAsFixed(2)}', isDiscount: true),
+            const SizedBox(height: 8),
           ],
-          const SizedBox(height: 4),
-          _buildSummaryRow('Tax (8%)', tax),
-          if (_currentOrder.type == OrderType.dineIn && gratuityAmount > 0) ...[
-            const SizedBox(height: 4),
-            _buildSummaryRow('Gratuity', gratuityAmount, isGratuity: true),
+          _buildSummaryRow('HST (13%)', '\$${_currentOrder.hstAmount.toStringAsFixed(2)}'),
+          const SizedBox(height: 8),
+          if (gratuity > 0) ...[
+            _buildSummaryRow('Gratuity', '\$${gratuity.toStringAsFixed(2)}', isGratuity: true),
+            const SizedBox(height: 8),
           ],
           const SizedBox(height: 8),
           // Action buttons for admin
@@ -2132,7 +2263,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _showDiscountDialog(),
                     icon: const Icon(Icons.discount, size: 16),
-                    label: Text(discountAmount > 0 ? 'Edit Discount' : 'Add Discount'),
+                    label: Text(discount > 0 ? 'Edit Discount' : 'Add Discount'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.blue,
                       side: BorderSide(color: Colors.blue.shade300),
@@ -2146,7 +2277,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => _showGratuityDialog(),
                       icon: const Icon(Icons.attach_money, size: 16),
-                      label: Text(gratuityAmount > 0 ? 'Edit Gratuity' : 'Add Gratuity'),
+                      label: Text(gratuity > 0 ? 'Edit Gratuity' : 'Add Gratuity'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.green,
                         side: BorderSide(color: Colors.green.shade300),
@@ -2157,20 +2288,27 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
                 ],
               ],
             ),
-            const SizedBox(height: 8),
           ],
-          const Divider(height: 16),
-          _buildSummaryRow('Total', total, isTotal: true),
+          const Divider(),
+          _buildSummaryRow(
+            'Total',
+            '\$${_currentOrder.totalAmount.toStringAsFixed(2)}',
+            isTotal: true,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(String label, double amount, {bool isTotal = false, bool isDiscount = false, bool isGratuity = false}) {
-    Color textColor = Colors.grey.shade700;
-    if (isTotal) textColor = Colors.black;
-    if (isDiscount) textColor = Colors.red.shade600;
-    if (isGratuity) textColor = Colors.green.shade600;
+  Widget _buildSummaryRow(String label, String value, {bool isTotal = false, bool isDiscount = false, bool isGratuity = false}) {
+    Color? textColor;
+    if (isTotal) {
+      textColor = Theme.of(context).primaryColor;
+    } else if (isDiscount) {
+      textColor = Colors.red;
+    } else if (isGratuity) {
+      textColor = Colors.green;
+    }
     
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2178,17 +2316,17 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: isTotal ? 16 : 12,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-            color: textColor,
+            fontSize: isTotal ? 16 : 14,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+            color: isDiscount ? Colors.red : (isGratuity ? Colors.green : null),
           ),
         ),
         Text(
-          '\$${amount.abs().toStringAsFixed(2)}',
+          value,
           style: TextStyle(
-            fontSize: isTotal ? 16 : 12,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-            color: isTotal ? Colors.green : textColor,
+            fontSize: isTotal ? 18 : 14,
+            fontWeight: FontWeight.bold,
+            color: textColor,
           ),
         ),
       ],
@@ -2304,45 +2442,44 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   }
 
   Widget _buildCategoriesTabs() {
+    if (_categories.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final category = _categories[index];
+      padding: const EdgeInsets.all(12),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: _categories.map((category) {
           final isSelected = _selectedCategory?.id == category.id;
           
-          return Container(
-            margin: const EdgeInsets.only(right: 4),
-            child: FilterChip(
-              label: Text(
-                category.name,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  fontSize: 11,
-                ),
+          return FilterChip(
+            label: Text(
+              category.name,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 12,
               ),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  _onCategorySelected(category);
-                }
-              },
-              backgroundColor: Colors.grey.shade100,
-              selectedColor: Theme.of(context).primaryColor,
-              checkmarkColor: Colors.white,
-              side: BorderSide(
-                color: isSelected 
-                    ? Theme.of(context).primaryColor 
-                    : Colors.grey.shade300,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             ),
+            selected: isSelected,
+            onSelected: (selected) {
+              if (selected) {
+                _onCategorySelected(category);
+              }
+            },
+            backgroundColor: Colors.grey.shade100,
+            selectedColor: Theme.of(context).primaryColor,
+            checkmarkColor: Colors.white,
+            side: BorderSide(
+              color: isSelected 
+                  ? Theme.of(context).primaryColor 
+                  : Colors.grey.shade300,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           );
-        },
+        }).toList(),
       ),
     );
   }
@@ -2379,18 +2516,30 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.0,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: _filteredMenuItems.length,
-      itemBuilder: (context, index) {
-        final item = _filteredMenuItems[index];
-        return _buildMenuItemCard(item);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive grid: more columns for wider screens
+        int crossAxisCount = 3; // Default 3 columns for edit screen (less space due to order panel)
+        if (constraints.maxWidth > 1000) {
+          crossAxisCount = 5; // 5 columns for very wide screens
+        } else if (constraints.maxWidth > 700) {
+          crossAxisCount = 4; // 4 columns for wide screens
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(6),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 1.0, // Square aspect ratio for compact design
+            crossAxisSpacing: 6,
+            mainAxisSpacing: 6,
+          ),
+          itemCount: _filteredMenuItems.length,
+          itemBuilder: (context, index) {
+            final item = _filteredMenuItems[index];
+            return _buildMenuItemCard(item);
+          },
+        );
       },
     );
   }
@@ -2399,37 +2548,38 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
     final isOutOfStock = item.isOutOfStock;
     
     return Card(
-      elevation: 2,
+      elevation: 1,
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: InkWell(
         onTap: isOutOfStock ? null : () => _addItemToOrder(item),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             color: isOutOfStock ? Colors.grey.shade100 : Colors.white,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Item image placeholder
+              // Compact item header with icon
               Container(
-                height: 60,
+                height: 28,
                 decoration: BoxDecoration(
                   color: isOutOfStock 
                       ? Colors.grey.shade300 
                       : Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
+                    topLeft: Radius.circular(6),
+                    topRight: Radius.circular(6),
                   ),
                 ),
                 child: Center(
                   child: Icon(
                     Icons.restaurant,
-                    size: 24,
+                    size: 16,
                     color: isOutOfStock 
                         ? Colors.grey.shade500 
                         : Theme.of(context).primaryColor,
@@ -2438,64 +2588,80 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                          color: isOutOfStock ? Colors.grey.shade500 : Colors.black,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.description,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 10,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '\$${item.price.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: isOutOfStock 
-                                  ? Colors.grey.shade500 
-                                  : Colors.green,
-                            ),
+                      // Item name
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          item.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10,
+                            height: 1.2,
+                            color: isOutOfStock ? Colors.grey.shade500 : Colors.black,
                           ),
-                          if (isOutOfStock)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade100,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Description (compact)
+                      if (item.description.isNotEmpty)
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            item.description,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 8,
+                              height: 1.1,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      // Price and status
+                      Expanded(
+                        flex: 2,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
                               child: Text(
-                                'Out of Stock',
+                                '\$${item.price.toStringAsFixed(2)}',
                                 style: TextStyle(
-                                  color: Colors.red.shade700,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                  color: isOutOfStock 
+                                      ? Colors.grey.shade500 
+                                      : Colors.green,
                                 ),
                               ),
                             ),
-                        ],
+                            if (isOutOfStock)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 3,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Text(
+                                  'Out',
+                                  style: TextStyle(
+                                    color: Colors.red.shade700,
+                                    fontSize: 7,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -2537,5 +2703,399 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         ],
       ),
     );
+  }
+
+  // Show chef notes dialog for entire order
+  void _showChefNotesDialog() {
+    final orderChefNotesController = TextEditingController();
+    
+    // Get existing chef notes
+    final existingChefNotes = _currentOrder.notes
+        .where((note) => note.isInternal)
+        .map((note) => note.note)
+        .join('\n');
+    
+    orderChefNotesController.text = existingChefNotes;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.restaurant, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('Chef Notes - Order'),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          height: 200,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Order #${_currentOrder.orderNumber}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: TextField(
+                  controller: orderChefNotesController,
+                  maxLines: null,
+                  expands: true,
+                  textAlignVertical: TextAlignVertical.top,
+                  decoration: const InputDecoration(
+                    labelText: 'Chef instructions for entire order',
+                    hintText: 'e.g., Rush order, allergy information, special preparation notes...',
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _updateChefNotes(orderChefNotesController.text);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show item chef notes dialog
+  void _showItemChefNotesDialog(OrderItem item) {
+    final itemChefNotesController = TextEditingController(text: item.notes ?? '');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.restaurant, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('Chef Notes'),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          height: 200,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.menuItem.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Quantity: ${item.quantity}',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: TextField(
+                  controller: itemChefNotesController,
+                  maxLines: null,
+                  expands: true,
+                  textAlignVertical: TextAlignVertical.top,
+                  decoration: const InputDecoration(
+                    labelText: 'Chef instructions for this item',
+                    hintText: 'e.g., Extra crispy, temperature preference, plating instructions...',
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _updateItemNotes(item, itemChefNotesController.text);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show item instructions dialog
+  void _showItemInstructionsDialog(OrderItem item) {
+    final instructionsController = TextEditingController(text: item.specialInstructions ?? '');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Special Instructions - ${item.menuItem.name}'),
+        content: SizedBox(
+          width: 400,
+          child: TextField(
+            controller: instructionsController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Enter special instructions for this item',
+              hintText: 'e.g., No onions, extra spicy, well done...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _updateItemSpecialInstructions(item, instructionsController.text);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Updates chef notes for the entire order
+  void _updateChefNotes(String notes) {
+    if (notes.isNotEmpty) {
+      setState(() {
+        final chefNote = OrderNote(
+          id: const Uuid().v4(),
+          note: notes,
+          author: widget.user.name,
+          timestamp: DateTime.now(),
+          isInternal: true, // Chef notes are internal
+        );
+        final updatedNotes = List<OrderNote>.from(_currentOrder.notes);
+        // Remove existing chef notes first
+        updatedNotes.removeWhere((note) => note.isInternal);
+        updatedNotes.add(chefNote);
+        _currentOrder = _currentOrder.copyWith(notes: updatedNotes);
+      });
+    }
+  }
+
+  /// Updates item notes (chef notes for specific item)
+  void _updateItemNotes(OrderItem item, String notes) {
+    setState(() {
+      final itemIndex = _currentOrder.items.indexWhere((orderItem) => orderItem.id == item.id);
+      if (itemIndex != -1) {
+        final updatedItem = item.copyWith(notes: notes.isEmpty ? null : notes);
+        _currentOrder.items[itemIndex] = updatedItem;
+        // Force rebuild by updating the order reference
+        _currentOrder = _currentOrder.copyWith(
+          items: List<OrderItem>.from(_currentOrder.items),
+        );
+      }
+    });
+  }
+
+  /// Updates item special instructions
+  void _updateItemSpecialInstructions(OrderItem item, String instructions) {
+    setState(() {
+      final itemIndex = _currentOrder.items.indexWhere((orderItem) => orderItem.id == item.id);
+      if (itemIndex != -1) {
+        final updatedItem = item.copyWith(specialInstructions: instructions.isEmpty ? null : instructions);
+        _currentOrder.items[itemIndex] = updatedItem;
+        // Force rebuild by updating the order reference
+        _currentOrder = _currentOrder.copyWith(
+          items: List<OrderItem>.from(_currentOrder.items),
+        );
+      }
+    });
+  }
+
+  // Cancel order with proper validation
+  Future<void> _cancelOrder() async {
+    if (_currentOrder.items.isEmpty) return;
+
+    // Check if order has items sent to kitchen
+    final sentItems = _currentOrder.items.where((item) => item.sentToKitchen).toList();
+    final newItems = _currentOrder.items.where((item) => !item.sentToKitchen).toList();
+
+    // If there are items sent to kitchen, order can be cancelled
+    // If only new items (not sent to kitchen), they must be removed first
+    if (sentItems.isEmpty && newItems.isNotEmpty) {
+      // Show dialog asking to remove items first
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Cannot Cancel Order'),
+          content: const Text(
+            'This order has items that haven\'t been sent to the kitchen yet. '
+            'Please remove all items first, or send them to the kitchen before cancelling.'
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'close'),
+              child: const Text('OK'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'remove_all'),
+              child: const Text('Remove All Items'),
+            ),
+          ],
+        ),
+      );
+
+      if (result == 'remove_all') {
+        setState(() {
+          _currentOrder = _currentOrder.copyWith(
+            items: [],
+            // Reset all totals, discount, and gratuity when items are removed
+            subtotal: 0.0,
+            hstAmount: 0.0,
+            totalAmount: 0.0,
+            discountAmount: 0.0,
+            gratuityAmount: 0.0,
+          );
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All items removed. Order totals reset.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show confirmation dialog for cancellation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Order'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to cancel this order?'),
+            const SizedBox(height: 16),
+            if (sentItems.isNotEmpty)
+              Text(
+                'Warning: ${sentItems.length} item(s) have been sent to the kitchen.',
+                style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+              ),
+            const SizedBox(height: 8),
+            Text('Order #: ${_currentOrder.orderNumber}'),
+            Text('Order Total: \$${_currentOrder.totalAmount.toStringAsFixed(2)}'),
+            if (_currentOrder.discountAmount != null && _currentOrder.discountAmount! > 0)
+              Text('Discount: -\$${_currentOrder.discountAmount!.toStringAsFixed(2)}'),
+            if (_currentOrder.gratuityAmount != null && _currentOrder.gratuityAmount! > 0)
+              Text('Gratuity: +\$${_currentOrder.gratuityAmount!.toStringAsFixed(2)}'),
+            const SizedBox(height: 8),
+            const Text(
+              'This action cannot be undone.',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep Order'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Create cancellation history entry
+      final cancellationHistory = OrderHistory(
+        id: const Uuid().v4(),
+        status: OrderStatus.cancelled,
+        updatedBy: widget.user.name,
+        timestamp: DateTime.now(),
+        notes: 'Order cancelled by ${widget.user.name}',
+      );
+
+      // Add cancellation history to the order
+      final updatedHistory = List<OrderHistory>.from(_currentOrder.history);
+      updatedHistory.add(cancellationHistory);
+
+      // Mark order as cancelled
+      final cancelledOrder = _currentOrder.copyWith(
+        status: OrderStatus.cancelled,
+        completedTime: DateTime.now(),
+        history: updatedHistory,
+      );
+
+      // Save the cancelled order
+      await Provider.of<OrderService>(context, listen: false).saveOrder(cancelledOrder);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order cancelled successfully!'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        // Navigate back to previous screen
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel order: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 } 

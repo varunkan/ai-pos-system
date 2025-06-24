@@ -34,7 +34,7 @@ void main() {
       databaseService = DatabaseService();
       await databaseService.database;
       mockPrefs = MockSharedPreferences();
-      userService = UserService(mockPrefs);
+      userService = UserService(mockPrefs, databaseService);
       
       // Initialize default users manually for testing
       final defaultUsers = [

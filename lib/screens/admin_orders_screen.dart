@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../models/order.dart';
 import '../models/user.dart';
 import '../services/order_service.dart';
+import '../services/user_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/back_button.dart';
@@ -85,6 +87,38 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     }).toList();
   }
 
+  // Get server name who cancelled the order
+  String? _getCancelledByServerName(Order order) {
+    if (order.status != OrderStatus.cancelled) return null;
+    
+    // Find the last history entry with cancelled status
+    final cancelHistory = order.history
+        .where((h) => h.status == OrderStatus.cancelled)
+        .lastOrNull;
+    
+    return cancelHistory?.updatedBy;
+  }
+
+  // Get server name from user ID
+  Future<String?> _getServerNameFromId(String? userId) async {
+    if (userId == null) return null;
+    
+    try {
+      final userService = Provider.of<UserService>(context, listen: false);
+      final user = await userService.getUserById(userId);
+      return user?.name;
+    } catch (e) {
+      return userId; // Return ID if name lookup fails
+    }
+  }
+
+  Future<void> _viewOrderDetails(Order order) async {
+    await showDialog(
+      context: context,
+      builder: (context) => _OrderDetailsDialog(order: order),
+    );
+  }
+
   Future<void> _editOrder(Order order) async {
     // Check if order is closed/completed
     if (order.status == OrderStatus.completed || order.status == OrderStatus.cancelled) {
@@ -110,7 +144,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       await _loadOrders();
       
       // If coming from send to kitchen, show a success message
-      if (result is Map && result['showActiveOrders'] == true) {
+      if (result is Map && result['showActiveOrders'] == true && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Items sent to kitchen successfully!'),
@@ -118,6 +152,105 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _cancelOrder(Order order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Order'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to cancel this order?'),
+            const SizedBox(height: 16),
+            Text('Order #: ${order.orderNumber}'),
+            Text('Customer: ${order.customerName ?? 'No customer name'}'),
+            Text('Order Total: \$${order.totalAmount.toStringAsFixed(2)}'),
+            const SizedBox(height: 8),
+            const Text(
+              'This will mark the order as cancelled and cannot be undone.',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep Order'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Create cancellation history entry
+      final cancellationHistory = OrderHistory(
+        id: const Uuid().v4(),
+        status: OrderStatus.cancelled,
+        updatedBy: widget.user.name,
+        timestamp: DateTime.now(),
+        notes: 'Order cancelled by ${widget.user.name} from Admin Panel',
+      );
+
+      // Add cancellation history to the order
+      final updatedHistory = List<OrderHistory>.from(order.history);
+      updatedHistory.add(cancellationHistory);
+
+      // Mark order as cancelled
+      final cancelledOrder = order.copyWith(
+        status: OrderStatus.cancelled,
+        completedTime: DateTime.now(),
+        history: updatedHistory,
+      );
+
+      // Save the cancelled order
+      final orderService = Provider.of<OrderService>(context, listen: false);
+      await orderService.saveOrder(cancelledOrder);
+      await _loadOrders();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Order #${order.orderNumber} cancelled successfully!'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        await ErrorDialogHelper.showError(
+          context,
+          title: 'Error Cancelling Order',
+          message: 'Failed to cancel order: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -398,6 +531,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   Widget _buildOrderCard(Order order) {
     final canEdit = order.status != OrderStatus.completed && 
                    order.status != OrderStatus.cancelled;
+    final cancelledBy = _getCancelledByServerName(order);
     
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -424,6 +558,28 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                       fontSize: 14,
                     ),
                   ),
+                  // Show cancellation info for cancelled orders
+                  if (order.status == OrderStatus.cancelled && cancelledBy != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person,
+                          size: 14,
+                          color: Colors.red.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Cancelled by: $cancelledBy',
+                          style: TextStyle(
+                            color: Colors.red.shade600,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -478,8 +634,14 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             switch (value) {
+              case 'view':
+                _viewOrderDetails(order);
+                break;
               case 'edit':
                 _editOrder(order);
+                break;
+              case 'cancel':
+                _cancelOrder(order);
                 break;
               case 'delete':
                 _deleteOrder(order);
@@ -487,6 +649,16 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
             }
           },
           itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'view',
+              child: Row(
+                children: [
+                  Icon(Icons.visibility, size: 16),
+                  SizedBox(width: 8),
+                  Text('View Details'),
+                ],
+              ),
+            ),
             if (canEdit)
               const PopupMenuItem(
                 value: 'edit',
@@ -495,6 +667,17 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                     Icon(Icons.edit, size: 16),
                     SizedBox(width: 8),
                     Text('Edit Order'),
+                  ],
+                ),
+              ),
+            if (canEdit && order.status != OrderStatus.cancelled)
+              const PopupMenuItem(
+                value: 'cancel',
+                child: Row(
+                  children: [
+                    Icon(Icons.cancel, size: 16, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('Cancel Order', style: TextStyle(color: Colors.orange)),
                   ],
                 ),
               ),
@@ -510,6 +693,504 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(OrderStatus status) {
+    Color color;
+    String label;
+
+    switch (status) {
+      case OrderStatus.pending:
+        color = Colors.orange;
+        label = 'PENDING';
+        break;
+      case OrderStatus.confirmed:
+        color = Colors.blue;
+        label = 'CONFIRMED';
+        break;
+      case OrderStatus.preparing:
+        color = Colors.indigo;
+        label = 'PREPARING';
+        break;
+      case OrderStatus.ready:
+        color = Colors.green;
+        label = 'READY';
+        break;
+      case OrderStatus.served:
+        color = Colors.teal;
+        label = 'SERVED';
+        break;
+      case OrderStatus.completed:
+        color = Colors.green;
+        label = 'COMPLETED';
+        break;
+      case OrderStatus.cancelled:
+        color = Colors.red;
+        label = 'CANCELLED';
+        break;
+      case OrderStatus.refunded:
+        color = Colors.purple;
+        label = 'REFUNDED';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _OrderDetailsDialog extends StatelessWidget {
+  final Order order;
+
+  const _OrderDetailsDialog({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.8,
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order #${order.orderNumber}',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          _buildStatusChip(order.status),
+                          const SizedBox(width: 12),
+                          Text(
+                            order.type.name.toUpperCase(),
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const Divider(height: 32),
+            
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Customer Information
+                    _buildSection(
+                      'Customer Information',
+                      [
+                        _buildInfoRow('Name', order.customerName ?? 'N/A'),
+                        _buildInfoRow('Phone', order.customerPhone ?? 'N/A'),
+                        _buildInfoRow('Email', order.customerEmail ?? 'N/A'),
+                        if (order.customerAddress != null)
+                          _buildInfoRow('Address', order.customerAddress!),
+                      ],
+                    ),
+                    
+                    // Order Information
+                    _buildSection(
+                      'Order Information',
+                      [
+                        _buildInfoRow('Order Time', _formatDateTime(order.createdAt)),
+                        _buildInfoRow('Order Type', order.type.name.toUpperCase()),
+                        if (order.tableId != null)
+                          _buildInfoRow('Table', order.tableId!),
+                        if (order.specialInstructions != null)
+                          _buildInfoRow('Special Instructions', order.specialInstructions!),
+                        if (order.assignedTo != null)
+                          _buildInfoRow('Assigned To', order.assignedTo!),
+                      ],
+                    ),
+                    
+                    // Items
+                    _buildSection(
+                      'Order Items (${order.items.length})',
+                      order.items.map((item) => _buildItemRow(item)).toList(),
+                    ),
+                    
+                    // Order Totals
+                    _buildSection(
+                      'Order Totals',
+                      [
+                        _buildInfoRow('Subtotal', '\$${order.subtotal.toStringAsFixed(2)}'),
+                        if (order.discountAmount > 0)
+                          _buildInfoRow('Discount', '-\$${order.discountAmount.toStringAsFixed(2)}', isDiscount: true),
+                        _buildInfoRow('HST (13%)', '\$${order.hstAmount.toStringAsFixed(2)}'),
+                        if (order.gratuityAmount > 0)
+                          _buildInfoRow('Gratuity', '\$${order.gratuityAmount.toStringAsFixed(2)}'),
+                        if (order.tipAmount > 0)
+                          _buildInfoRow('Tip', '\$${order.tipAmount.toStringAsFixed(2)}'),
+                        const Divider(),
+                        _buildInfoRow('Total', '\$${order.totalAmount.toStringAsFixed(2)}', isTotal: true),
+                      ],
+                    ),
+                    
+                    // Payment Information
+                    if (order.paymentMethod != null)
+                      _buildSection(
+                        'Payment Information',
+                        [
+                          _buildInfoRow('Payment Method', order.paymentMethod!),
+                          _buildInfoRow('Payment Status', order.paymentStatus.name.toUpperCase()),
+                          if (order.paymentTransactionId != null)
+                            _buildInfoRow('Transaction ID', order.paymentTransactionId!),
+                        ],
+                      ),
+                    
+                    // Order History
+                    if (order.history.isNotEmpty)
+                      _buildSection(
+                        'Order History',
+                        order.history.map((history) => _buildHistoryRow(history)).toList(),
+                      ),
+                    
+                    // Order Notes
+                    if (order.notes.isNotEmpty)
+                      _buildSection(
+                        'Order Notes',
+                        order.notes.map((note) => _buildNoteRow(note)).toList(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...children,
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, {bool isDiscount = false, bool isTotal = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+                fontSize: isTotal ? 16 : 14,
+                color: isDiscount ? Colors.red.shade600 : 
+                       isTotal ? Colors.black87 : Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemRow(OrderItem item) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.menuItem.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              Text(
+                'x${item.quantity}',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '\$${item.totalPrice.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          if (item.selectedVariant != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Variant: ${item.selectedVariant}',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+          if (item.selectedModifiers.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Modifiers: ${item.selectedModifiers.join(', ')}',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+          if (item.specialInstructions != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Instructions: ${item.specialInstructions}',
+              style: TextStyle(
+                color: Colors.orange.shade700,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+          if (item.notes != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Chef Notes: ${item.notes}',
+              style: TextStyle(
+                color: Colors.blue.shade700,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: item.sentToKitchen ? Colors.green.shade100 : Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  item.sentToKitchen ? 'SENT TO KITCHEN' : 'NEW',
+                  style: TextStyle(
+                    color: item.sentToKitchen ? Colors.green.shade700 : Colors.orange.shade700,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (item.voided == true)
+                Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'VOIDED',
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryRow(OrderHistory history) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Status changed to: ${history.status.name.toUpperCase()}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                _formatDateTime(history.timestamp),
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          if (history.updatedBy != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Updated by: ${history.updatedBy}',
+              style: TextStyle(
+                color: Colors.blue.shade700,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+          if (history.notes != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Notes: ${history.notes}',
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoteRow(OrderNote note) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: note.isInternal ? Colors.yellow.shade50 : Colors.green.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: note.isInternal ? Colors.yellow.shade200 : Colors.green.shade200,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                note.isInternal ? Icons.note : Icons.comment,
+                size: 16,
+                color: note.isInternal ? Colors.yellow.shade700 : Colors.green.shade700,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                note.isInternal ? 'Internal Note' : 'Customer Note',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: note.isInternal ? Colors.yellow.shade700 : Colors.green.shade700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                _formatDateTime(note.timestamp),
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            note.note,
+            style: const TextStyle(fontSize: 14),
+          ),
+          if (note.author != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'By: ${note.author}',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

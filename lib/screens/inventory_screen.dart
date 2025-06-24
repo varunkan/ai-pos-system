@@ -4,6 +4,7 @@ import 'package:ai_pos_system/services/inventory_service.dart';
 import 'package:ai_pos_system/widgets/loading_overlay.dart';
 import 'package:ai_pos_system/widgets/error_dialog.dart';
 import 'package:ai_pos_system/widgets/confirmation_dialog.dart';
+import 'package:ai_pos_system/widgets/universal_navigation.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 
@@ -95,12 +96,10 @@ class _InventoryScreenState extends State<InventoryScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Inventory Management'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
+      appBar: UniversalAppBar(
+        currentUser: null, // This screen doesn't have user context
+        title: 'Inventory Management',
+        additionalActions: [
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _showAddItemDialog,
@@ -137,6 +136,7 @@ class _InventoryScreenState extends State<InventoryScreen>
             ],
           ),
         ],
+        showQuickActions: false, // Disable quick actions for this admin screen
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

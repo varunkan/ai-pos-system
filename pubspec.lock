@@ -222,6 +222,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_bluetooth_serial:
+    dependency: "direct main"
+    description:
+      name: flutter_bluetooth_serial
+      sha256: "85ae82c4099b2b1facdc54e75e1bcfa88dc7f719e55dc886bb0b648cb16636b1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -797,6 +805,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  web_socket_channel:
+    dependency: "direct main"
+    description:
+      name: web_socket_channel
+      sha256: d88238e5eac9a42bb43ca4e721edba3c08c6354d4a53063afaa568516217621b
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.0"
   win32:
     dependency: transitive
     description:

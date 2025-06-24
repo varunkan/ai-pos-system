@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 /// Represents a menu category in the POS system.
@@ -8,6 +9,8 @@ class Category {
   final String? imageUrl;
   final bool isActive;
   final int sortOrder;
+  final int? iconCodePoint;
+  final int? colorValue;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,12 +22,20 @@ class Category {
     this.imageUrl,
     this.isActive = true,
     this.sortOrder = 0,
+    this.iconCodePoint,
+    this.colorValue,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : 
     id = id ?? const Uuid().v4(),
     createdAt = createdAt ?? DateTime.now(),
     updatedAt = updatedAt ?? DateTime.now();
+
+  /// Gets the icon for this category.
+  IconData get icon => IconData(iconCodePoint ?? Icons.restaurant_menu.codePoint, fontFamily: 'MaterialIcons');
+  
+  /// Gets the color for this category.
+  Color get color => Color(colorValue ?? Colors.blue.value);
 
   /// Creates a [Category] from JSON, with null safety and defaults.
   factory Category.fromJson(Map<String, dynamic> json) {
@@ -35,6 +46,8 @@ class Category {
       imageUrl: json['image_url'] as String?,
       isActive: (json['is_active'] as int?) == 1,
       sortOrder: json['sort_order'] as int? ?? 0,
+      iconCodePoint: json['icon_code_point'] as int?,
+      colorValue: json['color_value'] as int?,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
@@ -53,6 +66,8 @@ class Category {
       'image_url': imageUrl,
       'is_active': isActive ? 1 : 0,
       'sort_order': sortOrder,
+      'icon_code_point': iconCodePoint,
+      'color_value': colorValue,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -66,6 +81,8 @@ class Category {
     String? imageUrl,
     bool? isActive,
     int? sortOrder,
+    int? iconCodePoint,
+    int? colorValue,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -76,6 +93,8 @@ class Category {
       imageUrl: imageUrl ?? this.imageUrl,
       isActive: isActive ?? this.isActive,
       sortOrder: sortOrder ?? this.sortOrder,
+      iconCodePoint: iconCodePoint ?? this.iconCodePoint,
+      colorValue: colorValue ?? this.colorValue,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

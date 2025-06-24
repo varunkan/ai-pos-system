@@ -18,66 +18,379 @@ class OrderServiceException implements Exception {
   String toString() => 'OrderServiceException: $message${operation != null ? ' (Operation: $operation)' : ''}';
 }
 
-/// Service responsible for all order-related operations in the POS system.
-/// 
-/// This service manages order lifecycle, persistence, and business logic
-/// for orders including creation, updates, status changes, and queries.
+/// Advanced order service with caching and performance optimizations
 class OrderService with ChangeNotifier {
   DatabaseService _databaseService;
+  
+  // Cached data
   List<Order> _activeOrders = [];
   List<Order> _completedOrders = [];
+  final Map<String, Order> _orderCache = {};
+  final Map<String, DateTime> _cacheTimestamps = {};
+  
+  // Performance tracking
   bool _isLoading = false;
+  Timer? _cacheCleanupTimer;
+  Timer? _autoRefreshTimer;
+  
+  // Cache configuration
+  static const Duration _cacheValidDuration = Duration(minutes: 5);
+  static const Duration _autoRefreshInterval = Duration(seconds: 30);
+  static const int _maxCacheSize = 1000;
 
   OrderService(this._databaseService) {
-    // Temporarily disable automatic order loading to prevent crashes
-    // _loadOrders();
-    debugPrint('OrderService initialized without loading orders to prevent crashes');
+    _startCacheCleanup();
+    // Disable auto-refresh for now to prevent crashes
+    // _startAutoRefresh();
+    debugPrint('OrderService initialized with advanced caching');
   }
 
-  // Getters
-  List<Order> get activeOrders => List.unmodifiable(_activeOrders);
-  List<Order> get completedOrders => List.unmodifiable(_completedOrders);
+  @override
+  void dispose() {
+    _cacheCleanupTimer?.cancel();
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  // Getters with lazy loading disabled for stability
+  List<Order> get activeOrders {
+    // Disable automatic loading to prevent crashes
+    // if (_activeOrders.isEmpty && !_isLoading) {
+    //   _loadOrdersLazy();
+    // }
+    return List.unmodifiable(_activeOrders);
+  }
+  
+  List<Order> get completedOrders {
+    // Disable automatic loading to prevent crashes
+    // if (_completedOrders.isEmpty && !_isLoading) {
+    //   _loadOrdersLazy();
+    // }
+    return List.unmodifiable(_completedOrders);
+  }
+  
   bool get isLoading => _isLoading;
 
-  /// Loads all orders from the database and categorizes them.
-  /// 
-  /// This method is called during service initialization and can be
-  /// called manually to refresh the order lists.
+  /// Manually load orders from database
+  /// Use this instead of automatic loading for better control
+  Future<void> loadOrders() async {
+    if (_isLoading) {
+      debugPrint('OrderService: Already loading orders, skipping...');
+      return;
+    }
+    
+    debugPrint('OrderService: Starting to load all orders...');
+    
+    try {
+      await _loadOrders();
+      debugPrint('OrderService: Successfully loaded ${_activeOrders.length + _completedOrders.length} orders');
+    } catch (e) {
+      debugPrint('OrderService: Error loading orders: $e');
+      // Don't rethrow to prevent crashes, just log the error
+    }
+  }
+
+  /// Lazy loading with debouncing
+  Timer? _loadDebounceTimer;
+  void _loadOrdersLazy() {
+    _loadDebounceTimer?.cancel();
+    _loadDebounceTimer = Timer(const Duration(milliseconds: 100), () {
+      _loadOrders();
+    });
+  }
+
+  /// Start automatic cache cleanup
+  void _startCacheCleanup() {
+    _cacheCleanupTimer = Timer.periodic(const Duration(minutes: 10), (_) {
+      _cleanupCache();
+    });
+  }
+
+  /// Start automatic refresh for real-time updates
+  void _startAutoRefresh() {
+    _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) {
+      if (!_isLoading) {
+        _refreshActiveOrders();
+      }
+    });
+  }
+
+  /// Clean up expired cache entries
+  void _cleanupCache() {
+    final now = DateTime.now();
+    final expiredKeys = _cacheTimestamps.entries
+        .where((entry) => now.difference(entry.value) > _cacheValidDuration)
+        .map((entry) => entry.key)
+        .toList();
+    
+    for (final key in expiredKeys) {
+      _orderCache.remove(key);
+      _cacheTimestamps.remove(key);
+    }
+    
+    // Limit cache size
+    if (_orderCache.length > _maxCacheSize) {
+      final sortedEntries = _cacheTimestamps.entries.toList()
+        ..sort((a, b) => a.value.compareTo(b.value));
+      
+      final keysToRemove = sortedEntries
+          .take(_orderCache.length - _maxCacheSize)
+          .map((e) => e.key);
+      
+      for (final key in keysToRemove) {
+        _orderCache.remove(key);
+        _cacheTimestamps.remove(key);
+      }
+    }
+    
+    debugPrint('Cache cleanup completed. Cache size: ${_orderCache.length}');
+  }
+
+  /// Optimized order loading with caching
   Future<void> _loadOrders() async {
+    if (_isLoading) return;
+    
     _setLoading(true);
     
     try {
-      final ordersData = await _databaseService.query('orders');
-      final allOrders = <Order>[];
+      debugPrint('OrderService: Starting database query...');
+      // Use optimized database query
+      final ordersData = await _databaseService.getOrdersWithItems(
+        orderBy: 'o.created_at DESC',
+        limit: 500, // Limit for performance
+      );
       
-      for (final orderData in ordersData) {
-        try {
-          final order = await _buildOrderFromData(orderData);
-          allOrders.add(order);
-        } catch (e) {
-          debugPrint('Error loading order ${orderData['id']}: $e');
-          // Continue loading other orders even if one fails
+      debugPrint('OrderService: Found ${ordersData.length} order rows in database');
+      final ordersMap = <String, Order>{};
+      
+      // Group data by order ID
+      for (final row in ordersData) {
+        final orderId = row['id'] as String;
+        
+        if (!ordersMap.containsKey(orderId)) {
+          ordersMap[orderId] = _buildOrderFromOptimizedData(row);
+        }
+        
+        // Add item if exists
+        if (row['item_id'] != null) {
+          final item = _buildOrderItemFromOptimizedData(row);
+          ordersMap[orderId]!.items.add(item);
         }
       }
       
-      _categorizeOrders(allOrders);
+      final allOrders = ordersMap.values.toList();
       
-      // Safely notify listeners
-      try {
-        SchedulerBinding.instance.addPostFrameCallback((_) {
-          try {
-            notifyListeners();
-          } catch (e) {
-            debugPrint('Error notifying listeners during load: $e');
-          }
-        });
-      } catch (e) {
-        debugPrint('Error scheduling notification during load: $e');
+      // Update cache
+      for (final order in allOrders) {
+        _orderCache[order.id] = order;
+        _cacheTimestamps[order.id] = DateTime.now();
       }
+      
+      _categorizeOrders(allOrders);
+      _safeNotifyListeners();
+      
     } catch (e) {
+      debugPrint('Error loading orders: $e');
       throw OrderServiceException('Failed to load orders', operation: 'load_orders', originalError: e);
     } finally {
       _setLoading(false);
+    }
+  }
+
+  /// Build order from optimized query data
+  Order _buildOrderFromOptimizedData(Map<String, dynamic> row) {
+    return Order(
+      id: row['id'],
+      orderNumber: row['order_number'],
+      status: OrderStatus.values.firstWhere(
+        (e) => e.toString().split('.').last == row['status'],
+        orElse: () => OrderStatus.pending,
+      ),
+      type: OrderType.values.firstWhere(
+        (e) => e.toString().split('.').last == row['type'],
+        orElse: () => OrderType.dineIn,
+      ),
+      tableId: row['table_id'],
+      userId: row['user_id'],
+      customerName: row['customer_name'],
+      customerPhone: row['customer_phone'],
+      customerEmail: row['customer_email'],
+      customerAddress: row['customer_address'],
+      specialInstructions: row['special_instructions'],
+      subtotal: (row['subtotal'] ?? 0.0).toDouble(),
+      taxAmount: (row['tax_amount'] ?? 0.0).toDouble(),
+      tipAmount: (row['tip_amount'] ?? 0.0).toDouble(),
+      hstAmount: (row['hst_amount'] ?? 0.0).toDouble(),
+      discountAmount: (row['discount_amount'] ?? 0.0).toDouble(),
+      gratuityAmount: (row['gratuity_amount'] ?? 0.0).toDouble(),
+      totalAmount: (row['total_amount'] ?? 0.0).toDouble(),
+      paymentMethod: row['payment_method'],
+      paymentStatus: PaymentStatus.values.firstWhere(
+        (e) => e.toString().split('.').last == (row['payment_status'] ?? 'pending'),
+        orElse: () => PaymentStatus.pending,
+      ),
+      paymentTransactionId: row['payment_transaction_id'],
+      orderTime: DateTime.tryParse(row['order_time']) ?? DateTime.now(),
+      estimatedReadyTime: row['estimated_ready_time'] != null 
+          ? DateTime.tryParse(row['estimated_ready_time']) 
+          : null,
+      actualReadyTime: row['actual_ready_time'] != null 
+          ? DateTime.tryParse(row['actual_ready_time']) 
+          : null,
+      servedTime: row['served_time'] != null 
+          ? DateTime.tryParse(row['served_time']) 
+          : null,
+      completedTime: row['completed_time'] != null 
+          ? DateTime.tryParse(row['completed_time']) 
+          : null,
+      isUrgent: (row['is_urgent'] ?? 0) == 1,
+      priority: row['priority'] ?? 0,
+      assignedTo: row['assigned_to'],
+      customFields: row['custom_fields'] != null 
+          ? jsonDecode(row['custom_fields']) 
+          : {},
+      metadata: row['metadata'] != null 
+          ? jsonDecode(row['metadata']) 
+          : {},
+      createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
+      items: [], // Items will be added separately
+    );
+  }
+
+  /// Build order item from optimized query data
+  OrderItem _buildOrderItemFromOptimizedData(Map<String, dynamic> row) {
+    final menuItem = MenuItem(
+      id: row['menu_item_id'],
+      name: row['menu_item_name'] ?? 'Unknown Item',
+      description: row['menu_item_description'] ?? '',
+      price: (row['menu_item_price'] ?? 0.0).toDouble(),
+      categoryId: row['menu_item_category_id'] ?? '',
+      imageUrl: row['menu_item_image_url'],
+      isAvailable: (row['menu_item_available'] ?? 1) == 1,
+      preparationTime: row['preparation_time'] ?? 0,
+      isVegetarian: (row['is_vegetarian'] ?? 0) == 1,
+      isVegan: (row['is_vegan'] ?? 0) == 1,
+      isGlutenFree: (row['is_gluten_free'] ?? 0) == 1,
+      isSpicy: (row['is_spicy'] ?? 0) == 1,
+      spiceLevel: row['spice_level'] ?? 0,
+    );
+
+    return OrderItem(
+      id: row['item_id'],
+      menuItem: menuItem,
+      quantity: row['quantity'] ?? 1,
+      unitPrice: (row['unit_price'] ?? 0.0).toDouble(),
+      selectedVariant: row['selected_variant'],
+      selectedModifiers: row['selected_modifiers'] != null 
+          ? List<String>.from(jsonDecode(row['selected_modifiers'])) 
+          : [],
+      specialInstructions: row['special_instructions'],
+      notes: row['notes'],
+      customProperties: row['custom_properties'] != null 
+          ? jsonDecode(row['custom_properties']) 
+          : {},
+      isAvailable: (row['item_available'] ?? 1) == 1,
+      sentToKitchen: (row['sent_to_kitchen'] ?? 0) == 1,
+      createdAt: DateTime.tryParse(row['item_created_at']) ?? DateTime.now(),
+    );
+  }
+
+  /// Fast refresh for active orders only
+  Future<void> _refreshActiveOrders() async {
+    try {
+      final activeOrdersData = await _databaseService.getOrdersWithItems(
+        whereClause: "o.status IN ('pending', 'confirmed', 'preparing', 'ready')",
+        orderBy: 'o.created_at DESC',
+      );
+      
+      final ordersMap = <String, Order>{};
+      
+      for (final row in activeOrdersData) {
+        final orderId = row['id'] as String;
+        
+        if (!ordersMap.containsKey(orderId)) {
+          ordersMap[orderId] = _buildOrderFromOptimizedData(row);
+        }
+        
+        if (row['item_id'] != null) {
+          final item = _buildOrderItemFromOptimizedData(row);
+          ordersMap[orderId]!.items.add(item);
+        }
+      }
+      
+      final newActiveOrders = ordersMap.values.toList();
+      
+      // Check if there are actual changes
+      if (_hasOrdersChanged(_activeOrders, newActiveOrders)) {
+        _activeOrders = newActiveOrders;
+        
+        // Update cache for active orders
+        for (final order in newActiveOrders) {
+          _orderCache[order.id] = order;
+          _cacheTimestamps[order.id] = DateTime.now();
+        }
+        
+        _safeNotifyListeners();
+      }
+      
+    } catch (e) {
+      debugPrint('Error refreshing active orders: $e');
+    }
+  }
+
+  /// Check if orders list has changed
+  bool _hasOrdersChanged(List<Order> oldOrders, List<Order> newOrders) {
+    if (oldOrders.length != newOrders.length) return true;
+    
+    for (int i = 0; i < oldOrders.length; i++) {
+      if (oldOrders[i].id != newOrders[i].id || 
+          oldOrders[i].status != newOrders[i].status ||
+          oldOrders[i].items.length != newOrders[i].items.length) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /// Get order from cache or database
+  Future<Order?> getOrderById(String orderId) async {
+    // Check cache first
+    if (_orderCache.containsKey(orderId)) {
+      final cacheTime = _cacheTimestamps[orderId];
+      if (cacheTime != null && 
+          DateTime.now().difference(cacheTime) < _cacheValidDuration) {
+        return _orderCache[orderId];
+      }
+    }
+    
+    // Load from database
+    try {
+      final orderData = await _databaseService.getOrdersWithItems(
+        whereClause: 'o.id = ?',
+        whereArgs: [orderId],
+      );
+      
+      if (orderData.isEmpty) return null;
+      
+      final order = _buildOrderFromOptimizedData(orderData.first);
+      
+      // Add items
+      for (final row in orderData) {
+        if (row['item_id'] != null) {
+          final item = _buildOrderItemFromOptimizedData(row);
+          order.items.add(item);
+        }
+      }
+      
+      // Update cache
+      _orderCache[orderId] = order;
+      _cacheTimestamps[orderId] = DateTime.now();
+      
+      return order;
+    } catch (e) {
+      throw OrderServiceException('Failed to get order by ID', operation: 'get_by_id', originalError: e);
     }
   }
 
@@ -91,102 +404,6 @@ class OrderService with ChangeNotifier {
     // Sort orders by creation time (newest first)
     _activeOrders.sort((a, b) => b.orderTime.compareTo(a.orderTime));
     _completedOrders.sort((a, b) => b.orderTime.compareTo(a.orderTime));
-  }
-
-  /// Builds an Order object from database data.
-  /// 
-  /// [orderData] is the raw database data for the order.
-  /// Returns the built Order object.
-  /// Throws [OrderServiceException] if building fails.
-  Future<Order> _buildOrderFromData(Map<String, dynamic> orderData) async {
-    try {
-      // Get order items
-      final orderItemsData = await _databaseService.query(
-        'order_items',
-        where: 'order_id = ?',
-        whereArgs: [orderData['id']],
-      );
-      
-      final orderItems = <OrderItem>[];
-      for (final itemData in orderItemsData) {
-        try {
-          final menuItemData = await _databaseService.query(
-            'menu_items',
-            where: 'id = ?',
-            whereArgs: [itemData['menu_item_id']],
-          );
-          
-          if (menuItemData.isNotEmpty) {
-            final menuItem = MenuItem.fromJson(menuItemData.first);
-            // Convert database field names to JSON field names for OrderItem
-            final orderItemJson = {
-              'id': itemData['id'],
-              'quantity': itemData['quantity'],
-              'unitPrice': itemData['unit_price'], // Fix: map database field to JSON field
-              'selectedVariant': itemData['selected_variant'],
-              'selectedModifiers': itemData['selected_modifiers'] != null 
-                  ? jsonDecode(itemData['selected_modifiers']) 
-                  : [],
-              'specialInstructions': itemData['special_instructions'],
-              'customProperties': itemData['custom_properties'] != null 
-                  ? jsonDecode(itemData['custom_properties']) 
-                  : {},
-              'isAvailable': itemData['is_available'] == 1,
-              'sentToKitchen': itemData['sent_to_kitchen'] == 1,
-              'createdAt': itemData['created_at'],
-              'menuItem': menuItem.toJson(),
-            };
-            final orderItem = OrderItem.fromJson(orderItemJson);
-            orderItems.add(orderItem);
-          }
-        } catch (e) {
-          debugPrint('Error loading order item: $e');
-          // Continue loading other items even if one fails
-        }
-      }
-      
-      // Convert database field names to JSON field names
-      final jsonData = {
-        'id': orderData['id'],
-        'orderNumber': orderData['order_number'],
-        'status': orderData['status'],
-        'type': orderData['type'],
-        'tableId': orderData['table_id'],
-        'userId': orderData['user_id'],
-        'customerName': orderData['customer_name'],
-        'customerPhone': orderData['customer_phone'],
-        'customerEmail': orderData['customer_email'],
-        'customerAddress': orderData['customer_address'],
-        'specialInstructions': orderData['special_instructions'],
-        'subtotal': orderData['subtotal'],
-        'taxAmount': orderData['tax_amount'],
-        'tipAmount': orderData['tip_amount'],
-        'hstAmount': orderData['hst_amount'] ?? 0.0,
-        'discountAmount': orderData['discount_amount'] ?? 0.0,
-        'gratuityAmount': orderData['gratuity_amount'] ?? 0.0,
-        'totalAmount': orderData['total_amount'],
-        'paymentMethod': orderData['payment_method'],
-        'paymentStatus': orderData['payment_status'],
-        'paymentTransactionId': orderData['payment_transaction_id'],
-        'orderTime': orderData['order_time'],
-        'estimatedReadyTime': orderData['estimated_ready_time'],
-        'actualReadyTime': orderData['actual_ready_time'],
-        'servedTime': orderData['served_time'],
-        'completedTime': orderData['completed_time'],
-        'isUrgent': orderData['is_urgent'] == 1,
-        'priority': orderData['priority'],
-        'assignedTo': orderData['assigned_to'],
-        'customFields': orderData['custom_fields'] != null ? jsonDecode(orderData['custom_fields']) : {},
-        'metadata': orderData['metadata'] != null ? jsonDecode(orderData['metadata']) : {},
-        'createdAt': orderData['created_at'],
-        'updatedAt': orderData['updated_at'],
-        'items': orderItems.map((item) => item.toJson()).toList(),
-      };
-      
-      return Order.fromJson(jsonData);
-    } catch (e) {
-      throw OrderServiceException('Failed to build order from data', operation: 'build_order', originalError: e);
-    }
   }
 
   /// Saves an order to the database and updates local lists.
@@ -388,26 +605,6 @@ class OrderService with ChangeNotifier {
     }
   }
 
-  /// Gets an order by its ID.
-  /// 
-  /// [orderId] is the ID of the order to retrieve.
-  /// Returns the order if found, null otherwise.
-  Future<Order?> getOrderById(String orderId) async {
-    try {
-      final orderData = await _databaseService.query(
-        'orders',
-        where: 'id = ?',
-        whereArgs: [orderId],
-      );
-      
-      if (orderData.isEmpty) return null;
-      
-      return await _buildOrderFromData(orderData.first);
-    } catch (e) {
-      throw OrderServiceException('Failed to get order by ID', operation: 'get_by_id', originalError: e);
-    }
-  }
-
   /// Gets all orders for a specific user.
   /// 
   /// [userId] is the ID of the user.
@@ -553,9 +750,11 @@ class OrderService with ChangeNotifier {
       'selected_variant': item.selectedVariant,
       'selected_modifiers': jsonEncode(item.selectedModifiers),
       'special_instructions': item.specialInstructions,
+      'notes': item.notes, // Include notes field
       'custom_properties': jsonEncode(item.customProperties),
       'is_available': item.isAvailable ? 1 : 0,
       'sent_to_kitchen': item.sentToKitchen ? 1 : 0,
+      'kitchen_status': item.sentToKitchen ? 'preparing' : 'pending', // Include kitchen_status
       'created_at': item.createdAt.toIso8601String(),
     };
   }
@@ -645,5 +844,148 @@ class OrderService with ChangeNotifier {
   void updateDatabase(DatabaseService db) {
     _databaseService = db;
     _loadOrders();
+  }
+
+  /// Builds an Order object from database row data.
+  /// 
+  /// This method loads order items separately from the database.
+  /// [data] is the database row containing order data.
+  /// Returns a complete Order object with its items.
+  Future<Order> _buildOrderFromData(Map<String, dynamic> data) async {
+    try {
+      // Create the order from the main data
+      final order = Order(
+        id: data['id'],
+        orderNumber: data['order_number'],
+        status: OrderStatus.values.firstWhere(
+          (e) => e.toString().split('.').last == data['status'],
+          orElse: () => OrderStatus.pending,
+        ),
+        type: OrderType.values.firstWhere(
+          (e) => e.toString().split('.').last == data['type'],
+          orElse: () => OrderType.dineIn,
+        ),
+        tableId: data['table_id'],
+        userId: data['user_id'],
+        customerName: data['customer_name'],
+        customerPhone: data['customer_phone'],
+        customerEmail: data['customer_email'],
+        customerAddress: data['customer_address'],
+        specialInstructions: data['special_instructions'],
+        subtotal: (data['subtotal'] ?? 0.0).toDouble(),
+        taxAmount: (data['tax_amount'] ?? 0.0).toDouble(),
+        tipAmount: (data['tip_amount'] ?? 0.0).toDouble(),
+        hstAmount: (data['hst_amount'] ?? 0.0).toDouble(),
+        discountAmount: (data['discount_amount'] ?? 0.0).toDouble(),
+        gratuityAmount: (data['gratuity_amount'] ?? 0.0).toDouble(),
+        totalAmount: (data['total_amount'] ?? 0.0).toDouble(),
+        paymentMethod: data['payment_method'],
+        paymentStatus: PaymentStatus.values.firstWhere(
+          (e) => e.toString().split('.').last == (data['payment_status'] ?? 'pending'),
+          orElse: () => PaymentStatus.pending,
+        ),
+        paymentTransactionId: data['payment_transaction_id'],
+        orderTime: DateTime.tryParse(data['order_time']) ?? DateTime.now(),
+        estimatedReadyTime: data['estimated_ready_time'] != null 
+            ? DateTime.tryParse(data['estimated_ready_time']) 
+            : null,
+        actualReadyTime: data['actual_ready_time'] != null 
+            ? DateTime.tryParse(data['actual_ready_time']) 
+            : null,
+        servedTime: data['served_time'] != null 
+            ? DateTime.tryParse(data['served_time']) 
+            : null,
+        completedTime: data['completed_time'] != null 
+            ? DateTime.tryParse(data['completed_time']) 
+            : null,
+        isUrgent: (data['is_urgent'] ?? 0) == 1,
+        priority: data['priority'] ?? 0,
+        assignedTo: data['assigned_to'],
+        customFields: data['custom_fields'] != null 
+            ? jsonDecode(data['custom_fields']) 
+            : {},
+        metadata: data['metadata'] != null 
+            ? jsonDecode(data['metadata']) 
+            : {},
+        createdAt: DateTime.tryParse(data['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(data['updated_at']) ?? DateTime.now(),
+        items: [], // Will be loaded separately
+      );
+
+      // Load order items for this order
+      final orderItemsData = await _databaseService.query(
+        'order_items',
+        where: 'order_id = ?',
+        whereArgs: [order.id],
+      );
+
+      // Load each order item with its menu item data
+      for (final itemData in orderItemsData) {
+        try {
+          // Get menu item details
+          final menuItemData = await _databaseService.query(
+            'menu_items',
+            where: 'id = ?',
+            whereArgs: [itemData['menu_item_id']],
+          );
+
+          if (menuItemData.isNotEmpty) {
+            final menuItemRow = menuItemData.first;
+            final menuItem = MenuItem(
+              id: menuItemRow['id'],
+              name: menuItemRow['name'] ?? 'Unknown Item',
+              description: menuItemRow['description'] ?? '',
+              price: (menuItemRow['price'] ?? 0.0).toDouble(),
+              categoryId: menuItemRow['category_id'] ?? '',
+              imageUrl: menuItemRow['image_url'],
+              isAvailable: (menuItemRow['is_available'] ?? 1) == 1,
+              preparationTime: menuItemRow['preparation_time'] ?? 0,
+              isVegetarian: (menuItemRow['is_vegetarian'] ?? 0) == 1,
+              isVegan: (menuItemRow['is_vegan'] ?? 0) == 1,
+              isGlutenFree: (menuItemRow['is_gluten_free'] ?? 0) == 1,
+              isSpicy: (menuItemRow['is_spicy'] ?? 0) == 1,
+              spiceLevel: menuItemRow['spice_level'] ?? 0,
+            );
+
+            final orderItem = OrderItem(
+              id: itemData['id'],
+              menuItem: menuItem,
+              quantity: itemData['quantity'] ?? 1,
+              unitPrice: (itemData['unit_price'] ?? 0.0).toDouble(),
+              selectedVariant: itemData['selected_variant'],
+              selectedModifiers: itemData['selected_modifiers'] != null 
+                  ? List<String>.from(jsonDecode(itemData['selected_modifiers'])) 
+                  : [],
+              specialInstructions: itemData['special_instructions'],
+              notes: itemData['notes'],
+              customProperties: itemData['custom_properties'] != null 
+                  ? jsonDecode(itemData['custom_properties']) 
+                  : {},
+              isAvailable: (itemData['is_available'] ?? 1) == 1,
+              sentToKitchen: (itemData['sent_to_kitchen'] ?? 0) == 1,
+              createdAt: DateTime.tryParse(itemData['created_at']) ?? DateTime.now(),
+            );
+
+            order.items.add(orderItem);
+          }
+        } catch (e) {
+          debugPrint('Error loading order item: $e');
+          // Continue loading other items
+        }
+      }
+
+      return order;
+    } catch (e) {
+      debugPrint('Error building order from data: $e');
+      rethrow;
+    }
+  }
+
+  void _safeNotifyListeners() {
+    try {
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error notifying listeners: $e');
+    }
   }
 } 

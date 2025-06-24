@@ -49,7 +49,7 @@ void main() {
       mockPrefs = MockSharedPreferences();
       menuService = MenuService(databaseService);
       settingsService = SettingsService(mockPrefs);
-      userService = UserService(mockPrefs);
+      userService = UserService(mockPrefs, databaseService);
       
       // Initialize default users
       final defaultUsers = [

@@ -1,13 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
 import '../models/order.dart';
 import '../models/user.dart';
 import '../services/order_service.dart';
 import '../services/printing_service.dart';
 import '../widgets/loading_overlay.dart';
-import '../widgets/back_button.dart';
 import '../widgets/error_dialog.dart';
+import '../widgets/universal_navigation.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class KitchenScreen extends StatefulWidget {
@@ -100,12 +100,14 @@ class _KitchenScreenState extends State<KitchenScreen> with TickerProviderStateM
         final newOrder = newOrderIds.any((id) => !_lastOrderIds.contains(id));
         final overdueOrder = orders.any((o) => o.isOverdue && !_lastOrderIds.contains(o.id));
         if (urgentOrder) {
-          await _audioPlayer.play(AssetSource('sounds/urgent.mp3'));
+          // Disable audio to prevent crashes
+          // await _audioPlayer.play(AssetSource('sounds/urgent.mp3'));
           _showBanner('URGENT order received!', Colors.red.shade700);
         } else if (overdueOrder) {
           _showBanner('Order OVERDUE!', Colors.yellow.shade900);
         } else if (newOrder) {
-          await _audioPlayer.play(AssetSource('sounds/new_order.mp3'));
+          // Disable audio to prevent crashes
+          // await _audioPlayer.play(AssetSource('sounds/new_order.mp3'));
           _showBanner('New order received', Colors.blue.shade700);
         }
         _lastOrderIds = newOrderIds;
@@ -286,12 +288,10 @@ class _KitchenScreenState extends State<KitchenScreen> with TickerProviderStateM
         backgroundColor: Colors.grey.shade50,
         appBar: _isFullscreen
             ? null
-            : AppBar(
-                title: const Text('Kitchen Management'),
-                backgroundColor: Colors.white,
-                elevation: 2,
-                shadowColor: Colors.black.withValues(alpha: 0.1),
-                actions: [
+            : UniversalAppBar(
+                currentUser: widget.user,
+                title: 'Kitchen Management',
+                additionalActions: [
                   IconButton(
                     onPressed: _loadOrders,
                     icon: const Icon(Icons.refresh),
@@ -302,8 +302,6 @@ class _KitchenScreenState extends State<KitchenScreen> with TickerProviderStateM
                     icon: const Icon(Icons.fullscreen),
                     tooltip: 'Fullscreen Mode',
                   ),
-                  const CustomBackButton(),
-                  const SizedBox(width: 16),
                 ],
                 bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(160),

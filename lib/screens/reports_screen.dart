@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ai_pos_system/models/order.dart';
-import 'package:ai_pos_system/models/user.dart';
-import 'package:ai_pos_system/services/order_service.dart';
-import 'package:ai_pos_system/widgets/loading_overlay.dart';
-import 'package:ai_pos_system/widgets/back_button.dart';
+import '../models/order.dart';
+import '../models/user.dart';
+import '../services/order_service.dart';
+import '../widgets/universal_navigation.dart';
+import '../widgets/loading_overlay.dart';
 
 class ReportsScreen extends StatefulWidget {
   final User user;
@@ -52,7 +52,7 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
     });
 
     try {
-      // Data is loaded through providers
+      await _updateFilteredOrders();
       setState(() {
         _isLoading = false;
       });
@@ -64,9 +64,11 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
     }
   }
 
-  List<Order> get _filteredOrders {
+  List<Order> _filteredOrders = [];
+
+  Future<void> _updateFilteredOrders() async {
     final orderService = Provider.of<OrderService>(context, listen: false);
-    final allOrders = orderService.activeOrders;
+    final allOrders = await orderService.getAllOrders();
     final now = DateTime.now();
     
     DateTime startDate;
@@ -99,8 +101,11 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
         endDate = now;
     }
     
-    return allOrders.where((order) => 
-      order.orderTime.isAfter(startDate) && order.orderTime.isBefore(endDate)
+    // Filter orders to include only completed orders within the date range
+    _filteredOrders = allOrders.where((order) => 
+      order.isCompleted && 
+      order.orderTime.isAfter(startDate) && 
+      order.orderTime.isBefore(endDate)
     ).toList();
   }
 
@@ -160,25 +165,68 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
     return customers.take(10).toList();
   }
 
+  Future<void> _showCustomDatePicker() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Theme.of(context).primaryColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedPeriod = 'custom';
+        _startDate = picked.start;
+        _endDate = picked.end;
+      });
+      await _updateFilteredOrders();
+      setState(() {});
+    }
+  }
+
+  String _getDateRangeText() {
+    final now = DateTime.now();
+    switch (_selectedPeriod) {
+      case 'today':
+        return 'Today';
+      case 'yesterday':
+        return 'Yesterday';
+      case 'week':
+        return 'Last 7 days';
+      case 'month':
+        return 'Last 30 days';
+      case 'custom':
+        return '${_startDate.day}/${_startDate.month}/${_startDate.year} - ${_endDate.day}/${_endDate.month}/${_endDate.year}';
+      default:
+        return 'Last 7 days';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
         backgroundColor: Colors.grey.shade50,
-        appBar: AppBar(
-          title: const Text('Reports & Analytics'),
-          backgroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: Colors.black.withValues(alpha: 0.1),
-          actions: [
+        appBar: UniversalAppBar(
+          currentUser: widget.user,
+          title: 'Reports & Analytics',
+          additionalActions: [
             IconButton(
               onPressed: _loadData,
               icon: const Icon(Icons.refresh),
               tooltip: 'Refresh Data',
             ),
-            const CustomBackButton(),
-            const SizedBox(width: 16),
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(80),
@@ -196,10 +244,16 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
                         child: FilterChip(
                           label: Text(period.toUpperCase()),
                           selected: isSelected,
-                          onSelected: (selected) {
-                            setState(() {
-                              _selectedPeriod = period;
-                            });
+                          onSelected: (selected) async {
+                            if (period == 'custom') {
+                              await _showCustomDatePicker();
+                            } else {
+                              setState(() {
+                                _selectedPeriod = period;
+                              });
+                              await _updateFilteredOrders();
+                              setState(() {});
+                            }
                           },
                           selectedColor: Theme.of(context).primaryColor,
                           checkmarkColor: Colors.white,
@@ -279,29 +333,70 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Overview',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Overview',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                _getDateRangeText(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          // Key metrics cards
-          Row(
-            children: [
-              Expanded(child: _buildMetricCard('Total Revenue', '\$${_totalRevenue.toStringAsFixed(2)}', Colors.green, Icons.attach_money)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildMetricCard('Total Orders', _totalOrders.toString(), Colors.blue, Icons.receipt)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _buildMetricCard('Avg Order Value', '\$${_averageOrderValue.toStringAsFixed(2)}', Colors.orange, Icons.analytics)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildMetricCard('Total Items', _totalItems.toString(), Colors.purple, Icons.restaurant_menu)),
-            ],
-          ),
+          // Summary card
+          if (_filteredOrders.isNotEmpty) ...[
+            Card(
+              elevation: 2,
+              color: Colors.blue.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.analytics, color: Colors.blue.shade700, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Analyzing ${_filteredOrders.length} completed orders',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          // Key metrics cards or empty state
+          if (_filteredOrders.isEmpty)
+            _buildEmptyState('No completed orders found for the selected period')
+          else ...[
+            Row(
+              children: [
+                Expanded(child: _buildMetricCard('Total Revenue', '\$${_totalRevenue.toStringAsFixed(2)}', Colors.green, Icons.attach_money)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildMetricCard('Total Orders', _totalOrders.toString(), Colors.blue, Icons.receipt)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _buildMetricCard('Avg Order Value', '\$${_averageOrderValue.toStringAsFixed(2)}', Colors.orange, Icons.analytics)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildMetricCard('Total Items', _totalItems.toString(), Colors.purple, Icons.restaurant_menu)),
+              ],
+            ),
+          ],
           const SizedBox(height: 24),
           // Top selling items
           _buildTopSellingItems(),
@@ -316,14 +411,28 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Sales Analytics',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Sales Analytics',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                _getDateRangeText(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          _buildSalesBreakdown(),
+          if (_filteredOrders.isEmpty)
+            _buildEmptyState('No completed orders found for the selected period')
+          else
+            _buildSalesBreakdown(),
         ],
       ),
     );
@@ -335,11 +444,22 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Popular Items',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Popular Items',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                _getDateRangeText(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _buildTopSellingItems(),
@@ -354,11 +474,22 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Peak Hours Analysis',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Peak Hours Analysis',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                _getDateRangeText(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _buildPeakHoursBreakdown(),
@@ -373,16 +504,31 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Customer Analytics',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Customer Analytics',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                _getDateRangeText(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          _buildTopCustomers(),
-          const SizedBox(height: 24),
-          _buildCustomerInsights(),
+          if (_filteredOrders.isEmpty)
+            _buildEmptyState('No completed orders found for the selected period')
+          else ...[
+            _buildTopCustomers(),
+            const SizedBox(height: 24),
+            _buildCustomerInsights(),
+          ],
         ],
       ),
     );

@@ -6,7 +6,7 @@ import 'package:ai_pos_system/screens/admin_panel_screen.dart';
 import 'package:ai_pos_system/screens/manage_categories_screen.dart';
 import 'package:ai_pos_system/screens/manage_menu_items_screen.dart';
 import 'package:ai_pos_system/screens/server_selection_screen.dart';
-import 'package:ai_pos_system/screens/order_type_selection_screen.dart';
+
 import 'package:ai_pos_system/services/database_service.dart';
 import 'package:ai_pos_system/services/menu_service.dart';
 import 'package:ai_pos_system/services/order_service.dart';
@@ -16,8 +16,11 @@ import 'package:ai_pos_system/services/settings_service.dart';
 import 'package:ai_pos_system/services/inventory_service.dart';
 import 'package:ai_pos_system/services/printing_service.dart';
 import 'package:ai_pos_system/services/payment_service.dart';
+import 'package:ai_pos_system/services/reservation_service.dart';
+import 'package:ai_pos_system/services/printer_assignment_service.dart';
+import 'package:ai_pos_system/services/printer_configuration_service.dart';
 import 'package:ai_pos_system/screens/user_action_screen.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:network_info_plus/network_info_plus.dart';
 
 void main() async {
@@ -37,6 +40,9 @@ class MyApp extends StatelessWidget {
   late final InventoryService _inventoryService;
   late final PrintingService _printingService;
   late final PaymentService _paymentService;
+  late final ReservationService _reservationService;
+  late final PrinterConfigurationService _printerConfigurationService;
+  late final PrinterAssignmentService _printerAssignmentService;
 
   MyApp({super.key, required this.prefs}) {
     _databaseService = DatabaseService();
@@ -48,6 +54,9 @@ class MyApp extends StatelessWidget {
     _inventoryService = InventoryService();
     _printingService = PrintingService(prefs, NetworkInfo());
     _paymentService = PaymentService(_orderService, _inventoryService);
+    _reservationService = ReservationService(_databaseService);
+    _printerConfigurationService = PrinterConfigurationService(_databaseService);
+    _printerAssignmentService = PrinterAssignmentService(_databaseService, _printerConfigurationService);
   }
 
   @override
@@ -63,6 +72,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<InventoryService>.value(value: _inventoryService),
         ChangeNotifierProvider<PrintingService>.value(value: _printingService),
         ChangeNotifierProvider<PaymentService>.value(value: _paymentService),
+        ChangeNotifierProvider<ReservationService>.value(value: _reservationService),
+        ChangeNotifierProvider<PrinterConfigurationService>.value(value: _printerConfigurationService),
+        ChangeNotifierProvider<PrinterAssignmentService>.value(value: _printerAssignmentService),
       ],
       child: MaterialApp(
         title: 'AI POS System',
@@ -107,6 +119,10 @@ class MyApp extends StatelessWidget {
   Future<void> _initializeApp() async {
     try {
       debugPrint('Initializing app...');
+      
+      // Initialize reservation database
+      await _reservationService.initializeDatabase();
+      await _reservationService.loadReservations();
       
       // Temporarily skip menu loading to test stability
       // Check if categories exist, if not load Oh Bombay menu

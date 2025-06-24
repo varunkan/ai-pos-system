@@ -123,6 +123,9 @@ class Order {
   double get subtotal => _storedSubtotal ?? _calculateSubtotal(items);
   /// Returns the total amount for the order.
   double get totalAmount => _storedTotalAmount ?? (subtotal + taxAmount + tipAmount + hstAmount + gratuityAmount - discountAmount);
+  
+  /// Alias for totalAmount
+  double get total => totalAmount;
 
   /// Generates a unique order number.
   static String _generateOrderNumber() {
@@ -287,13 +290,13 @@ class Order {
       customerEmail: customerEmail ?? this.customerEmail,
       customerAddress: customerAddress ?? this.customerAddress,
       specialInstructions: specialInstructions ?? this.specialInstructions,
-      subtotal: subtotal ?? this._storedSubtotal,
+      subtotal: subtotal ?? _storedSubtotal,
       taxAmount: taxAmount ?? this.taxAmount,
       tipAmount: tipAmount ?? this.tipAmount,
       hstAmount: hstAmount ?? this.hstAmount,
       discountAmount: discountAmount ?? this.discountAmount,
       gratuityAmount: gratuityAmount ?? this.gratuityAmount,
-      totalAmount: totalAmount ?? this._storedTotalAmount,
+      totalAmount: totalAmount ?? _storedTotalAmount,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paymentTransactionId: paymentTransactionId ?? this.paymentTransactionId,
