@@ -673,11 +673,9 @@ class DatabaseService {
     try {
       // Version 1 → 2: Add missing columns to existing tables
       if (oldVersion < 2) {
-        await db.transaction((txn) async {
-          await _migratePrinterConfigurationsTable(txn);
-          await _migratePrinterAssignmentsTable(txn);
-          await _migrateOrderLogsTable(txn);
-        });
+        await _migratePrinterConfigurationsTable(db);
+        await _migratePrinterAssignmentsTable(db);
+        await _migrateOrderLogsTable(db);
       }
       
       // Future migrations can be added here

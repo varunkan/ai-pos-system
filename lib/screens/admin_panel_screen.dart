@@ -28,6 +28,7 @@ import '../screens/inventory_screen.dart';
 import '../screens/tables_screen.dart';
 import '../screens/user_management_screen.dart';
 import '../screens/user_activity_monitoring_screen.dart';
+import '../screens/free_cloud_setup_screen.dart';
 import '../services/activity_log_service.dart';
 import '../widgets/printer_status_widget.dart';
 
@@ -2319,6 +2320,93 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Free Cloud Printing Setup Section
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.cloud, color: Colors.blue.shade600),
+                      const SizedBox(width: 8),
+                      Text(
+                        '🆓 Free Cloud Printing',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'FREE',
+                          style: TextStyle(
+                            color: Colors.green.shade700,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Print from anywhere to your restaurant printers. No computer needed at restaurant - everything in the cloud!',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green.shade600, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Zero monthly cost',
+                        style: TextStyle(color: Colors.green.shade700, fontSize: 12),
+                      ),
+                      const SizedBox(width: 16),
+                      Icon(Icons.check_circle, color: Colors.green.shade600, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        '5-minute setup',
+                        style: TextStyle(color: Colors.green.shade700, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FreeCloudSetupScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.cloud_upload),
+                      label: const Text('Setup Free Cloud Printing'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
                     ),
                   ),
                 ],

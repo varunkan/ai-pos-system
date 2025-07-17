@@ -25,6 +25,7 @@ import 'services/enhanced_printer_assignment_service.dart';
 import 'services/cross_platform_printer_sync_service.dart';
 import 'services/printer_validation_service.dart';
 import 'services/robust_kitchen_service.dart';
+import 'services/free_cloud_printing_service.dart';
 // Removed redundant printer services for streamlined architecture
 import 'services/analytics_service.dart';
 import 'services/settings_service.dart';
@@ -106,6 +107,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   EnhancedPrinterManager? _enhancedPrinterManager;
   PrinterValidationService? _printerValidationService;
   RobustKitchenService? _robustKitchenService;
+  FreeCloudPrintingService? _freeCloudPrintingService;
 
   @override
   void initState() {
@@ -441,6 +443,18 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         debugPrint('⚠️ Could not initialize RobustKitchenService - required services not available');
       }
       
+      // Initialize free cloud printing service
+      widget.progressService.addMessage('🆓 Setting up free cloud printing service...');
+      if (_printingService != null && _enhancedPrinterAssignmentService != null) {
+        _freeCloudPrintingService = FreeCloudPrintingService(
+          printingService: _printingService!,
+          assignmentService: _enhancedPrinterAssignmentService!,
+        );
+        debugPrint('✅ FreeCloudPrintingService initialized - free cloud printing ready');
+      } else {
+        debugPrint('⚠️ Could not initialize FreeCloudPrintingService - required services not available');
+      }
+      
       // Initialize auto printer discovery service (requires printing service, printer config service, and multi printer manager)
       widget.progressService.addMessage('🔍 Setting up automatic printer discovery...');
       if (_printingService != null && _printerConfigurationService != null && _enhancedPrinterAssignmentService != null) {
@@ -550,6 +564,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _crossPlatformPrinterSyncService = null;
       // Removed: _autoPrinterDiscoveryService reference
       _enhancedPrinterManager = null;
+      _freeCloudPrintingService = null;
       
       debugPrint('✅ Service cleanup completed - all services preserved');
     } catch (e) {
@@ -586,6 +601,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     providers.add(ChangeNotifierProvider<EnhancedPrinterManager?>.value(value: _enhancedPrinterManager));
     providers.add(ChangeNotifierProvider<PrinterValidationService?>.value(value: _printerValidationService));
     providers.add(ChangeNotifierProvider<RobustKitchenService?>.value(value: _robustKitchenService));
+    providers.add(ChangeNotifierProvider<FreeCloudPrintingService?>.value(value: _freeCloudPrintingService));
     
     return MultiProvider(
       providers: [
