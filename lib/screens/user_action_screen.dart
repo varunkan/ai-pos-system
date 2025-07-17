@@ -20,7 +20,7 @@ import 'admin_orders_screen.dart';
 import 'kitchen_screen.dart';
 import 'reports_screen.dart';
 import 'inventory_screen.dart';
-import '../main.dart'; // Import for LandingScreen
+import 'restaurant_auth_screen.dart'; // Import for RestaurantAuthScreen
 
 /// Main screen that displays user actions and navigation options.
 /// 
@@ -460,10 +460,10 @@ class UserActionScreen extends StatelessWidget {
               child: const Text('Logout'),
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
-                // Navigate back to landing screen and clear navigation stack
+                // Navigate back to restaurant auth screen and clear navigation stack
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (context) => const LandingScreen(),
+                    builder: (context) => const RestaurantAuthScreen(),
                   ),
                   (route) => false, // Remove all previous routes
                 );

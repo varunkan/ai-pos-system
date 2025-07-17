@@ -32,7 +32,12 @@ class Category {
     updatedAt = updatedAt ?? DateTime.now();
 
   /// Gets the icon for this category.
-  IconData get icon => IconData(iconCodePoint ?? Icons.restaurant_menu.codePoint, fontFamily: 'MaterialIcons');
+  IconData get icon {
+    if (iconCodePoint != null) {
+      return IconData(iconCodePoint!, fontFamily: 'MaterialIcons');
+    }
+    return Icons.restaurant_menu;
+  }
   
   /// Gets the color for this category.
   Color get color => Color(colorValue ?? Colors.blue.value);

@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ai_pos_system/main.dart';
 import 'package:ai_pos_system/services/database_service.dart';
 import 'package:ai_pos_system/services/menu_service.dart';
+import 'package:ai_pos_system/services/multi_tenant_auth_service.dart';
+import 'package:ai_pos_system/services/initialization_progress_service.dart';
 // import 'package:ai_pos_system/services/order_service.dart'; // Removed unused import
 import 'package:ai_pos_system/services/settings_service.dart';
 import 'package:ai_pos_system/services/user_service.dart';
@@ -83,7 +85,11 @@ void main() {
     });
 
     testWidgets('Basic app functionality and user login', (WidgetTester tester) async {
+      final authService = MultiTenantAuthService();
+      final progressService = InitializationProgressService();
       await tester.pumpWidget(MyApp(
+        authService: authService,
+        progressService: progressService,
         prefs: mockPrefs,
       ));
       await tester.pump();

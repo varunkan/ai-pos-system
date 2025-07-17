@@ -29,13 +29,15 @@ class ReservationService extends ChangeNotifier {
 
     try {
       final db = await _databaseService.database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        'reservations',
-        orderBy: 'reservationDate ASC, reservationTimeHour ASC, reservationTimeMinute ASC',
-      );
+      if (db != null) {
+        final List<Map<String, dynamic>> maps = await db.query(
+          'reservations',
+          orderBy: 'reservationDate ASC, reservationTimeHour ASC, reservationTimeMinute ASC',
+        );
 
-      _reservations = maps.map((map) => Reservation.fromJson(map)).toList();
-      _updateTodaysReservations();
+        _reservations = maps.map((map) => Reservation.fromJson(map)).toList();
+        _updateTodaysReservations();
+      }
     } catch (e) {
       debugPrint('Error loading reservations: $e');
       _reservations = [];
@@ -50,27 +52,30 @@ class ReservationService extends ChangeNotifier {
   Future<List<Reservation>> getReservationsForDate(DateTime date) async {
     try {
       final db = await _databaseService.database;
-      final startOfDay = DateTime(date.year, date.month, date.day);
-      final endOfDay = startOfDay.add(const Duration(days: 1));
+      if (db != null) {
+        final startOfDay = DateTime(date.year, date.month, date.day);
+        final endOfDay = startOfDay.add(const Duration(days: 1));
 
-      final List<Map<String, dynamic>> maps = await db.query(
-        'reservations',
-        where: 'reservationDate >= ? AND reservationDate < ?',
-        whereArgs: [startOfDay.toIso8601String(), endOfDay.toIso8601String()],
-        orderBy: 'reservationTimeHour ASC, reservationTimeMinute ASC',
-      );
+        final List<Map<String, dynamic>> maps = await db.query(
+          'reservations',
+          where: 'reservationDate >= ? AND reservationDate < ?',
+          whereArgs: [startOfDay.toIso8601String(), endOfDay.toIso8601String()],
+          orderBy: 'reservationTimeHour ASC, reservationTimeMinute ASC',
+        );
 
-      return maps.map((map) => Reservation.fromJson(map)).toList();
+        return maps.map((map) => Reservation.fromJson(map)).toList();
+      }
     } catch (e) {
       debugPrint('Error loading reservations for date: $e');
-      return [];
     }
+    return [];
   }
 
   /// Create a new reservation
   Future<bool> createReservation(Reservation reservation) async {
     try {
       final db = await _databaseService.database;
+      if (db == null) return false;
       
       // Create a clean reservation with validated foreign keys
       String? validTableId;
@@ -157,57 +162,63 @@ class ReservationService extends ChangeNotifier {
   Future<bool> _validateTableExists(String tableId) async {
     try {
       final db = await _databaseService.database;
-      final result = await db.query(
-        'tables',
-        where: 'id = ?',
-        whereArgs: [tableId],
-        limit: 1,
-      );
-      return result.isNotEmpty;
+      if (db != null) {
+        final result = await db.query(
+          'tables',
+          where: 'id = ?',
+          whereArgs: [tableId],
+          limit: 1,
+        );
+        return result.isNotEmpty;
+      }
     } catch (e) {
       debugPrint('Error validating table: $e');
-      return false;
     }
+    return false;
   }
 
   /// Validate if user exists
   Future<bool> _validateUserExists(String userId) async {
     try {
       final db = await _databaseService.database;
-      final result = await db.query(
-        'users',
-        where: 'id = ?',
-        whereArgs: [userId],
-        limit: 1,
-      );
-      return result.isNotEmpty;
+      if (db != null) {
+        final result = await db.query(
+          'users',
+          where: 'id = ?',
+          whereArgs: [userId],
+          limit: 1,
+        );
+        return result.isNotEmpty;
+      }
     } catch (e) {
       debugPrint('Error validating user: $e');
-      return false;
     }
+    return false;
   }
 
   /// Find an admin user or return null
   Future<String?> _findAdminUser() async {
     try {
       final db = await _databaseService.database;
-      final result = await db.query(
-        'users',
-        where: 'role = ?',
-        whereArgs: ['admin'],
-        limit: 1,
-      );
-      if (result.isNotEmpty) {
-        return result.first['id'] as String;
+      if (db != null) {
+        final result = await db.query(
+          'users',
+          where: 'role = ?',
+          whereArgs: ['admin'],
+          limit: 1,
+        );
+        if (result.isNotEmpty) {
+          return result.first['id'] as String;
+        }
+        
+        // If no admin user found, try to get any user
+        final anyUser = await db.query('users', limit: 1);
+        if (anyUser.isNotEmpty) {
+          return anyUser.first['id'] as String;
+        }
+        
+        return null;
       }
-      
-      // If no admin user found, try to get any user
-      final anyUser = await db.query('users', limit: 1);
-      if (anyUser.isNotEmpty) {
-        return anyUser.first['id'] as String;
-      }
-      
-      return null;
     } catch (e) {
       debugPrint('Error finding admin user: $e');
       return null;
@@ -218,6 +229,7 @@ class ReservationService extends ChangeNotifier {
   Future<bool> updateReservation(Reservation reservation) async {
     try {
       final db = await _databaseService.database;
+      if (db == null) return false;
       
       // Check for conflicts (excluding current reservation)
       final conflicts = await _checkReservationConflicts(reservation, excludeId: reservation.id);
@@ -271,16 +283,17 @@ class ReservationService extends ChangeNotifier {
   Future<bool> deleteReservation(String reservationId) async {
     try {
       final db = await _databaseService.database;
-      
-      await db.delete(
-        'reservations',
-        where: 'id = ?',
-        whereArgs: [reservationId],
-      );
+      if (db != null) {
+        await db.delete(
+          'reservations',
+          where: 'id = ?',
+          whereArgs: [reservationId],
+        );
 
-      _reservations.removeWhere((r) => r.id == reservationId);
-      _updateTodaysReservations();
-      notifyListeners();
+        _reservations.removeWhere((r) => r.id == reservationId);
+        _updateTodaysReservations();
+        notifyListeners();
+      }
       
       return true;
     } catch (e) {
@@ -293,39 +306,41 @@ class ReservationService extends ChangeNotifier {
   Future<List<Reservation>> _checkReservationConflicts(Reservation reservation, {String? excludeId}) async {
     try {
       final db = await _databaseService.database;
-      final reservationDate = DateTime(
-        reservation.reservationDate.year,
-        reservation.reservationDate.month,
-        reservation.reservationDate.day,
-      );
-      
-      // Get all reservations for the same date
-      final List<Map<String, dynamic>> maps = await db.query(
-        'reservations',
-        where: 'reservationDate = ? AND status != ? AND status != ?${excludeId != null ? ' AND id != ?' : ''}',
-        whereArgs: [
-          reservationDate.toIso8601String(),
-          ReservationStatus.cancelled.toString().split('.').last,
-          ReservationStatus.noShow.toString().split('.').last,
-          if (excludeId != null) excludeId,
-        ],
-      );
+      if (db != null) {
+        final reservationDate = DateTime(
+          reservation.reservationDate.year,
+          reservation.reservationDate.month,
+          reservation.reservationDate.day,
+        );
+        
+        // Get all reservations for the same date
+        final List<Map<String, dynamic>> maps = await db.query(
+          'reservations',
+          where: 'reservationDate = ? AND status != ? AND status != ?${excludeId != null ? ' AND id != ?' : ''}',
+          whereArgs: [
+            reservationDate.toIso8601String(),
+            ReservationStatus.cancelled.toString().split('.').last,
+            ReservationStatus.noShow.toString().split('.').last,
+            if (excludeId != null) excludeId,
+          ],
+        );
 
-      final existingReservations = maps.map((map) => Reservation.fromJson(map)).toList();
-      final conflicts = <Reservation>[];
+        final existingReservations = maps.map((map) => Reservation.fromJson(map)).toList();
+        final conflicts = <Reservation>[];
 
-      // Check for time conflicts (2-hour window)
-      for (final existing in existingReservations) {
-        if (_reservationsConflict(reservation, existing)) {
-          conflicts.add(existing);
+        // Check for time conflicts (2-hour window)
+        for (final existing in existingReservations) {
+          if (_reservationsConflict(reservation, existing)) {
+            conflicts.add(existing);
+          }
         }
-      }
 
-      return conflicts;
+        return conflicts;
+      }
     } catch (e) {
       debugPrint('Error checking reservation conflicts: $e');
-      return [];
     }
+    return [];
   }
 
   /// Check if two reservations conflict
@@ -379,34 +394,35 @@ class ReservationService extends ChangeNotifier {
   Future<void> initializeDatabase() async {
     try {
       final db = await _databaseService.database;
-      
-      // Drop existing table if it exists to apply schema changes
-      await db.execute('DROP TABLE IF EXISTS reservations');
-      
-      await db.execute('''
-        CREATE TABLE reservations (
-          id TEXT PRIMARY KEY,
-          customerName TEXT NOT NULL,
-          customerPhone TEXT,
-          customerEmail TEXT,
-          reservationDate TEXT NOT NULL,
-          reservationTimeHour INTEGER NOT NULL,
-          reservationTimeMinute INTEGER NOT NULL,
-          partySize INTEGER NOT NULL,
-          tableId TEXT,
-          status TEXT NOT NULL DEFAULT 'pending',
-          specialRequests TEXT,
-          createdAt TEXT NOT NULL,
-          createdBy TEXT,
-          confirmedAt TEXT,
-          arrivedAt TEXT,
-          seatedAt TEXT,
-          completedAt TEXT,
-          notes TEXT
-        )
-      ''');
+      if (db != null) {
+        // Drop existing table if it exists to apply schema changes
+        await db.execute('DROP TABLE IF EXISTS reservations');
+        
+        await db.execute('''
+          CREATE TABLE reservations (
+            id TEXT PRIMARY KEY,
+            customerName TEXT NOT NULL,
+            customerPhone TEXT,
+            customerEmail TEXT,
+            reservationDate TEXT NOT NULL,
+            reservationTimeHour INTEGER NOT NULL,
+            reservationTimeMinute INTEGER NOT NULL,
+            partySize INTEGER NOT NULL,
+            tableId TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            specialRequests TEXT,
+            createdAt TEXT NOT NULL,
+            createdBy TEXT,
+            confirmedAt TEXT,
+            arrivedAt TEXT,
+            seatedAt TEXT,
+            completedAt TEXT,
+            notes TEXT
+          )
+        ''');
 
-      debugPrint('Reservations table initialized successfully');
+        debugPrint('Reservations table initialized successfully');
+      }
     } catch (e) {
       debugPrint('Error initializing reservations database: $e');
     }

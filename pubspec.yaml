@@ -45,15 +45,41 @@ dependencies:
   flutter_bluetooth_serial: ^0.4.0
   web_socket_channel: ^2.4.0
   
-  # Database dependencies
+  # Cross-platform database dependencies
   sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.0  # For desktop/web support
   path: ^1.8.3
   audioplayers: ^5.2.1
+  
+  # Cloud synchronization and cross-platform storage (temporarily disabled due to build issues)
+  # firebase_core: ^2.24.2
+  # cloud_firestore: ^4.13.6
+  # firebase_auth: ^4.15.3
+  # firebase_storage: ^11.6.0
+  
+  # Cross-platform local storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  
+  # Network and connectivity
+  connectivity_plus: ^5.0.2
+  http: ^1.4.0
+  
+  # Cross-platform utilities
+  universal_io: ^2.2.2
+  platform_detect: ^2.0.8
+  
+  # Security and encryption
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   sqflite_common_ffi: ^2.3.0
+  
+  # Code generation for Hive
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.7
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

@@ -5,6 +5,7 @@ import '../models/order.dart';
 import '../models/user.dart';
 import '../services/order_service.dart';
 import '../services/printing_service.dart';
+import '../services/table_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/universal_navigation.dart';
@@ -41,6 +42,59 @@ class _KitchenScreenState extends State<KitchenScreen> with TickerProviderStateM
     'ready',
     'urgent',
   ];
+
+  /// Enhanced text styles for better prominence and visual appeal
+  static const _headerTextStyle = TextStyle(
+    fontSize: 26,
+    fontWeight: FontWeight.w900,
+    color: Color(0xFF1F2937),
+    letterSpacing: 0.8,
+  );
+
+  static const _orderNumberStyle = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w900,
+    color: Color(0xFF1F2937),
+    letterSpacing: 0.5,
+  );
+
+  static const _statusBadgeStyle = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w800,
+    letterSpacing: 1.0,
+  );
+
+  static const _tabLabelStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.3,
+  );
+
+  static const _timeStyle = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.2,
+  );
+
+  static const _itemNameStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: Color(0xFF1F2937),
+    letterSpacing: 0.3,
+  );
+
+  static const _quantityStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w800,
+    color: Color(0xFF059669),
+    letterSpacing: 0.2,
+  );
+
+  static const _buttonTextStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.5,
+  );
 
   @override
   void initState() {
@@ -645,11 +699,37 @@ class _KitchenScreenState extends State<KitchenScreen> with TickerProviderStateM
                         ),
                         if (order.tableId != null) ...[
                           const SizedBox(height: 2),
-                          Text(
-                            'Table ${order.tableId}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey.shade600,
-                            ),
+                          Consumer<TableService>(
+                            builder: (context, tableService, child) {
+                              final table = tableService.getTableById(order.tableId!);
+                              
+                              // Improved table number extraction and fallback
+                              String tableDisplay;
+                              if (table != null) {
+                                tableDisplay = table.number.toString();
+                              } else {
+                                // Try to extract table number from ID pattern
+                                final match = RegExp(r'table_(\d+)').firstMatch(order.tableId!);
+                                if (match != null) {
+                                  tableDisplay = match.group(1)!;
+                                } else {
+                                  // Fallback: try to extract any numbers from the ID
+                                  final numbers = RegExp(r'\d+').allMatches(order.tableId!);
+                                  if (numbers.isNotEmpty) {
+                                    tableDisplay = numbers.first.group(0)!;
+                                  } else {
+                                    tableDisplay = 'Unknown';
+                                  }
+                                }
+                              }
+                              
+                              return Text(
+                                'Table $tableDisplay',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey.shade600,
+                                ),
+                              );
+                            },
                           ),
                         ],
                         if (order.customerName != null && order.customerName!.isNotEmpty) ...[
@@ -1038,7 +1118,19 @@ class _OrderDetailModal extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Text('${order.type.toString().split('.').last.toUpperCase()} • ${order.tableId != null ? 'Table ${order.tableId}' : ''}'),
+        Consumer<TableService>(
+          builder: (context, tableService, child) {
+            final tableDisplay = order.tableId != null 
+                ? () {
+                    final table = tableService.getTableById(order.tableId!);
+                    final tableNumber = table?.number.toString() ?? order.tableId!;
+                    return ' • Table $tableNumber';
+                  }()
+                : '';
+            
+            return Text('${order.type.toString().split('.').last.toUpperCase()}$tableDisplay');
+          },
+        ),
         const SizedBox(height: 16),
         Text('Items', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
         const Divider(),

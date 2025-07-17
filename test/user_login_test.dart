@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ai_pos_system/main.dart';
 import 'package:ai_pos_system/services/database_service.dart';
 import 'package:ai_pos_system/services/user_service.dart';
+import 'package:ai_pos_system/services/multi_tenant_auth_service.dart';
+import 'package:ai_pos_system/services/initialization_progress_service.dart';
 import 'package:ai_pos_system/models/user.dart';
 
 class MockSharedPreferences implements SharedPreferences {
@@ -66,7 +68,11 @@ void main() {
     });
 
     testWidgets('User selection and login', (WidgetTester tester) async {
+      final authService = MultiTenantAuthService();
+      final progressService = InitializationProgressService();
       await tester.pumpWidget(MyApp(
+        authService: authService,
+        progressService: progressService,
         prefs: mockPrefs,
       ));
       await tester.pumpAndSettle();

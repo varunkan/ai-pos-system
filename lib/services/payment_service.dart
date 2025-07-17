@@ -34,7 +34,7 @@ class PaymentService with ChangeNotifier {
         paymentStatus: PaymentStatus.paid,
         paymentTransactionId: transactionId ?? 'TXN${DateTime.now().millisecondsSinceEpoch}',
       );
-      await orderService.updateOrderStatus(order.id, OrderStatus.completed);
+      await orderService.updateOrderStatus(order.id, 'completed');
       
       // TODO: Update inventory after successful payment
       // await inventoryService.updateInventoryOnOrderCompletion(updatedOrder);
@@ -68,7 +68,7 @@ class PaymentService with ChangeNotifier {
       order.copyWith(
         paymentStatus: PaymentStatus.refunded,
       );
-      await orderService.updateOrderStatus(order.id, OrderStatus.refunded);
+      await orderService.updateOrderStatus(order.id, 'refunded');
       // Optionally update payment info in DB
       // ...
       

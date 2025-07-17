@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 /// A reusable error dialog widget for consistent error handling.
 /// 
@@ -11,67 +12,105 @@ class ErrorDialog extends StatelessWidget {
   final bool showRetry;
 
   const ErrorDialog({
-    super.key,
+    Key? key,
     required this.title,
     required this.message,
     this.actionText,
     this.onAction,
     this.showRetry = false,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: [
-          const Icon(
-            Icons.error_outline,
-            color: Colors.red,
-            size: 24,
+    // FIXED: Add responsive constraints to prevent overflow
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = math.min(constraints.maxWidth * 0.8, 400.0);
+        final maxHeight = math.min(constraints.maxHeight * 0.6, 300.0);
+        
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth,
+              maxHeight: maxHeight,
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with icon and title
+                Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.red.shade600,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade800,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Scrollable message content
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      message,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey.shade700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Action buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (showRetry)
+                      TextButton(
+                        onPressed: onAction,
+                        child: Text(
+                          actionText ?? 'Retry',
+                          style: TextStyle(color: Theme.of(context).primaryColor),
+                        ),
+                      ),
+                    if (showRetry) const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        foregroundColor: Colors.grey.shade800,
+                        elevation: 0,
+                      ),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            message,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-        if (showRetry)
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(true); // Return true to indicate retry
-            },
-            child: const Text('Retry'),
-          ),
-        if (actionText != null && onAction != null)
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onAction!();
-            },
-            child: Text(actionText!),
-          ),
-      ],
+        );
+      },
     );
   }
 }

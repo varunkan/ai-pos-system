@@ -126,6 +126,7 @@ class AnalyticsService extends ChangeNotifier {
   /// Get hourly analytics for peak time analysis
   Future<List<Map<String, dynamic>>> _getHourlyAnalytics(DateTime start, DateTime end) async {
     final db = await _databaseService.database;
+    if (db == null) return [];
     
     final result = await db.rawQuery('''
       SELECT 
@@ -148,6 +149,7 @@ class AnalyticsService extends ChangeNotifier {
   /// Get daily analytics for trend analysis
   Future<List<Map<String, dynamic>>> _getDailyAnalytics(DateTime start, DateTime end) async {
     final db = await _databaseService.database;
+    if (db == null) return [];
     
     final result = await db.rawQuery('''
       SELECT 
@@ -169,6 +171,7 @@ class AnalyticsService extends ChangeNotifier {
   /// Get performance metrics
   Future<Map<String, dynamic>> _getPerformanceMetrics(DateTime start, DateTime end) async {
     final db = await _databaseService.database;
+    if (db == null) return {};
     
     // Kitchen performance
     final kitchenPerformance = await db.rawQuery('''
@@ -210,6 +213,7 @@ class AnalyticsService extends ChangeNotifier {
   /// Get customer insights
   Future<Map<String, dynamic>> _getCustomerInsights(DateTime start, DateTime end) async {
     final db = await _databaseService.database;
+    if (db == null) return {};
     
     // Customer frequency analysis
     final customerFrequency = await db.rawQuery('''
@@ -252,6 +256,7 @@ class AnalyticsService extends ChangeNotifier {
   /// Get financial analytics
   Future<Map<String, dynamic>> _getFinancialAnalytics(DateTime start, DateTime end) async {
     final db = await _databaseService.database;
+    if (db == null) return {};
     
     // Payment method analysis
     final paymentMethods = await db.rawQuery('''
@@ -288,6 +293,7 @@ class AnalyticsService extends ChangeNotifier {
   /// Get operational insights
   Future<Map<String, dynamic>> _getOperationalInsights(DateTime start, DateTime end) async {
     final db = await _databaseService.database;
+    if (db == null) return {};
     
     // Table utilization
     final tableUtilization = await db.rawQuery('''
@@ -685,5 +691,238 @@ class AnalyticsService extends ChangeNotifier {
     _aiInsights = null;
     _lastAiUpdate = null;
     notifyListeners();
+  }
+
+  Future<List<Map<String, dynamic>>> getTotalSales() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        return await db.rawQuery('''
+          SELECT SUM(total_amount) as total_sales, COUNT(*) as total_orders
+          FROM orders 
+          WHERE payment_status = 'completed'
+        ''');
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting total sales: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getSalesToday() async {
+    try {
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      final todayEnd = todayStart.add(const Duration(days: 1));
+      
+      final db = await _databaseService.database;
+      if (db != null) {
+        return await db.rawQuery('''
+          SELECT SUM(total_amount) as today_sales, COUNT(*) as today_orders
+          FROM orders 
+          WHERE payment_status = 'completed'
+          AND order_time >= ? AND order_time < ?
+        ''', [todayStart.toIso8601String(), todayEnd.toIso8601String()]);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting today sales: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTopSellingItems() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final result = await db.rawQuery('''
+          SELECT 
+            oi.menu_item_id,
+            mi.name as item_name,
+            SUM(oi.quantity) as total_quantity,
+            SUM(oi.total_price) as total_revenue
+          FROM order_items oi
+          JOIN menu_items mi ON oi.menu_item_id = mi.id
+          JOIN orders o ON oi.order_id = o.id
+          WHERE o.payment_status = 'completed'
+          GROUP BY oi.menu_item_id, mi.name
+          ORDER BY total_quantity DESC
+          LIMIT 10
+        ''');
+        return result;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting top selling items: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getOrdersByHour() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final result = await db.rawQuery('''
+          SELECT 
+            CAST(strftime('%H', order_time) AS INTEGER) as hour,
+            COUNT(*) as order_count,
+            SUM(total_amount) as total_sales
+          FROM orders
+          WHERE payment_status = 'completed'
+          GROUP BY hour
+          ORDER BY hour
+        ''');
+        return result;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting orders by hour: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getOrdersByDay() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final result = await db.rawQuery('''
+          SELECT 
+            DATE(order_time) as date,
+            COUNT(*) as order_count,
+            SUM(total_amount) as total_sales
+          FROM orders
+          WHERE payment_status = 'completed'
+          GROUP BY date
+          ORDER BY date DESC
+          LIMIT 30
+        ''');
+        return result;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting orders by day: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getOrdersByStatus() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        return await db.rawQuery('''
+          SELECT status, COUNT(*) as count
+          FROM orders
+          GROUP BY status
+        ''');
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting orders by status: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAverageOrderValue() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        return await db.rawQuery('''
+          SELECT AVG(total_amount) as average_order_value
+          FROM orders 
+          WHERE payment_status = 'completed'
+        ''');
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting average order value: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCustomerAnalytics() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        return await db.rawQuery('''
+          SELECT 
+            customer_name,
+            customer_phone,
+            COUNT(*) as order_count,
+            SUM(total_amount) as total_spent,
+            AVG(total_amount) as average_order_value
+          FROM orders
+          WHERE payment_status = 'completed'
+          AND customer_name IS NOT NULL
+          AND customer_name != ''
+          GROUP BY customer_name, customer_phone
+          ORDER BY total_spent DESC
+          LIMIT 50
+        ''');
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting customer analytics: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPaymentMethodAnalytics() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        return await db.rawQuery('''
+          SELECT 
+            payment_method,
+            COUNT(*) as transaction_count,
+            SUM(total_amount) as total_amount
+          FROM orders
+          WHERE payment_status = 'completed'
+          GROUP BY payment_method
+          ORDER BY total_amount DESC
+        ''');
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting payment method analytics: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> getDashboardStats() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final result = await db.rawQuery('''
+          SELECT 
+            COUNT(*) as total_orders,
+            SUM(CASE WHEN payment_status = 'completed' THEN total_amount ELSE 0 END) as total_revenue,
+            COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_orders,
+            COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as active_orders
+          FROM orders
+        ''');
+        
+        return result.isNotEmpty ? result.first : {
+          'total_orders': 0,
+          'total_revenue': 0.0,
+          'pending_orders': 0,
+          'active_orders': 0,
+        };
+      }
+      return {
+        'total_orders': 0,
+        'total_revenue': 0.0,
+        'pending_orders': 0,
+        'active_orders': 0,
+      };
+    } catch (e) {
+      debugPrint('Error getting dashboard stats: $e');
+      return {
+        'total_orders': 0,
+        'total_revenue': 0.0,
+        'pending_orders': 0,
+        'active_orders': 0,
+      };
+    }
   }
 } 

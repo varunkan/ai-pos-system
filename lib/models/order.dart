@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 import 'package:ai_pos_system/models/menu_item.dart';
+import 'package:flutter/material.dart';
 
 enum OrderStatus {
   pending,
@@ -119,11 +120,32 @@ class Order {
     createdAt = createdAt ?? DateTime.now(),
     updatedAt = updatedAt ?? DateTime.now();
 
-  /// Returns the subtotal for the order.
-  double get subtotal => _storedSubtotal ?? _calculateSubtotal(items);
-  /// Returns the total amount for the order.
-  double get totalAmount => _storedTotalAmount ?? (subtotal + taxAmount + tipAmount + hstAmount + gratuityAmount - discountAmount);
+  /// Returns the subtotal for the order (always calculated from items)
+  double get subtotal => _calculateSubtotal(items);
   
+  /// Returns the subtotal after applying discount
+  double get subtotalAfterDiscount => subtotal - (discountAmount ?? 0.0);
+  
+  /// Returns the HST amount calculated on the discounted subtotal
+  double get calculatedHstAmount => subtotalAfterDiscount * 0.13;
+  
+  /// Returns the total amount for the order with proper calculation
+  double get totalAmount {
+    // Always calculate dynamically for accurate totals
+    // 1. Start with subtotal after discount
+    // 2. Add HST on discounted amount
+    // 3. Add gratuity/tip (prioritize gratuityAmount over tipAmount)
+    final baseAfterDiscount = subtotalAfterDiscount;
+    final hstAmount = calculatedHstAmount;
+    final gratuityTip = (gratuityAmount ?? 0.0) + (tipAmount ?? 0.0);
+    
+    final calculatedTotal = baseAfterDiscount + hstAmount + gratuityTip;
+    
+    // If we have a stored total and it's different from calculated, use calculated
+    // This ensures consistency when values change
+    return calculatedTotal;
+  }
+
   /// Alias for totalAmount
   double get total => totalAmount;
 
@@ -326,6 +348,89 @@ class Order {
   bool get isActive => status != OrderStatus.completed && 
                       status != OrderStatus.cancelled && 
                       status != OrderStatus.refunded;
+
+  /// NEW: Comprehensive order state protection
+  bool get isModifiable => status != OrderStatus.completed && 
+                          status != OrderStatus.cancelled && 
+                          status != OrderStatus.refunded;
+
+  bool get isProtected => !isModifiable;
+
+  /// Returns protection reason for user feedback
+  String get protectionReason {
+    switch (status) {
+      case OrderStatus.cancelled:
+        return 'Order has been cancelled';
+      case OrderStatus.completed:
+        return 'Order has been completed';
+      case OrderStatus.refunded:
+        return 'Order has been refunded';
+      default:
+        return 'Order cannot be modified';
+    }
+  }
+
+  /// Returns appropriate protection message for UI
+  String get protectionMessage {
+    switch (status) {
+      case OrderStatus.cancelled:
+        return 'This order was cancelled and cannot be modified';
+      case OrderStatus.completed:
+        return 'This order is completed and cannot be modified';
+      case OrderStatus.refunded:
+        return 'This order has been refunded and cannot be modified';
+      default:
+        return 'This order cannot be modified';
+    }
+  }
+
+  /// Returns color for order status display
+  Color get statusColor {
+    switch (status) {
+      case OrderStatus.pending:
+        return Colors.orange;
+      case OrderStatus.confirmed:
+        return Colors.blue;
+      case OrderStatus.preparing:
+        return Colors.purple;
+      case OrderStatus.ready:
+        return Colors.green;
+      case OrderStatus.served:
+        return Colors.teal;
+      case OrderStatus.completed:
+        return Colors.grey;
+      case OrderStatus.cancelled:
+        return Colors.red;
+      case OrderStatus.refunded:
+        return Colors.red.shade300;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// Returns icon for order status display
+  IconData get statusIcon {
+    switch (status) {
+      case OrderStatus.pending:
+        return Icons.pending;
+      case OrderStatus.confirmed:
+        return Icons.check_circle_outline;
+      case OrderStatus.preparing:
+        return Icons.restaurant;
+      case OrderStatus.ready:
+        return Icons.room_service;
+      case OrderStatus.served:
+        return Icons.done_all;
+      case OrderStatus.completed:
+        return Icons.task_alt;
+      case OrderStatus.cancelled:
+        return Icons.cancel;
+      case OrderStatus.refunded:
+        return Icons.money_off;
+      default:
+        return Icons.help_outline;
+    }
+  }
 
   Duration get preparationTime {
     if (actualReadyTime != null) {

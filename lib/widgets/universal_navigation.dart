@@ -5,7 +5,7 @@ import '../models/printer_assignment.dart';
 import '../services/order_service.dart';
 import '../services/reservation_service.dart';
 import '../services/printing_service.dart';
-import '../services/printer_assignment_service.dart';
+import '../services/enhanced_printer_assignment_service.dart';
 import '../screens/order_type_selection_screen.dart';
 import '../screens/admin_panel_screen.dart';
 import '../screens/kitchen_screen.dart';
@@ -13,13 +13,15 @@ import '../screens/reports_screen.dart';
 import '../screens/admin_orders_screen.dart';
 import '../screens/daily_bookings_screen.dart';
 import '../screens/reservations_screen.dart';
-import '../screens/server_selection_screen.dart';
-import '../screens/printer_selection_screen.dart';
-import '../screens/printer_assignment_screen.dart';
+
+// Printer selection now handled by UnifiedPrinterDashboard
+import '../screens/unified_printer_dashboard.dart';
 import '../main.dart';
+import '../services/multi_tenant_auth_service.dart';
+import '../screens/restaurant_auth_screen.dart';
 
 /// Universal navigation widget that provides consistent navigation across all screens
-class UniversalNavigation extends StatelessWidget {
+class UniversalNavigation extends StatelessWidget implements PreferredSizeWidget {
   final User? currentUser;
   final String currentScreenTitle;
   final VoidCallback? onBack;
@@ -44,7 +46,38 @@ class UniversalNavigation extends StatelessWidget {
     }
 
     return AppBar(
-      title: Text(currentScreenTitle),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Screen title on the left
+          Expanded(
+            child: Text(
+              currentScreenTitle,
+              textAlign: TextAlign.left,
+            ),
+          ),
+          // Central POS Dashboard button
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: ElevatedButton.icon(
+              onPressed: () => _navigateToPOSDashboard(context),
+              icon: const Icon(Icons.dashboard, size: 18),
+              label: const Text('POS Dashboard'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+          ),
+          // Spacer to balance the layout
+          const Expanded(child: SizedBox()),
+        ],
+      ),
       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       elevation: 2,
       leading: _buildLeadingWidget(context),
@@ -107,6 +140,24 @@ class UniversalNavigation extends StatelessWidget {
             child: Text(
               currentScreenTitle,
               style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
+          // Central POS Dashboard button for fullscreen mode
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: ElevatedButton.icon(
+              onPressed: () => _navigateToPOSDashboard(context),
+              icon: const Icon(Icons.dashboard, size: 16),
+              label: const Text('POS Dashboard'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
             ),
           ),
           if (showQuickActions) ..._buildQuickActions(context),
@@ -217,174 +268,7 @@ class UniversalNavigation extends StatelessWidget {
       );
     }
 
-    // Enhanced Printer Actions with Status and Submenu
-    actions.add(
-      Consumer2<PrintingService, PrinterAssignmentService>(
-        builder: (context, printingService, assignmentService, child) {
-          final isConnected = printingService.isConnected;
-          final assignmentCount = assignmentService.assignments.length;
-          
-          return Stack(
-            children: [
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.print,
-                  color: isConnected ? Colors.green : null,
-                ),
-                tooltip: isConnected 
-                    ? 'Printer Connected (${assignmentCount} assignments)' 
-                    : 'Printer Settings',
-                onSelected: (value) => _handlePrinterAction(context, value),
-                itemBuilder: (context) => [
-                  // Connection Status Header
-                  PopupMenuItem(
-                    enabled: false,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isConnected ? Icons.check_circle : Icons.error_outline,
-                            color: isConnected ? Colors.green : Colors.red,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  isConnected ? 'Printer Connected' : 'No Printer Connected',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isConnected ? Colors.green : Colors.red,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                if (isConnected && printingService.connectedPrinter != null) ...[
-                                  Text(
-                                    printingService.connectedPrinter!.name,
-                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
-                                  ),
-                                ],
-                                if (assignmentCount > 0) ...[
-                                  Text(
-                                    '$assignmentCount active assignments',
-                                    style: const TextStyle(fontSize: 10, color: Colors.blue),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  
-                  // Connection Management
-                  const PopupMenuItem(
-                    value: 'connection',
-                    child: ListTile(
-                      leading: Icon(Icons.wifi),
-                      title: Text('Printer Connection'),
-                      subtitle: Text('Connect to WiFi/Bluetooth printers'),
-                      dense: true,
-                    ),
-                  ),
-                  
-                  // Assignment Management
-                  PopupMenuItem(
-                    value: 'assignments',
-                    child: ListTile(
-                      leading: const Icon(Icons.assignment),
-                      title: const Text('Printer Assignments'),
-                      subtitle: Text('$assignmentCount category & item routings'),
-                      dense: true,
-                    ),
-                  ),
-                  
-                  // IP Configuration
-                  const PopupMenuItem(
-                    value: 'ip_config',
-                    child: ListTile(
-                      leading: Icon(Icons.settings_ethernet),
-                      title: Text('Configure IP Addresses'),
-                      subtitle: Text('Set printer network addresses'),
-                      dense: true,
-                    ),
-                  ),
-                  
-                  const PopupMenuDivider(),
-                  
-                  // Quick Actions
-                  PopupMenuItem(
-                    value: 'test_print',
-                    enabled: isConnected,
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.print_outlined,
-                        color: isConnected ? null : Colors.grey,
-                      ),
-                      title: Text(
-                        'Test Print',
-                        style: TextStyle(
-                          color: isConnected ? null : Colors.grey,
-                        ),
-                      ),
-                      dense: true,
-                    ),
-                  ),
-                  
-                  if (assignmentCount > 0) ...[
-                    const PopupMenuItem(
-                      value: 'view_assignments',
-                      child: ListTile(
-                        leading: Icon(Icons.visibility),
-                        title: Text('View All Assignments'),
-                        dense: true,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              
-              // Status Indicator Dots
-              if (isConnected)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.white, width: 1),
-                    ),
-                  ),
-                ),
-              
-              if (assignmentCount > 0 && !isConnected)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.white, width: 1),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
+    // Printer features removed - only accessible via Admin Panel
 
     return actions;
   }
@@ -572,7 +456,14 @@ class UniversalNavigation extends StatelessWidget {
         _navigateToPrinterAssignments(context);
         break;
       case 'switch_server':
-        _navigateToServerSelection(context);
+        // Navigate to landing screen instead of server selection
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const RestaurantAuthScreen(),
+          ),
+          (route) => false,
+        );
         break;
       case 'logout':
         _performLogout(context);
@@ -585,7 +476,7 @@ class UniversalNavigation extends StatelessWidget {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (context) => OrderTypeSelectionScreen(user: currentUser!),
+        builder: (context) => const OrderTypeSelectionScreen(),
       ),
       (route) => false,
     );
@@ -595,10 +486,32 @@ class UniversalNavigation extends StatelessWidget {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (context) => OrderTypeSelectionScreen(user: currentUser!),
+        builder: (context) => const OrderTypeSelectionScreen(),
       ),
       (route) => false,
     );
+  }
+
+  void _navigateToPOSDashboard(BuildContext context) {
+    // Navigate to the main POS dashboard (OrderTypeSelectionScreen)
+    if (currentUser != null) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const OrderTypeSelectionScreen(),
+        ),
+        (route) => false,
+      );
+    } else {
+      // If no user is available, go to landing screen
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const RestaurantAuthScreen(),
+        ),
+        (route) => false,
+      );
+    }
   }
 
   void _navigateToActiveOrders(BuildContext context) {
@@ -655,47 +568,39 @@ class UniversalNavigation extends StatelessWidget {
     );
   }
 
-  void _navigateToServerSelection(BuildContext context) {
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ServerSelectionScreen(),
-      ),
-      (route) => false,
-    );
-  }
+
 
   // Enhanced printer navigation methods
   void _navigateToPrinterConnection(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PrinterSelectionScreen(user: currentUser),
+        builder: (context) => const UnifiedPrinterDashboard(),
       ),
     );
   }
 
   void _navigateToPrinterAssignments(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const PrinterAssignmentScreen(),
-      ),
-    );
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const UnifiedPrinterDashboard(),
+    ),
+  );
+}
 
   void _navigateToPrinterIPConfig(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const PrinterAssignmentScreen(openIPConfigOnStart: true),
+        builder: (context) => const UnifiedPrinterDashboard(),
       ),
     );
   }
 
   void _showPrinterAssignmentsSummary(BuildContext context) {
-    final assignmentService = Provider.of<PrinterAssignmentService>(context, listen: false);
-    final assignments = assignmentService.assignments;
+    final assignmentService = Provider.of<EnhancedPrinterAssignmentService?>(context, listen: false);
+    final assignments = assignmentService?.assignments ?? [];
     
     showDialog(
       context: context,
@@ -889,7 +794,7 @@ class UniversalNavigation extends StatelessWidget {
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const LandingScreen(),
+                  builder: (context) => const RestaurantAuthScreen(),
                 ),
                 (route) => false,
               );
@@ -901,6 +806,9 @@ class UniversalNavigation extends StatelessWidget {
       ),
     );
   }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
 /// Universal AppBar that delegates to UniversalNavigation
@@ -934,7 +842,38 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
     
     // Return the AppBar from UniversalNavigation build method
     return AppBar(
-      title: Text(title),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Screen title on the left
+          Expanded(
+            child: Text(
+              title,
+              textAlign: TextAlign.left,
+            ),
+          ),
+          // Central POS Dashboard button
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: ElevatedButton.icon(
+              onPressed: () => _navigateToPOSDashboard(context),
+              icon: const Icon(Icons.dashboard, size: 18),
+              label: const Text('POS Dashboard'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+          ),
+          // Spacer to balance the layout
+          const Expanded(child: SizedBox()),
+        ],
+      ),
       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       elevation: 2,
       leading: onBack != null 
@@ -980,7 +919,6 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
         const SizedBox(width: 16),
       ],
-      bottom: bottom,
     );
   }
 
@@ -1040,40 +978,7 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
     );
 
-    // Enhanced Printer Actions with Status
-    actions.add(
-      Consumer2<PrintingService, PrinterAssignmentService>(
-        builder: (context, printingService, assignmentService, child) {
-          final isConnected = printingService.isConnected;
-          return PopupMenuButton<String>(
-            icon: Icon(
-              Icons.print,
-              color: isConnected ? Colors.green : null,
-            ),
-            tooltip: 'Printer Settings',
-            onSelected: (value) => _handlePrinterAction(context, value),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'connection',
-                child: ListTile(
-                  leading: Icon(Icons.wifi),
-                  title: Text('Printer Connection'),
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'assignments',
-                child: ListTile(
-                  leading: Icon(Icons.assignment),
-                  title: Text('Printer Assignments'),
-                  dense: true,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+    // Printer features removed - only accessible via Admin Panel
 
     return actions;
   }
@@ -1084,7 +989,7 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PrinterSelectionScreen(user: currentUser),
+            builder: (context) => const UnifiedPrinterDashboard(),
           ),
         );
         break;
@@ -1092,10 +997,32 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const PrinterAssignmentScreen(),
+            builder: (context) => const UnifiedPrinterDashboard(),
           ),
         );
         break;
+    }
+  }
+
+  void _navigateToPOSDashboard(BuildContext context) {
+    // Navigate to the main POS dashboard (OrderTypeSelectionScreen)
+    if (currentUser != null) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const OrderTypeSelectionScreen(),
+        ),
+        (route) => false,
+      );
+    } else {
+      // If no user is available, go to landing screen
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const RestaurantAuthScreen(),
+        ),
+        (route) => false,
+      );
     }
   }
 
@@ -1105,7 +1032,7 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PrinterSelectionScreen(user: currentUser),
+            builder: (context) => const UnifiedPrinterDashboard(),
           ),
         );
         break;
@@ -1113,7 +1040,7 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const PrinterAssignmentScreen(),
+            builder: (context) => const UnifiedPrinterDashboard(),
           ),
         );
         break;
@@ -1124,4 +1051,4 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => Size.fromHeight(
     kToolbarHeight + (bottom?.preferredSize.height ?? 0.0),
   );
-} 
+}

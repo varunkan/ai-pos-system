@@ -2,6 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:ai_pos_system/services/database_service.dart';
+import 'package:ai_pos_system/models/customer.dart';
+import 'package:ai_pos_system/models/loyalty_transaction.dart';
+import 'package:ai_pos_system/models/loyalty_reward.dart';
+import 'package:ai_pos_system/models/order.dart';
+import 'package:uuid/uuid.dart';
 
 /// Customer loyalty and engagement service
 class LoyaltyService extends ChangeNotifier {
@@ -23,6 +28,7 @@ class LoyaltyService extends ChangeNotifier {
   }) async {
     try {
       final db = await _databaseService.database;
+      if (db == null) throw Exception('Database not available');
       
       // Check if customer exists
       final existing = await db.query(
@@ -75,6 +81,7 @@ class LoyaltyService extends ChangeNotifier {
   Future<Map<String, dynamic>> getCustomerProfile(String phone) async {
     try {
       final db = await _databaseService.database;
+      if (db == null) throw Exception('Database not available');
       
       final customers = await db.query(
         'customers',
@@ -120,6 +127,7 @@ class LoyaltyService extends ChangeNotifier {
   Future<void> awardPoints(String phone, double orderAmount) async {
     try {
       final db = await _databaseService.database;
+      if (db == null) throw Exception('Database not available');
       
       final pointsEarned = (orderAmount * _pointsPerDollar).round();
       
@@ -157,6 +165,7 @@ class LoyaltyService extends ChangeNotifier {
   Future<Map<String, dynamic>> redeemPoints(String phone, int pointsToRedeem) async {
     try {
       final db = await _databaseService.database;
+      if (db == null) throw Exception('Database not available');
       
       final customers = await db.query(
         'customers',
@@ -208,6 +217,7 @@ class LoyaltyService extends ChangeNotifier {
   /// Get customer favorites
   Future<List<Map<String, dynamic>>> _getFavoriteItems(String phone) async {
     final db = await _databaseService.database;
+    if (db == null) return [];
     
     return await db.rawQuery('''
       SELECT 
@@ -360,6 +370,7 @@ class LoyaltyService extends ChangeNotifier {
       final newTier = tierInfo['current_tier'] as String;
       
       final db = await _databaseService.database;
+      if (db == null) return;
       await db.update(
         'customers',
         {'tier': newTier},
@@ -375,6 +386,7 @@ class LoyaltyService extends ChangeNotifier {
   Future<void> _logPointsTransaction(String phone, int points, String type, String description) async {
     try {
       final db = await _databaseService.database;
+      if (db == null) return;
       
       await db.insert('loyalty_transactions', {
         'id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -393,6 +405,7 @@ class LoyaltyService extends ChangeNotifier {
   Future<Map<String, dynamic>> getLoyaltyAnalytics() async {
     try {
       final db = await _databaseService.database;
+      if (db == null) throw Exception('Database not available');
       
       // Customer tier distribution
       final tierDistribution = await db.rawQuery('''
@@ -435,6 +448,359 @@ class LoyaltyService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error getting loyalty analytics: $e');
       rethrow;
+    }
+  }
+
+  Future<Customer?> getCustomerByPhone(String phone) async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final List<Map<String, dynamic>> maps = await db.query(
+          'customers',
+          where: 'phone = ?',
+          whereArgs: [phone],
+        );
+        
+        if (maps.isNotEmpty) {
+          return Customer.fromJson(maps.first);
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting customer by phone: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateCustomer(Customer customer) async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        await db.update(
+          'customers',
+          customer.toJson(),
+          where: 'id = ?',
+          whereArgs: [customer.id],
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error updating customer: $e');
+    }
+  }
+
+  Future<void> createCustomer(Customer customer) async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        await db.insert('customers', customer.toJson());
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error creating customer: $e');
+    }
+  }
+
+  Future<List<Customer>> getTopCustomers({int limit = 10}) async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final List<Map<String, dynamic>> maps = await db.query(
+          'customers',
+          orderBy: 'total_spent DESC',
+          limit: limit,
+        );
+        
+        return maps.map((map) => Customer.fromJson(map)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting top customers: $e');
+      return [];
+    }
+  }
+
+  Future<List<Customer>> searchCustomers(String query) async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final List<Map<String, dynamic>> maps = await db.query(
+          'customers',
+          where: 'name LIKE ? OR phone LIKE ? OR email LIKE ?',
+          whereArgs: ['%$query%', '%$query%', '%$query%'],
+          orderBy: 'name ASC',
+        );
+        
+        return maps.map((map) => Customer.fromJson(map)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error searching customers: $e');
+      return [];
+    }
+  }
+
+  Future<void> addLoyaltyPoints(String customerId, double points, String reason) async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        await db.rawUpdate('''
+          UPDATE customers 
+          SET loyalty_points = loyalty_points + ? 
+          WHERE id = ?
+        ''', [points, customerId]);
+        
+        // Add loyalty transaction record
+        await _addLoyaltyTransaction(customerId, points, 'earned', reason);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error adding loyalty points: $e');
+    }
+  }
+
+  Future<List<LoyaltyTransaction>> getLoyaltyHistory(String customerId) async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final List<Map<String, dynamic>> maps = await db.query(
+          'loyalty_transactions',
+          where: 'customer_id = ?',
+          whereArgs: [customerId],
+          orderBy: 'created_at DESC',
+        );
+        
+        return maps.map((map) => LoyaltyTransaction.fromJson(map)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting loyalty history: $e');
+      return [];
+    }
+  }
+
+  Future<void> redeemLoyaltyPoints(String customerId, double points, String reason) async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        await db.rawUpdate('''
+          UPDATE customers 
+          SET loyalty_points = loyalty_points - ? 
+          WHERE id = ? AND loyalty_points >= ?
+        ''', [points, customerId, points]);
+        
+        // Add loyalty transaction record
+        await _addLoyaltyTransaction(customerId, -points, 'redeemed', reason);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error redeeming loyalty points: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getLoyaltyStats() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final result = await db.rawQuery('''
+          SELECT 
+            COUNT(*) as total_customers,
+            SUM(loyalty_points) as total_points,
+            AVG(loyalty_points) as average_points
+          FROM customers
+        ''');
+        
+        if (result.isNotEmpty) {
+          return result.first;
+        }
+      }
+      return {
+        'total_customers': 0,
+        'total_points': 0.0,
+        'average_points': 0.0,
+      };
+    } catch (e) {
+      debugPrint('Error getting loyalty stats: $e');
+      return {
+        'total_customers': 0,
+        'total_points': 0.0,
+        'average_points': 0.0,
+      };
+    }
+  }
+
+  Future<void> updateCustomerFromOrder(Order order) async {
+    if (order.customerPhone == null || order.customerPhone!.isEmpty) return;
+    
+    try {
+      // Calculate points (1 point per dollar spent)
+      final pointsEarned = order.totalAmount.floor().toDouble();
+      
+      // Get or create customer
+      Customer? customer = await getCustomerByPhone(order.customerPhone!);
+      
+      if (customer == null) {
+        // Create new customer
+        customer = Customer(
+          id: const Uuid().v4(),
+          name: order.customerName ?? 'Customer',
+          phone: order.customerPhone!,
+          email: order.customerEmail,
+          loyaltyPoints: pointsEarned,
+          totalSpent: order.totalAmount,
+          visitCount: 1,
+          lastVisit: DateTime.now(),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await createCustomer(customer);
+      } else {
+        // Update existing customer
+        final visitCount = customer.visitCount + 1;
+        final updatedCustomer = Customer(
+          id: customer.id,
+          name: order.customerName ?? customer.name,
+          phone: customer.phone,
+          email: order.customerEmail ?? customer.email,
+          loyaltyPoints: customer.loyaltyPoints + pointsEarned,
+          totalSpent: customer.totalSpent + order.totalAmount,
+          visitCount: visitCount,
+          lastVisit: DateTime.now(),
+          createdAt: customer.createdAt,
+          updatedAt: DateTime.now(),
+        );
+        
+        final db = await _databaseService.database;
+        if (db != null) {
+          await db.update(
+            'customers',
+            updatedCustomer.toJson(),
+            where: 'id = ?',
+            whereArgs: [customer.id],
+          );
+        }
+      }
+      
+      // Add loyalty transaction
+      await _addLoyaltyTransaction(
+        customer.id,
+        pointsEarned,
+        'earned',
+        'Order #${order.orderNumber}',
+      );
+      
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error updating customer from order: $e');
+    }
+  }
+
+  Future<void> _addLoyaltyTransaction(
+    String customerId,
+    double points,
+    String type,
+    String description,
+  ) async {
+    try {
+      final transaction = LoyaltyTransaction(
+        id: const Uuid().v4(),
+        customerId: customerId,
+        points: points,
+        type: type,
+        description: description,
+        createdAt: DateTime.now(),
+      );
+      
+      final db = await _databaseService.database;
+      if (db != null) {
+        await db.insert('loyalty_transactions', transaction.toJson());
+      }
+    } catch (e) {
+      debugPrint('Error adding loyalty transaction: $e');
+    }
+  }
+
+  Future<List<LoyaltyReward>> getAvailableRewards() async {
+    try {
+      final db = await _databaseService.database;
+      if (db != null) {
+        final List<Map<String, dynamic>> maps = await db.rawQuery('''
+          SELECT * FROM loyalty_rewards 
+          WHERE is_active = 1 
+          ORDER BY points_required ASC
+        ''');
+        
+        return maps.map((map) => LoyaltyReward.fromJson(map)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting available rewards: $e');
+      return [];
+    }
+  }
+
+  Future<List<LoyaltyReward>> getEligibleRewards(String customerId) async {
+    try {
+      final customer = await getCustomerByPhone(''); // This needs to be fixed
+      if (customer == null) return [];
+      
+      final db = await _databaseService.database;
+      if (db != null) {
+        final List<Map<String, dynamic>> maps = await db.rawQuery('''
+          SELECT * FROM loyalty_rewards 
+          WHERE is_active = 1 AND points_required <= ?
+          ORDER BY points_required ASC
+        ''', [customer.loyaltyPoints]);
+        
+        return maps.map((map) => LoyaltyReward.fromJson(map)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting eligible rewards: $e');
+      return [];
+    }
+  }
+
+  Future<bool> redeemReward(String customerId, String rewardId) async {
+    try {
+      final db = await _databaseService.database;
+      if (db == null) return false;
+      
+      // Get reward details
+      final rewardMaps = await db.rawQuery('''
+        SELECT * FROM loyalty_rewards WHERE id = ? AND is_active = 1
+      ''', [rewardId]);
+      
+      if (rewardMaps.isEmpty) return false;
+      
+      final reward = LoyaltyReward.fromJson(rewardMaps.first);
+      
+      // Check if customer has enough points
+      final customerMaps = await db.query(
+        'customers',
+        where: 'id = ?',
+        whereArgs: [customerId],
+      );
+      
+      if (customerMaps.isEmpty) return false;
+      
+      final customer = Customer.fromJson(customerMaps.first);
+      
+      if (customer.loyaltyPoints < reward.pointsRequired) {
+        return false;
+      }
+      
+      // Redeem points
+      await redeemLoyaltyPoints(
+        customerId,
+        reward.pointsRequired,
+        'Redeemed: ${reward.name}',
+      );
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error redeeming reward: $e');
+      return false;
     }
   }
 } 

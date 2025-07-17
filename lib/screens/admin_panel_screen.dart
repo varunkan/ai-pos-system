@@ -1,23 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
-import '../models/category.dart';
+import '../models/category.dart' as pos_category;
 import '../models/menu_item.dart';
+import '../models/order.dart';
 
 import '../models/reservation.dart';
 import '../services/menu_service.dart';
+import '../services/order_service.dart';
+import '../services/order_log_service.dart';
 import '../services/table_service.dart';
-import '../services/printer_assignment_service.dart';
+import '../services/enhanced_printer_assignment_service.dart';
+import 'comprehensive_printer_assignment_screen.dart';
 
-import '../services/reservation_service.dart';
 import '../services/user_service.dart';
 import '../widgets/universal_navigation.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/confirmation_dialog.dart';
 import '../widgets/form_field.dart';
-import '../screens/reservations_screen.dart';
-import '../screens/printer_assignment_screen.dart';
+
+import '../screens/unified_printer_dashboard.dart';
+import '../screens/admin_orders_screen.dart';
+import '../screens/kitchen_screen.dart';
+import '../screens/reports_screen.dart';
+import '../screens/inventory_screen.dart';
+import '../screens/tables_screen.dart';
+import '../screens/user_management_screen.dart';
+import '../screens/user_activity_monitoring_screen.dart';
+import '../services/activity_log_service.dart';
+import '../widgets/printer_status_widget.dart';
 
 enum UserManagementView { addUser, existingUsers }
 
@@ -31,10 +43,74 @@ class AdminPanelScreen extends StatefulWidget {
   State<AdminPanelScreen> createState() => _AdminPanelScreenState();
 }
 
-class _AdminPanelScreenState extends State<AdminPanelScreen> {
+class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProviderStateMixin {
+  /// Enhanced text styles for better prominence and visual appeal
+  static const _headerTextStyle = TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.w900,
+    color: Color(0xFF1F2937),
+    letterSpacing: 0.8,
+  );
+
+  static const _titleTextStyle = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w800,
+    color: Color(0xFF1F2937),
+    letterSpacing: 0.5,
+  );
+
+  static const _subtitleTextStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: Color(0xFF3B82F6),
+    letterSpacing: 0.3,
+  );
+
+  static const _bodyTextStyle = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFF374151),
+    height: 1.4,
+  );
+
+  static const _labelTextStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    color: Color(0xFF6B7280),
+    letterSpacing: 0.2,
+  );
+
+  static const _valueTextStyle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w800,
+    color: Color(0xFF059669),
+    letterSpacing: 0.3,
+  );
+
+  static const _badgeTextStyle = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w800,
+    letterSpacing: 0.8,
+  );
+
+  /// Enhanced card text styling
+  static TextStyle _getCardTitleStyle(Color color) => TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w800,
+    color: color,
+    letterSpacing: 0.4,
+  );
+
+  static TextStyle _getCardValueStyle(Color color) => TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w900,
+    color: color,
+    letterSpacing: 0.5,
+  );
+
   int _selectedIndex = 0;
   UserManagementView _userManagementView = UserManagementView.addUser;
-  List<Category> _categories = [];
+  List<pos_category.Category> _categories = [];
   List<MenuItem> _menuItems = [];
   bool _isLoading = true;
 
@@ -44,6 +120,22 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _selectedIndex = widget.initialTabIndex;
     debugPrint('ADMIN FLOW: AdminPanelScreen initState, initialTabIndex: $_selectedIndex');
     _loadData();
+    _logAdminPanelAccess();
+  }
+
+  /// Log admin panel access
+  void _logAdminPanelAccess() {
+    try {
+      final activityLogService = Provider.of<ActivityLogService>(context, listen: false);
+      activityLogService.logAdminPanelAccess(
+        userId: widget.user.id,
+        userName: widget.user.name,
+        userRole: widget.user.role.toString(),
+        tabName: 'Tab $_selectedIndex',
+      );
+    } catch (e) {
+      debugPrint('⚠️ Failed to log admin panel access: $e');
+    }
   }
 
   @override
@@ -295,7 +387,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
       try {
         final menuService = Provider.of<MenuService>(context, listen: false);
-        final newCategory = Category(
+        final newCategory = pos_category.Category(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           name: result['name']!,
           description: result['description']!.isEmpty ? null : result['description']!,
@@ -334,7 +426,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
-  Future<void> _editCategory(Category category) async {
+  Future<void> _editCategory(pos_category.Category category) async {
     final TextEditingController nameController = TextEditingController(text: category.name);
     final TextEditingController descriptionController = TextEditingController(text: category.description ?? '');
 
@@ -420,7 +512,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
-  Future<void> _deleteCategory(Category category) async {
+  Future<void> _deleteCategory(pos_category.Category category) async {
     // Check if category has menu items
     final itemsInCategory = _menuItems.where((item) => item.categoryId == category.id).toList();
     
@@ -792,6 +884,286 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   // User Management Methods
   // Removed unused methods: _addUser, _editUser, _deleteUser
 
+  // Menu Loading Methods
+  Future<void> _loadOhBombayMenu() async {
+    final confirmed = await ConfirmationDialogHelper.showConfirmation(
+      context,
+      title: 'Load Oh Bombay Menu',
+      message: 'This will replace all existing categories and menu items with the Oh Bombay Milton restaurant menu. Are you sure?',
+      confirmText: 'Load Menu',
+      cancelText: 'Cancel',
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        debugPrint('🍽️ Admin: Starting Oh Bombay menu loading...');
+        final menuService = Provider.of<MenuService>(context, listen: false);
+        
+        // Ensure menu service is properly initialized
+        await menuService.ensureInitialized();
+        debugPrint('✅ Admin: Menu service initialized');
+        
+        // Load the Oh Bombay menu
+        await menuService.loadOhBombayMenu();
+        debugPrint('✅ Admin: Oh Bombay menu loaded');
+        
+        // Reload local data
+        await _loadData();
+        debugPrint('✅ Admin: UI data refreshed');
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Oh Bombay menu loaded successfully! 🇮🇳\n${_categories.length} categories, ${_menuItems.length} items'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      } catch (e, stackTrace) {
+        debugPrint('❌ Admin: Error loading Oh Bombay menu: $e');
+        debugPrint('Stack trace: $stackTrace');
+        
+        if (mounted) {
+          await ErrorDialogHelper.showError(
+            context,
+            title: 'Error Loading Oh Bombay Menu',
+            message: 'Failed to load Oh Bombay menu:\n\nError: $e\n\nPlease check the console for more details.',
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _testMenuService() async {
+    setState(() { _isLoading = true; });
+    
+    try {
+      debugPrint('🧪 Testing menu service functionality...');
+      final menuService = Provider.of<MenuService>(context, listen: false);
+      
+      // Test 1: Check service initialization
+      debugPrint('🔍 Test 1: Service initialization');
+      await menuService.ensureInitialized();
+      debugPrint('✅ Menu service initialized successfully');
+      
+      // Test 2: Check current data
+      debugPrint('🔍 Test 2: Current menu data');
+      final currentCategories = await menuService.getCategories();
+      final currentMenuItems = await menuService.getMenuItems();
+      debugPrint('📊 Current: ${currentCategories.length} categories, ${currentMenuItems.length} items');
+      
+      // Test 3: Test database connectivity
+      debugPrint('🔍 Test 3: Database operations');
+      // Try to create a test category
+      final testCategory = pos_category.Category(
+        name: 'Test Category ${DateTime.now().millisecondsSinceEpoch}',
+        description: 'Test category for functionality check',
+        sortOrder: 999,
+      );
+      
+      await menuService.saveCategory(testCategory);
+      debugPrint('✅ Test category created successfully');
+      
+      // Clean up test category
+      await menuService.deleteCategory(testCategory.id);
+      debugPrint('✅ Test category deleted successfully');
+      
+      // Test 4: Test Oh Bombay menu loading with detailed error checking
+      debugPrint('🔍 Test 4: Oh Bombay menu loading dry run');
+      try {
+        // This will test the actual loadOhBombayMenu method
+        await menuService.clearAllData();
+        debugPrint('✅ Data cleared successfully');
+        
+        await menuService.loadOhBombayMenu();
+        debugPrint('✅ Oh Bombay menu loaded successfully');
+        
+        final finalCategories = await menuService.getCategories();
+        final finalMenuItems = await menuService.getMenuItems();
+        debugPrint('📊 Final: ${finalCategories.length} categories, ${finalMenuItems.length} items');
+        
+      } catch (e, stackTrace) {
+        debugPrint('❌ Oh Bombay loading failed: $e');
+        debugPrint('Stack trace: $stackTrace');
+        throw e;
+      }
+      
+      // Refresh UI
+      await _loadData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Menu service test completed successfully!\n${_categories.length} categories, ${_menuItems.length} items loaded'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      
+    } catch (e, stackTrace) {
+      debugPrint('❌ Menu service test failed: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      if (mounted) {
+        await ErrorDialogHelper.showError(
+          context,
+          title: 'Menu Service Test Failed',
+          message: 'Test failed with error:\n\n$e\n\nCheck console for details.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() { _isLoading = false; });
+      }
+    }
+  }
+
+  Future<void> _loadSampleMenu() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Load Sample Menu'),
+        content: const Text('This will load a sample menu with various categories and items. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Load Menu'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final menuService = Provider.of<MenuService>(context, listen: false);
+        
+        // Load sample menu data
+        await menuService.loadSampleMenu();
+        
+        // Refresh the data
+        await _loadData();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sample menu loaded successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to load sample menu: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _createTestOrders() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Test Orders'),
+        content: const Text('This will create 3 simple test orders to demonstrate the audit logging functionality. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Create Orders'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() { _isLoading = true; });
+      
+      try {
+        final orderService = Provider.of<OrderService>(context, listen: false);
+        final orderLogService = Provider.of<OrderLogService>(context, listen: false);
+        
+        // Set current user context for logging
+        orderLogService.setCurrentUser(widget.user.id, widget.user.name);
+        
+        // Create 3 simple test orders
+        for (int i = 1; i <= 3; i++) {
+          final order = Order(
+            orderNumber: 'TEST-${DateTime.now().millisecondsSinceEpoch}-$i',
+            userId: widget.user.id,
+            customerName: 'Test Customer $i',
+            type: i % 2 == 0 ? OrderType.dineIn : OrderType.takeaway,
+            items: [], // Start with empty items to avoid menu dependency
+            status: OrderStatus.pending,
+          );
+          
+          // Save the order (this should create audit logs)
+          await orderService.saveOrder(order);
+          debugPrint('Created test order: ${order.orderNumber}');
+          
+          // Update status to create more audit logs
+          await orderService.updateOrderStatus(order.id, 'confirmed');
+          debugPrint('Updated order ${order.orderNumber} to confirmed');
+          
+          if (i > 1) {
+            await orderService.updateOrderStatus(order.id, 'preparing');
+            debugPrint('Updated order ${order.orderNumber} to preparing');
+          }
+        }
+        
+        // Check if logs were created
+        final allLogs = orderLogService.allLogs;
+        debugPrint('Total audit logs created: ${allLogs.length}');
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Created 3 test orders with ${allLogs.length} audit logs!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error creating test orders: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to create test orders: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() { _isLoading = false; });
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return LoadingOverlay(
@@ -801,7 +1173,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         appBar: _buildAppBar(),
         body: Column(
           children: [
-            if (_selectedIndex == 0) // Only show reset button on categories tab
+            if (_selectedIndex == 9) // Only show reset button on tables tab
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Align(
@@ -875,16 +1247,36 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               label: 'Users',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.event_seat),
-              label: 'Reservations',
-            ),
-            BottomNavigationBarItem(
               icon: Icon(Icons.print),
               label: 'Printers',
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long),
+              label: 'Orders',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.kitchen),
+              label: 'Kitchen',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.assessment),
+              label: 'Reports',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.inventory),
+              label: 'Inventory',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.table_restaurant),
+              label: 'Tables',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.settings),
               label: 'Settings',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.monitor_heart),
+              label: 'Activity',
             ),
           ],
         ),
@@ -896,6 +1288,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     return UniversalAppBar(
       currentUser: widget.user,
       title: 'Admin Panel',
+      onBack: () {
+        // Navigate back to landing screen
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      },
       additionalActions: [
         IconButton(
           icon: const Icon(Icons.refresh),
@@ -916,11 +1312,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       case 2:
         return _buildManageUsersTab();
       case 3:
-        return _buildReservationsTab();
-      case 4:
         return _buildPrinterAssignmentsTab();
+      case 4:
+        return _buildOrdersTab();
       case 5:
+        return _buildKitchenTab();
+      case 6:
+        return _buildReportsTab();
+      case 7:
+        return _buildInventoryTab();
+      case 8:
+        return _buildTablesTab();
+      case 9:
         return _buildSettingsTab();
+      case 10:
+        return _buildActivityMonitoringTab();
       default:
         return _buildCategoriesTab();
     }
@@ -934,12 +1340,80 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           subtitle: 'Manage menu categories',
           onAddPressed: _addCategory,
         ),
+        // Add Oh Bombay Menu loading section
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.restaurant),
+                      label: const Text('Load Oh Bombay Menu'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: _loadOhBombayMenu,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.dining),
+                      label: const Text('Load Sample Menu'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: _loadSampleMenu,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.bug_report),
+                      label: const Text('Test Menu Service'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: _testMenuService,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.add_shopping_cart),
+                  label: const Text('Create Test Orders (with Audit Logs)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: _createTestOrders,
+                ),
+              ),
+            ],
+          ),
+        ),
         Expanded(
           child: _categories.isEmpty
               ? _buildEmptyState(
                   icon: Icons.category,
                   title: 'No Categories',
-                  message: 'Add your first category to get started!',
+                  message: 'Add your first category to get started, or load a sample menu!',
                   actionLabel: 'Add Category',
                   onAction: _addCategory,
                 )
@@ -1007,7 +1481,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (category.description != null)
+                              if (category.description?.isNotEmpty == true)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
@@ -1195,11 +1669,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   Widget _buildMenuItemTile(MenuItem item) {
-    final category = _categories.firstWhere(
-      (cat) => cat.id == item.categoryId,
-                              orElse: () => Category(
-        id: 'unknown',
-        name: 'Unknown Category',
+            final category = _categories.firstWhere(
+          (cat) => cat.id == item.categoryId,
+          orElse: () => pos_category.Category(
+            id: 'unknown',
+            name: 'Unknown Category',
         sortOrder: 0,
       ),
     );
@@ -1260,7 +1734,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (item.description != null) 
+              if (item.description?.isNotEmpty == true) 
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
@@ -1384,235 +1858,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   Widget _buildManageUsersTab() {
-    debugPrint('ADMIN FLOW: _buildManageUsersTab called, _userManagementView: $_userManagementView');
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Manage Users',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  debugPrint('ADMIN FLOW: Add User button pressed');
-                  setState(() {
-                    _userManagementView = UserManagementView.addUser;
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _userManagementView == UserManagementView.addUser ? Colors.blue : Colors.grey[300],
-                  foregroundColor: _userManagementView == UserManagementView.addUser ? Colors.white : Colors.black,
-                ),
-                child: const Text('Add User'),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: () {
-                  debugPrint('ADMIN FLOW: Existing Users button pressed');
-                  setState(() {
-                    _userManagementView = UserManagementView.existingUsers;
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _userManagementView == UserManagementView.existingUsers ? Colors.blue : Colors.grey[300],
-                  foregroundColor: _userManagementView == UserManagementView.existingUsers ? Colors.white : Colors.black,
-                ),
-                child: const Text('Existing Users'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Builder(
-              builder: (context) {
-                debugPrint('ADMIN FLOW: _userManagementView is $_userManagementView');
-                if (_userManagementView == UserManagementView.addUser) {
-                  debugPrint('ADMIN FLOW: Showing _AddUserView');
-                  return SingleChildScrollView(child: _AddUserView());
-                } else {
-                  debugPrint('ADMIN FLOW: Showing _ExistingUsersView');
-                  return _ExistingUsersView();
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+    debugPrint('ADMIN FLOW: _buildManageUsersTab called');
+    return UserManagementScreen(currentUser: widget.user);
   }
 
-  Widget _buildReservationsTab() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Table Reservations',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Manage table bookings and reservations',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          
-          // Quick stats
-          Consumer<ReservationService>(
-            builder: (context, reservationService, child) {
-              final todaysReservations = reservationService.todaysReservations;
-              final upcomingReservations = reservationService.getUpcomingReservations();
-              
-              return Row(
-                children: [
-                  Expanded(
-                    child: _buildStatsCard(
-                      'Today\'s Bookings',
-                      todaysReservations.length.toString(),
-                      Icons.today,
-                      Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatsCard(
-                      'Upcoming',
-                      upcomingReservations.length.toString(),
-                      Icons.schedule,
-                      Colors.green,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ReservationsScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.event_seat),
-                  label: const Text('Manage Reservations'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Today's reservations preview
-          Expanded(
-            child: Consumer<ReservationService>(
-              builder: (context, reservationService, child) {
-                final todaysReservations = reservationService.todaysReservations;
-                
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Today\'s Reservations',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    Expanded(
-                      child: todaysReservations.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.event_busy,
-                                    size: 64,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No reservations for today',
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          color: Colors.grey,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: todaysReservations.length,
-                              itemBuilder: (context, index) {
-                                final reservation = todaysReservations[index];
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: reservation.status.color,
-                                      child: Text(
-                                        reservation.customerName[0].toUpperCase(),
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    title: Text(
-                                      reservation.customerName,
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('${reservation.formattedTime} • Party of ${reservation.partySize}'),
-                                        Text(
-                                          reservation.status.displayName,
-                                          style: TextStyle(
-                                            color: reservation.status.color,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    trailing: const Icon(Icons.chevron_right),
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => const ReservationsScreen(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildStatsCard(String title, String value, IconData icon, Color color) {
     return Container(
@@ -1691,6 +1941,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ),
                 const SizedBox(height: 24),
                 
+                // Real-time Printer Status Widget
+                const PrinterStatusWidget(
+                  showHeader: true,
+                  showControls: true,
+                ),
+                
+                const SizedBox(height: 24),
+                
                 // Action Button
                 ElevatedButton.icon(
                   onPressed: () => _navigateToPrinterAssignments(),
@@ -1735,37 +1993,120 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 const SizedBox(height: 24),
                 
                 // Current Assignments Preview
-                Consumer<PrinterAssignmentService>(
+                Consumer<EnhancedPrinterAssignmentService?>(
                   builder: (context, assignmentService, child) {
-                    final stats = assignmentService.getAssignmentStats();
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Current Assignment Status',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                    if (assignmentService == null) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Current Assignment Status',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Printer assignment service not available',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    
+                    return FutureBuilder<Map<String, dynamic>>(
+                      future: assignmentService.getAssignmentStats(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Current Assignment Status',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                const Center(child: CircularProgressIndicator()),
+                              ],
+                            ),
+                          );
+                        }
+                        
+                        if (snapshot.hasError) {
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Current Assignment Status',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Error loading stats: ${snapshot.error}',
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        
+                        final stats = snapshot.data ?? {};
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
                           ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildStatChip('Total', stats['totalAssignments'], Colors.blue),
-                              _buildStatChip('Categories', stats['categoryAssignments'], Colors.green),
-                              _buildStatChip('Items', stats['menuItemAssignments'], Colors.orange),
-                              _buildStatChip('Printers', stats['uniquePrinters'], Colors.purple),
+                              Text(
+                                'Current Assignment Status',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildStatChip('Total', stats['totalAssignments'] ?? 0, Colors.blue),
+                                  _buildStatChip('Categories', stats['categoryAssignments'] ?? 0, Colors.green),
+                                  _buildStatChip('Items', stats['menuItemAssignments'] ?? 0, Colors.orange),
+                                  _buildStatChip('Printers', stats['uniquePrinters'] ?? 0, Colors.purple),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -1828,29 +2169,38 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   Widget _buildStatChip(String label, int value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.15),
+            color.withOpacity(0.05),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             value.toString(),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+            style: _getCardValueStyle(color),
           ),
+          const SizedBox(height: 4),
           Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-            ),
+            label.toUpperCase(),
+            style: _getCardTitleStyle(color),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -1860,39 +2210,184 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   void _navigateToPrinterAssignments() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const PrinterAssignmentScreen(),
+        builder: (context) => const ComprehensivePrinterAssignmentScreen(),
       ),
     );
   }
 
+  Widget _buildOrdersTab() {
+    return AdminOrdersScreen(user: widget.user);
+  }
+
+  Widget _buildKitchenTab() {
+    return KitchenScreen(user: widget.user);
+  }
+
+  Widget _buildReportsTab() {
+    return ReportsScreen(user: widget.user);
+  }
+
+  Widget _buildInventoryTab() {
+    return const InventoryScreen();
+  }
+
+  Widget _buildTablesTab() {
+    return TablesScreen(user: widget.user);
+  }
+
   Widget _buildSettingsTab() {
-    return Center(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.settings,
-            size: 64,
-            color: Colors.grey,
-          ),
-          const SizedBox(height: 16),
           Text(
-            'Settings',
+            'System Settings',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'App settings and configuration options will be available here.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey.shade500,
-                ),
-            textAlign: TextAlign.center,
+          const SizedBox(height: 24),
+          
+          // Database Management Section
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.storage, color: Theme.of(context).primaryColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Database Management',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Use these tools to manage your database and fix data issues.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Database Reset Button
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      border: Border.all(color: Colors.red.shade200),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.warning, color: Colors.red.shade600, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Reset Database',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                                                 const SizedBox(height: 8),
+                         Text(
+                           'This will completely reset the database, removing all orders, menu items, and data. Use this to fix foreign key constraint errors.',
+                           style: TextStyle(
+                             fontSize: 12,
+                             color: Colors.red.shade600,
+                           ),
+                         ),
+                         const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: _resetDatabase,
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('Reset Database'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade600,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Other settings can go here
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.settings, color: Theme.of(context).primaryColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Application Settings',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Additional settings will be available here.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  /// Reset the database completely
+  Future<void> _resetDatabase() async {
+    try {
+      // For now, just show a message that the feature is coming soon
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Database reset feature is temporarily disabled. Please restart the app to clear data.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildActivityMonitoringTab() {
+    return UserActivityMonitoringScreen(user: widget.user);
   }
 
   Widget _buildTabHeader({
@@ -1901,14 +2396,29 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     required VoidCallback onAddPressed,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.surface,
+            Theme.of(context).colorScheme.surface.withOpacity(0.9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border(
           bottom: BorderSide(
             color: Theme.of(context).dividerColor,
+            width: 1.5,
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -1918,23 +2428,36 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: _titleTextStyle,
                 ),
+                const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey.shade600,
-                      ),
+                  style: _subtitleTextStyle,
                 ),
               ],
             ),
           ),
           ElevatedButton.icon(
             onPressed: onAddPressed,
-            icon: const Icon(Icons.add),
-            label: const Text('Add'),
+            icon: const Icon(Icons.add, size: 20),
+            label: Text(
+              'Add',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3B82F6),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 4,
+            ),
           ),
         ],
       ),
@@ -2250,6 +2773,6 @@ class _ExistingUsersViewState extends State<_ExistingUsersView> {
                     ),
                   ),
       ],
-    );
-  }
+          );
+    }
 } 

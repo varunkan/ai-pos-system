@@ -5,10 +5,12 @@ import '../models/order.dart';
 import '../models/user.dart';
 import '../services/order_service.dart';
 import '../services/user_service.dart';
+import '../services/table_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/back_button.dart';
 import 'edit_active_order_screen.dart';
+import 'order_audit_screen.dart';
 
 class AdminOrdersScreen extends StatefulWidget {
   final User user;
@@ -27,10 +29,69 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   OrderStatus? _statusFilter;
   OrderType? _typeFilter;
 
+  /// Enhanced text styles for better prominence and visual appeal
+  static const _headerTextStyle = TextStyle(
+    fontSize: 26,
+    fontWeight: FontWeight.w900,
+    color: Color(0xFF1F2937),
+    letterSpacing: 0.8,
+  );
+
+  static const _orderNumberStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w800,
+    color: Color(0xFF1F2937),
+    letterSpacing: 0.4,
+  );
+
+  static const _orderTypeStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    color: Color(0xFF6B7280),
+    letterSpacing: 0.8,
+  );
+
+  static const _itemNameStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: Color(0xFF1F2937),
+    letterSpacing: 0.3,
+  );
+
+  static const _priceStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w800,
+    color: Color(0xFF059669),
+    letterSpacing: 0.2,
+  );
+
+  static const _statusBadgeStyle = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w800,
+    letterSpacing: 1.0,
+  );
+
+  static const _instructionsStyle = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    fontStyle: FontStyle.italic,
+    letterSpacing: 0.2,
+  );
+
+  static const _quantityStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w800,
+    color: Color(0xFF3B82F6),
+    letterSpacing: 0.3,
+  );
+
   @override
   void initState() {
     super.initState();
-    _loadOrders();
+    // Defer loading until after the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadOrders();
+    });
   }
 
   Future<void> _loadOrders() async {
@@ -43,7 +104,8 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
 
     try {
       final orderService = Provider.of<OrderService>(context, listen: false);
-      final orders = await orderService.getAllOrders();
+      await orderService.loadOrders();
+      final orders = orderService.allOrders;
       
       if (mounted) {
         setState(() {
@@ -62,7 +124,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   }
 
   List<Order> get _filteredOrders {
-    return _allOrders.where((order) {
+    var filtered = _allOrders.where((order) {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -85,6 +147,18 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
 
       return true;
     }).toList();
+
+    // Sort by date/time with latest orders on top
+    filtered.sort((a, b) {
+      // Primary sort: by orderTime (latest first)
+      final orderTimeComparison = b.orderTime.compareTo(a.orderTime);
+      if (orderTimeComparison != 0) return orderTimeComparison;
+      
+      // Secondary sort: by createdAt if orderTime is the same (latest first)
+      return b.createdAt.compareTo(a.createdAt);
+    });
+
+    return filtered;
   }
 
   // Get server name who cancelled the order
@@ -100,12 +174,12 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   }
 
   // Get server name from user ID
-  Future<String?> _getServerNameFromId(String? userId) async {
+  String? _getServerNameFromId(String? userId) {
     if (userId == null) return null;
     
     try {
       final userService = Provider.of<UserService>(context, listen: false);
-      final user = await userService.getUserById(userId);
+      final user = userService.getUserById(userId);
       return user?.name;
     } catch (e) {
       return userId; // Return ID if name lookup fails
@@ -307,6 +381,15 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         }
       }
     }
+  }
+
+  Future<void> _viewOrderAudit(Order order) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OrderAuditScreen(orderId: order.id),
+      ),
+    );
   }
 
   @override
@@ -646,6 +729,9 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
               case 'delete':
                 _deleteOrder(order);
                 break;
+              case 'audit':
+                _viewOrderAudit(order);
+                break;
             }
           },
           itemBuilder: (context) => [
@@ -688,6 +774,16 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                   Icon(Icons.delete, size: 16, color: Colors.red),
                   SizedBox(width: 8),
                   Text('Delete Order', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'audit',
+              child: Row(
+                children: [
+                  Icon(Icons.receipt, size: 16),
+                  SizedBox(width: 8),
+                  Text('View Audit'),
                 ],
               ),
             ),
@@ -837,7 +933,13 @@ class _OrderDetailsDialog extends StatelessWidget {
                         _buildInfoRow('Order Time', _formatDateTime(order.createdAt)),
                         _buildInfoRow('Order Type', order.type.name.toUpperCase()),
                         if (order.tableId != null)
-                          _buildInfoRow('Table', order.tableId!),
+                          Consumer<TableService>(
+                            builder: (context, tableService, child) {
+                              final table = tableService.getTableById(order.tableId!);
+                              final tableDisplay = table?.number.toString() ?? order.tableId!;
+                              return _buildInfoRow('Table', tableDisplay);
+                            },
+                          ),
                         if (order.specialInstructions != null)
                           _buildInfoRow('Special Instructions', order.specialInstructions!),
                         if (order.assignedTo != null)
@@ -858,7 +960,7 @@ class _OrderDetailsDialog extends StatelessWidget {
                         _buildInfoRow('Subtotal', '\$${order.subtotal.toStringAsFixed(2)}'),
                         if (order.discountAmount > 0)
                           _buildInfoRow('Discount', '-\$${order.discountAmount.toStringAsFixed(2)}', isDiscount: true),
-                        _buildInfoRow('HST (13%)', '\$${order.hstAmount.toStringAsFixed(2)}'),
+                        _buildInfoRow('HST (13%)', '\$${order.calculatedHstAmount.toStringAsFixed(2)}'),
                         if (order.gratuityAmount > 0)
                           _buildInfoRow('Gratuity', '\$${order.gratuityAmount.toStringAsFixed(2)}'),
                         if (order.tipAmount > 0)
@@ -1235,18 +1337,34 @@ class _OrderDetailsDialog extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.15),
+            color.withOpacity(0.08),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.6), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.0,
+        ).copyWith(
           color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
         ),
       ),
     );

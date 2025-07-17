@@ -69,6 +69,7 @@ class TableService with ChangeNotifier {
 
   Future<void> createTable(int number, int capacity, {String? userId}) async {
     final newTable = restaurant_table.Table(
+      id: 'table_$number', // Use consistent ID format
       number: number,
       capacity: capacity,
       status: restaurant_table.TableStatus.available,
@@ -420,24 +421,25 @@ class TableService with ChangeNotifier {
 
   /// Resets all tables to the specified configuration for the restaurant.
   /// Only tables 1-16 will exist, with the correct capacities.
+  /// Uses consistent IDs based on table numbers to prevent display issues.
   Future<void> resetTablesToDefault() async {
     _tables = [
-      restaurant_table.Table(number: 1, capacity: 4),
-      restaurant_table.Table(number: 2, capacity: 4),
-      restaurant_table.Table(number: 3, capacity: 4),
-      restaurant_table.Table(number: 4, capacity: 4),
-      restaurant_table.Table(number: 5, capacity: 2),
-      restaurant_table.Table(number: 6, capacity: 4),
-      restaurant_table.Table(number: 7, capacity: 4),
-      restaurant_table.Table(number: 8, capacity: 6),
-      restaurant_table.Table(number: 9, capacity: 6),
-      restaurant_table.Table(number: 10, capacity: 4),
-      restaurant_table.Table(number: 11, capacity: 6),
-      restaurant_table.Table(number: 12, capacity: 6),
-      restaurant_table.Table(number: 13, capacity: 6),
-      restaurant_table.Table(number: 14, capacity: 4),
-      restaurant_table.Table(number: 15, capacity: 4),
-      restaurant_table.Table(number: 16, capacity: 4),
+      restaurant_table.Table(id: 'table_1', number: 1, capacity: 4),
+      restaurant_table.Table(id: 'table_2', number: 2, capacity: 4),
+      restaurant_table.Table(id: 'table_3', number: 3, capacity: 4),
+      restaurant_table.Table(id: 'table_4', number: 4, capacity: 4),
+      restaurant_table.Table(id: 'table_5', number: 5, capacity: 2),
+      restaurant_table.Table(id: 'table_6', number: 6, capacity: 4),
+      restaurant_table.Table(id: 'table_7', number: 7, capacity: 4),
+      restaurant_table.Table(id: 'table_8', number: 8, capacity: 6),
+      restaurant_table.Table(id: 'table_9', number: 9, capacity: 6),
+      restaurant_table.Table(id: 'table_10', number: 10, capacity: 4),
+      restaurant_table.Table(id: 'table_11', number: 11, capacity: 6),
+      restaurant_table.Table(id: 'table_12', number: 12, capacity: 6),
+      restaurant_table.Table(id: 'table_13', number: 13, capacity: 6),
+      restaurant_table.Table(id: 'table_14', number: 14, capacity: 4),
+      restaurant_table.Table(id: 'table_15', number: 15, capacity: 4),
+      restaurant_table.Table(id: 'table_16', number: 16, capacity: 4),
     ];
     await _saveTables();
     

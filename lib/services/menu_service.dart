@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:ai_pos_system/models/menu_item.dart';
 import 'package:ai_pos_system/models/category.dart' as pos_category;
 import 'package:ai_pos_system/services/database_service.dart';
+import 'package:ai_pos_system/services/web_menu_loader.dart';
 
 /// Custom exception for menu operations
 class MenuServiceException implements Exception {
@@ -24,12 +25,14 @@ class MenuServiceException implements Exception {
 /// for menu operations including CRUD operations and queries.
 class MenuService with ChangeNotifier {
   final DatabaseService _databaseService;
+  final WebMenuLoader? _webMenuLoader;
   List<MenuItem> _menuItems = [];
   List<pos_category.Category> _categories = [];
   bool _isLoading = false;
   bool _isInitialized = false;
+  bool _isDisposed = false;
 
-  MenuService(this._databaseService);
+  MenuService(this._databaseService) : _webMenuLoader = kIsWeb ? WebMenuLoader() : null;
 
   // Getters
   List<MenuItem> get menuItems => List.unmodifiable(_menuItems);
@@ -37,12 +40,131 @@ class MenuService with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
 
+  /// Initialize method for compatibility
+  Future<void> initialize() async {
+    // Menu service initializes in constructor, but this method provides compatibility
+    await ensureInitialized();
+  }
+
+  /// Reset disposal state for reinitialization (multi-tenant support)
+  void resetDisposalState() {
+    if (_isDisposed) {
+      debugPrint('🔄 MenuService: Resetting disposal state for reinitialization');
+      _isDisposed = false;
+      _isInitialized = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_isDisposed) {
+      debugPrint('⚠️ MenuService.dispose() called but already disposed');
+      return;
+    }
+    
+    debugPrint('🧹 MenuService.dispose() called - cleaning up resources...');
+    _isDisposed = true;
+    
+    // Clear data
+    _menuItems.clear();
+    _categories.clear();
+    _isInitialized = false;
+    
+    // Only dispose the parent ChangeNotifier if we're truly shutting down
+    try {
+      super.dispose();
+      debugPrint('✅ MenuService disposed successfully');
+    } catch (e) {
+      debugPrint('⚠️ Error during MenuService dispose: $e');
+    }
+  }
+
   /// Ensures the service is initialized and data is loaded.
   /// 
   /// This method should be called before any data access operations.
   Future<void> ensureInitialized() async {
     if (!_isInitialized) {
-      await _loadMenuData();
+      try {
+        debugPrint('🍽️ Initializing MenuService...');
+        
+        // Initialize web menu loader if on web platform
+        if (kIsWeb && _webMenuLoader != null) {
+          debugPrint('🌐 Initializing web menu loader...');
+          await _webMenuLoader!.initialize();
+          
+          // Load Oh Bombay Milton menu if no data exists
+          if (await _webMenuLoader!.isEmpty()) {
+            debugPrint('🍽️ Loading Oh Bombay Milton menu for web...');
+            await loadOhBombayMiltonMenu();
+          }
+        }
+        
+        await _loadMenuData();
+        
+        // Check if we need to load sample data
+        final needsSample = await _databaseService.needsSampleData();
+        if (needsSample && _menuItems.isEmpty && _categories.isEmpty) {
+          debugPrint('🔧 Loading sample menu data...');
+          await loadSampleData();
+          await _databaseService.markSampleDataLoaded();
+          
+          // Reload after adding sample data
+          await _loadMenuData();
+        }
+        
+        debugPrint('✅ MenuService initialized with ${_categories.length} categories and ${_menuItems.length} items');
+      } catch (e) {
+        debugPrint('❌ Failed to initialize MenuService: $e');
+        throw MenuServiceException('Failed to initialize menu service', operation: 'ensure_initialized', originalError: e);
+      }
+    }
+  }
+
+  /// Loads the Oh Bombay Milton menu specifically for web platform
+  Future<void> loadOhBombayMiltonMenu() async {
+    if (kIsWeb && _webMenuLoader != null) {
+      try {
+        debugPrint('🌐 Loading Oh Bombay Milton menu...');
+        await _webMenuLoader!.loadOhBombayMiltonMenu();
+        
+        // Reload the data after loading the menu
+        await _loadMenuData();
+        
+        // CRITICAL: Sync web menu data to main database service for order validation
+        await _syncWebMenuToDatabase();
+        
+        debugPrint('✅ Oh Bombay Milton menu loaded successfully with ${_categories.length} categories and ${_menuItems.length} items');
+      } catch (e) {
+        debugPrint('❌ Failed to load Oh Bombay Milton menu: $e');
+        throw MenuServiceException('Failed to load Oh Bombay Milton menu', operation: 'load_oh_bombay_menu', originalError: e);
+      }
+    }
+  }
+
+  /// Syncs web menu data to main database service for order validation
+  Future<void> _syncWebMenuToDatabase() async {
+    if (!kIsWeb || _webMenuLoader == null) return;
+    
+    try {
+      debugPrint('🔄 Syncing web menu data to main database service...');
+      
+      // Get data from WebMenuLoader
+      final menuItems = await _webMenuLoader!.getMenuItems();
+      final categories = await _webMenuLoader!.getCategories();
+      
+      // Save to main database service web storage
+      for (final item in menuItems) {
+        await _databaseService.saveWebMenuItem(item);
+      }
+      
+      for (final category in categories) {
+        await _databaseService.saveWebCategory(category);
+      }
+      
+      debugPrint('✅ Synced ${menuItems.length} menu items and ${categories.length} categories to main database service');
+    } catch (e) {
+      debugPrint('❌ Failed to sync web menu data: $e');
+      // Don't throw error, just log it
     }
   }
 
@@ -83,7 +205,16 @@ class MenuService with ChangeNotifier {
   /// Throws [MenuServiceException] if loading fails.
   Future<void> _loadMenuItems() async {
     try {
-      final itemsData = await _databaseService.query('menu_items');
+      List<Map<String, dynamic>> itemsData;
+      
+      if (kIsWeb && _webMenuLoader != null) {
+        // Load from web storage
+        itemsData = await _webMenuLoader!.getMenuItems();
+        debugPrint('🌐 Loaded ${itemsData.length} menu items from web storage');
+      } else {
+        // Load from SQLite database
+        itemsData = await _databaseService.query('menu_items');
+      }
       
       _menuItems = itemsData.map((data) {
         return MenuItem.fromJson(data);
@@ -104,7 +235,16 @@ class MenuService with ChangeNotifier {
   /// Throws [MenuServiceException] if loading fails.
   Future<void> _loadCategories() async {
     try {
-      final categoriesData = await _databaseService.query('categories');
+      List<Map<String, dynamic>> categoriesData;
+      
+      if (kIsWeb && _webMenuLoader != null) {
+        // Load from web storage
+        categoriesData = await _webMenuLoader!.getCategories();
+        debugPrint('🌐 Loaded ${categoriesData.length} categories from web storage');
+      } else {
+        // Load from SQLite database
+        categoriesData = await _databaseService.query('categories');
+      }
       
       _categories = categoriesData.map((data) {
         return pos_category.Category.fromJson(data);
@@ -161,28 +301,41 @@ class MenuService with ChangeNotifier {
     try {
       final itemData = _menuItemToMap(item);
 
-      // Check if menu item exists in the database
-      final existing = await _databaseService.query(
-        'menu_items',
-        where: 'id = ?',
-        whereArgs: [item.id],
-      );
-
-      if (existing.isEmpty) {
-        // Insert new menu item
-        await _databaseService.insert('menu_items', itemData);
-        _menuItems.add(item);
-      } else {
-        // Update existing menu item
-        await _databaseService.update(
-          'menu_items',
-          itemData,
-          where: 'id = ?',
-          whereArgs: [item.id],
-        );
+      if (kIsWeb && _webMenuLoader != null) {
+        // Save to web storage
+        await _webMenuLoader!.saveMenuItem(itemData);
+        
+        // Update local list
         final index = _menuItems.indexWhere((i) => i.id == item.id);
         if (index != -1) {
           _menuItems[index] = item;
+        } else {
+          _menuItems.add(item);
+        }
+      } else {
+        // Check if menu item exists in the database
+        final existing = await _databaseService.query(
+          'menu_items',
+          where: 'id = ?',
+          whereArgs: [item.id],
+        );
+
+        if (existing.isEmpty) {
+          // Insert new menu item
+          await _databaseService.insert('menu_items', itemData);
+          _menuItems.add(item);
+        } else {
+          // Update existing menu item
+          await _databaseService.update(
+            'menu_items',
+            itemData,
+            where: 'id = ?',
+            whereArgs: [item.id],
+          );
+          final index = _menuItems.indexWhere((i) => i.id == item.id);
+          if (index != -1) {
+            _menuItems[index] = item;
+          }
         }
       }
 
@@ -302,28 +455,41 @@ class MenuService with ChangeNotifier {
     try {
       final categoryData = _categoryToMap(category);
 
-      // Check if category exists in the database
-      final existing = await _databaseService.query(
-        'categories',
-        where: 'id = ?',
-        whereArgs: [category.id],
-      );
-
-      if (existing.isEmpty) {
-        // Insert new category
-        await _databaseService.insert('categories', categoryData);
-        _categories.add(category);
-      } else {
-        // Update existing category
-        await _databaseService.update(
-          'categories',
-          categoryData,
-          where: 'id = ?',
-          whereArgs: [category.id],
-        );
+      if (kIsWeb && _webMenuLoader != null) {
+        // Save to web storage
+        await _webMenuLoader!.saveCategory(categoryData);
+        
+        // Update local list
         final index = _categories.indexWhere((c) => c.id == category.id);
         if (index != -1) {
           _categories[index] = category;
+        } else {
+          _categories.add(category);
+        }
+      } else {
+        // Check if category exists in the database
+        final existing = await _databaseService.query(
+          'categories',
+          where: 'id = ?',
+          whereArgs: [category.id],
+        );
+
+        if (existing.isEmpty) {
+          // Insert new category
+          await _databaseService.insert('categories', categoryData);
+          _categories.add(category);
+        } else {
+          // Update existing category
+          await _databaseService.update(
+            'categories',
+            categoryData,
+            where: 'id = ?',
+            whereArgs: [category.id],
+          );
+          final index = _categories.indexWhere((c) => c.id == category.id);
+          if (index != -1) {
+            _categories[index] = category;
+          }
         }
       }
 
@@ -490,159 +656,149 @@ class MenuService with ChangeNotifier {
   /// 
   /// This method creates sample categories and menu items to get started.
   Future<void> loadSampleData() async {
-    await ensureInitialized();
-    
-    if (_categories.isNotEmpty && _menuItems.isNotEmpty) {
-      debugPrint('Sample menu data already loaded');
-      return;
-    }
-
     try {
-      // Create sample categories
-      final sampleCategories = [
-        pos_category.Category(
-          name: 'Appetizers',
-          description: 'Starters and small plates',
-          sortOrder: 1,
-        ),
-        pos_category.Category(
-          name: 'Main Courses',
-          description: 'Primary dishes',
-          sortOrder: 2,
-        ),
-        pos_category.Category(
-          name: 'Beverages',
-          description: 'Drinks and refreshments',
-          sortOrder: 3,
-        ),
-        pos_category.Category(
-          name: 'Desserts',
-          description: 'Sweet treats',
-          sortOrder: 4,
-        ),
-      ];
+      debugPrint('🍽️ Loading sample menu data...');
+      
+      // Don't clear existing data, just add if missing
+      if (_categories.isEmpty) {
+        // Create sample categories
+        final sampleCategories = [
+          pos_category.Category(
+            name: 'Appetizers',
+            description: 'Starters and small plates',
+            sortOrder: 1,
+          ),
+          pos_category.Category(
+            name: 'Main Courses',
+            description: 'Primary dishes',
+            sortOrder: 2,
+          ),
+          pos_category.Category(
+            name: 'Beverages',
+            description: 'Drinks and refreshments',
+            sortOrder: 3,
+          ),
+          pos_category.Category(
+            name: 'Desserts',
+            description: 'Sweet treats',
+            sortOrder: 4,
+          ),
+        ];
 
-      for (final category in sampleCategories) {
-        await saveCategory(category);
+        for (final category in sampleCategories) {
+          await saveCategory(category);
+        }
+        debugPrint('✅ Sample categories created');
       }
 
-      // Create sample menu items
-      final sampleItems = [
-        MenuItem(
-          name: 'Caesar Salad',
-          description: 'Fresh romaine lettuce with caesar dressing, croutons, and parmesan cheese',
-          price: 12.99,
-          categoryId: sampleCategories[0].id,
-          preparationTime: 10,
-          isVegetarian: true,
-          stockQuantity: 50,
-        ),
-        MenuItem(
-          name: 'Buffalo Wings',
-          description: 'Spicy buffalo chicken wings with blue cheese dip',
-          price: 14.99,
-          categoryId: sampleCategories[0].id,
-          preparationTime: 15,
-          isSpicy: true,
-          spiceLevel: 3,
-          stockQuantity: 30,
-        ),
-        MenuItem(
-          name: 'Grilled Salmon',
-          description: 'Fresh Atlantic salmon grilled to perfection with lemon butter sauce',
-          price: 24.99,
-          categoryId: sampleCategories[1].id,
-          preparationTime: 20,
-          stockQuantity: 20,
-        ),
-        MenuItem(
-          name: 'Ribeye Steak',
-          description: '12oz ribeye steak cooked to your preference with garlic mashed potatoes',
-          price: 32.99,
-          categoryId: sampleCategories[1].id,
-          preparationTime: 25,
-          stockQuantity: 15,
-        ),
-        MenuItem(
-          name: 'Margherita Pizza',
-          description: 'Classic pizza with fresh mozzarella, tomato sauce, and basil',
-          price: 18.99,
-          categoryId: sampleCategories[1].id,
-          preparationTime: 18,
-          isVegetarian: true,
-          stockQuantity: 25,
-        ),
-        MenuItem(
-          name: 'Coca Cola',
-          description: 'Classic Coca Cola soft drink',
-          price: 3.99,
-          categoryId: sampleCategories[2].id,
-          preparationTime: 1,
-          stockQuantity: 100,
-        ),
-        MenuItem(
-          name: 'Fresh Orange Juice',
-          description: 'Freshly squeezed orange juice',
-          price: 5.99,
-          categoryId: sampleCategories[2].id,
-          preparationTime: 3,
-          stockQuantity: 50,
-        ),
-        MenuItem(
-          name: 'Chocolate Cake',
-          description: 'Rich chocolate cake with chocolate ganache',
-          price: 8.99,
-          categoryId: sampleCategories[3].id,
-          preparationTime: 5,
-          isVegetarian: true,
-          stockQuantity: 15,
-        ),
-        MenuItem(
-          name: 'Tiramisu',
-          description: 'Classic Italian dessert with coffee-soaked ladyfingers',
-          price: 9.99,
-          categoryId: sampleCategories[3].id,
-          preparationTime: 5,
-          isVegetarian: true,
-          stockQuantity: 12,
-        ),
-      ];
+      if (_menuItems.isEmpty) {
+        // Create sample menu items using existing categories
+        final categories = await getCategories();
+        if (categories.length >= 4) {
+          final sampleItems = [
+            MenuItem(
+              name: 'Caesar Salad',
+              description: 'Fresh romaine lettuce with caesar dressing, croutons, and parmesan cheese',
+              price: 12.99,
+              categoryId: categories[0].id,
+              preparationTime: 10,
+              isVegetarian: true,
+              stockQuantity: 50,
+            ),
+            MenuItem(
+              name: 'Buffalo Wings',
+              description: 'Spicy buffalo chicken wings with blue cheese dip',
+              price: 14.99,
+              categoryId: categories[0].id,
+              preparationTime: 15,
+              isSpicy: true,
+              spiceLevel: 3,
+              stockQuantity: 30,
+            ),
+            MenuItem(
+              name: 'Grilled Salmon',
+              description: 'Fresh Atlantic salmon grilled to perfection with lemon butter sauce',
+              price: 24.99,
+              categoryId: categories[1].id,
+              preparationTime: 20,
+              stockQuantity: 20,
+            ),
+            MenuItem(
+              name: 'Ribeye Steak',
+              description: '12oz ribeye steak cooked to your preference with garlic mashed potatoes',
+              price: 32.99,
+              categoryId: categories[1].id,
+              preparationTime: 25,
+              stockQuantity: 15,
+            ),
+            MenuItem(
+              name: 'Margherita Pizza',
+              description: 'Classic pizza with fresh mozzarella, tomato sauce, and basil',
+              price: 18.99,
+              categoryId: categories[1].id,
+              preparationTime: 18,
+              isVegetarian: true,
+              stockQuantity: 25,
+            ),
+            MenuItem(
+              name: 'Coca Cola',
+              description: 'Classic Coca Cola soft drink',
+              price: 3.99,
+              categoryId: categories[2].id,
+              preparationTime: 1,
+              stockQuantity: 100,
+            ),
+            MenuItem(
+              name: 'Fresh Orange Juice',
+              description: 'Freshly squeezed orange juice',
+              price: 5.99,
+              categoryId: categories[2].id,
+              preparationTime: 3,
+              stockQuantity: 50,
+            ),
+            MenuItem(
+              name: 'Chocolate Cake',
+              description: 'Rich chocolate cake with chocolate ganache',
+              price: 8.99,
+              categoryId: categories[3].id,
+              preparationTime: 5,
+              isVegetarian: true,
+              stockQuantity: 15,
+            ),
+            MenuItem(
+              name: 'Tiramisu',
+              description: 'Classic Italian dessert with coffee-soaked ladyfingers',
+              price: 9.99,
+              categoryId: categories[3].id,
+              preparationTime: 5,
+              isVegetarian: true,
+              stockQuantity: 12,
+            ),
+          ];
 
-      for (final item in sampleItems) {
-        await saveMenuItem(item);
+          for (final item in sampleItems) {
+            await saveMenuItem(item);
+          }
+          debugPrint('✅ Sample menu items created');
+        }
       }
 
-      debugPrint('Sample menu data loaded successfully');
+      debugPrint('✅ Sample menu data loaded successfully');
     } catch (e) {
+      debugPrint('❌ Failed to load sample data: $e');
       throw MenuServiceException('Failed to load sample data', operation: 'load_sample_data', originalError: e);
     }
   }
 
-  /// Clears all menu data from the database.
+  /// Loads sample menu data for demonstration purposes.
   /// 
-  /// This method deletes all menu items and categories.
-  Future<void> clearAllData() async {
+  /// This method loads the Oh Bombay Milton restaurant menu as sample data.
+  /// Throws [MenuServiceException] if loading fails.
+  Future<void> loadSampleMenu() async {
     try {
-      await _databaseService.delete('menu_items', where: '1=1');
-      await _databaseService.delete('categories', where: '1=1');
-      _menuItems.clear();
-      _categories.clear();
-      _isInitialized = false;
-      
-      // Safely notify listeners
-      try {
-        SchedulerBinding.instance.addPostFrameCallback((_) {
-          try {
-            notifyListeners();
-          } catch (e) {
-            debugPrint('Error notifying listeners during clear data: $e');
-          }
-        });
-      } catch (e) {
-        debugPrint('Error scheduling notification during clear data: $e');
-      }
+      await loadOhBombayMenu();
     } catch (e) {
-      throw MenuServiceException('Failed to clear data', operation: 'clear_data', originalError: e);
+      throw MenuServiceException('Failed to load sample menu', operation: 'load_sample_menu', originalError: e);
     }
   }
 
@@ -651,7 +807,15 @@ class MenuService with ChangeNotifier {
   /// This method creates categories and menu items for Oh Bombay Milton restaurant.
   Future<void> loadOhBombayMenu() async {
     try {
-      // Clear existing data first
+      // Check if we already have menu data loaded
+      await _loadMenuData();
+      if (_categories.isNotEmpty && _menuItems.isNotEmpty) {
+        debugPrint('✅ Menu data already exists, skipping load to preserve existing data');
+        return;
+      }
+      
+      // Only clear data if we need to load fresh menu data
+      debugPrint('🍽️ Loading Oh Bombay menu data (no existing data found)');
       await clearAllData();
       
       // Create categories for Oh Bombay Milton
@@ -1686,6 +1850,56 @@ class MenuService with ChangeNotifier {
       debugPrint('Oh Bombay Milton menu loaded successfully with ${categories.length} categories and ${menuItems.length} items');
     } catch (e) {
       throw MenuServiceException('Failed to load Oh Bombay menu', operation: 'load_oh_bombay_menu', originalError: e);
+    }
+  }
+
+  /// Clears all menu data from the database.
+  /// 
+  /// This method deletes all menu items and categories with proper error handling.
+  Future<void> clearAllData() async {
+    try {
+      debugPrint('🗑️ Starting menu data cleanup...');
+      
+      // Clear menu items first (child table) - this should handle foreign keys properly
+      try {
+        final deletedItems = await _databaseService.delete('menu_items');
+        debugPrint('✅ Cleared $deletedItems menu items from database');
+      } catch (e) {
+        debugPrint('⚠️ Warning clearing menu_items: $e');
+        // Continue even if this fails - might be empty table
+      }
+      
+      // Clear categories (parent table)
+      try {
+        final deletedCategories = await _databaseService.delete('categories');
+        debugPrint('✅ Cleared $deletedCategories categories from database');
+      } catch (e) {
+        debugPrint('⚠️ Warning clearing categories: $e');
+        // Continue even if this fails - might be empty table
+      }
+      
+      // Clear in-memory caches
+      _menuItems.clear();
+      _categories.clear();
+      _isInitialized = false;
+      
+      debugPrint('🗑️ Menu data cleanup completed successfully');
+      
+      // Safely notify listeners
+      try {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          try {
+            notifyListeners();
+          } catch (e) {
+            debugPrint('Error notifying listeners during clear data: $e');
+          }
+        });
+      } catch (e) {
+        debugPrint('Error scheduling notification during clear data: $e');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in clearAllData: $e');
+      throw MenuServiceException('Failed to clear data', operation: 'clear_data', originalError: e);
     }
   }
 } 

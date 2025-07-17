@@ -19,56 +19,139 @@ class UserService with ChangeNotifier {
     _loadUsers();
   }
 
+  /// Load users from database
   Future<void> _loadUsers() async {
     try {
-      // First, try to load users from SQLite database
-      await _loadUsersFromDatabase();
-      
-      // If no users in database, try to migrate from SharedPreferences
-      if (_users.isEmpty) {
-        await _migrateUsersFromSharedPreferences();
+      if (_databaseService.isWeb) {
+        await _loadWebUsers();
+      } else {
+        await _loadSQLiteUsers();
       }
       
-      // If still no users, create default users
-      if (_users.isEmpty) {
-        await _createDefaultUsers();
-      }
+      // Ensure admin user exists with proper permissions
+      await _ensureAdminUserExists();
       
-      // Safely notify listeners
-      try {
-        SchedulerBinding.instance.addPostFrameCallback((_) {
-          try {
-            notifyListeners();
-          } catch (e) {
-            debugPrint('Error notifying listeners during user load: $e');
-          }
-        });
-      } catch (e) {
-        debugPrint('Error scheduling notification during user load: $e');
-      }
+      debugPrint('Loaded ${_users.length} users from database');
     } catch (e) {
       debugPrint('Error loading users: $e');
-      // Fall back to creating default users
-      await _createDefaultUsers();
       
-      // Safely notify listeners
-      try {
-        SchedulerBinding.instance.addPostFrameCallback((_) {
-          try {
-            notifyListeners();
-          } catch (e) {
-            debugPrint('Error notifying listeners during fallback: $e');
-          }
-        });
-      } catch (e) {
-        debugPrint('Error scheduling notification during fallback: $e');
-      }
+      // Create default admin user if loading fails
+      await _createDefaultAdminUser();
     }
   }
 
-  Future<void> _loadUsersFromDatabase() async {
+  /// Ensure admin user exists with proper permissions
+  Future<void> _ensureAdminUserExists() async {
+    try {
+      // Look for admin user
+      final adminUser = _users.where((user) => user.id == 'admin').firstOrNull;
+      
+      if (adminUser == null) {
+        // Create admin user
+        debugPrint('🔧 Creating admin user with PIN 7165 and full admin access');
+        final newAdminUser = User(
+          id: 'admin',
+          name: 'Admin',
+          role: UserRole.admin,
+          pin: '7165',
+          adminPanelAccess: true,
+          isActive: true,
+        );
+        
+        await _saveUserToDatabase(newAdminUser);
+        _users.add(newAdminUser);
+        
+        debugPrint('✅ Admin user created with PIN 7165 and full admin access');
+      } else {
+        // Check if admin user needs to be updated (role, access, or PIN)
+        if (adminUser.role != UserRole.admin || 
+            !adminUser.adminPanelAccess || 
+            adminUser.pin != '7165') {
+          debugPrint('🔧 Updating admin user to have full admin access and correct PIN');
+          
+          final updatedAdmin = adminUser.copyWith(
+            role: UserRole.admin,
+            adminPanelAccess: true,
+            pin: '7165',
+            isActive: true,
+          );
+          
+          await _updateUserInDatabase(updatedAdmin);
+          
+          // Update in memory
+          final adminIndex = _users.indexWhere((user) => user.id == 'admin');
+          if (adminIndex != -1) {
+            _users[adminIndex] = updatedAdmin;
+          }
+          
+          // Update current user if it's the admin
+          if (_currentUser?.id == 'admin') {
+            _currentUser = updatedAdmin;
+          }
+          
+          debugPrint('✅ Admin user updated with PIN 7165 and full admin access');
+        } else {
+          debugPrint('✅ Admin user already has full admin access and correct PIN');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error ensuring admin user exists: $e');
+    }
+  }
+
+  /// Create a default admin user if none exists
+  Future<void> _createDefaultAdminUser() async {
+    try {
+      debugPrint('🔧 Creating default admin user...');
+      
+      final adminUser = User(
+        id: 'admin',
+        name: 'Admin',
+        role: UserRole.admin,
+        pin: '7165',
+        adminPanelAccess: true,
+        isActive: true,
+      );
+      
+      await _saveUserToDatabase(adminUser);
+      _users.add(adminUser);
+      
+      debugPrint('✅ Default admin user created successfully');
+    } catch (e) {
+      debugPrint('❌ Error creating default admin user: $e');
+    }
+  }
+
+  Future<void> _loadWebUsers() async {
+    try {
+      final webUsers = await _databaseService.getWebUsers();
+      _users = webUsers.map((userMap) {
+        return User(
+          id: userMap['id'],
+          name: userMap['name'],
+          role: UserRole.values.firstWhere(
+            (e) => e.toString().split('.').last == userMap['role'],
+            orElse: () => UserRole.server,
+          ),
+          pin: userMap['pin'],
+          isActive: userMap['is_active'] == true,
+          adminPanelAccess: userMap['admin_panel_access'] == true,
+          createdAt: DateTime.parse(userMap['created_at']),
+          lastLogin: userMap['last_login'] != null ? DateTime.parse(userMap['last_login']) : null,
+        );
+      }).toList();
+      debugPrint('Loaded ${_users.length} users from web storage');
+    } catch (e) {
+      debugPrint('Error loading users from database: $e');
+      _users = [];
+    }
+  }
+
+  Future<void> _loadSQLiteUsers() async {
     try {
       final db = await _databaseService.database;
+      if (db == null) return;
+      
       final List<Map<String, dynamic>> userMaps = await db.query('users');
       
       _users = userMaps.map((userMap) {
@@ -81,6 +164,7 @@ class UserService with ChangeNotifier {
           ),
           pin: userMap['pin'],
           isActive: userMap['is_active'] == 1,
+          adminPanelAccess: userMap['admin_panel_access'] == 1,
           createdAt: DateTime.parse(userMap['created_at']),
           lastLogin: userMap['last_login'] != null ? DateTime.parse(userMap['last_login']) : null,
         );
@@ -123,9 +207,12 @@ class UserService with ChangeNotifier {
     try {
       debugPrint('Creating default users');
       final defaultUsers = [
-        User(id: 'admin', name: 'Admin', role: UserRole.admin, pin: '1234'),
+        User(id: 'admin', name: 'Admin', role: UserRole.admin, pin: '7165', adminPanelAccess: true),
         User(id: 'server1', name: 'Server 1', role: UserRole.server, pin: '1111'),
         User(id: 'server2', name: 'Server 2', role: UserRole.server, pin: '2222'),
+        // Add 2 more dummy servers
+        User(id: 'server3', name: 'Emma Thompson', role: UserRole.server, pin: '3333'),
+        User(id: 'server4', name: 'Alex Johnson', role: UserRole.server, pin: '4444'),
       ];
       
       for (final user in defaultUsers) {
@@ -134,27 +221,191 @@ class UserService with ChangeNotifier {
       
       _users = defaultUsers;
       debugPrint('Default users created successfully');
+      
+      // Ensure admin user has full admin access
+      await _ensureAdminUserHasFullAccess();
     } catch (e) {
       debugPrint('Error creating default users: $e');
     }
   }
 
+  /// Ensures the admin user has full admin access
+  Future<void> _ensureAdminUserHasFullAccess() async {
+    try {
+      final adminUser = _users.where((user) => user.id == 'admin').firstOrNull;
+      
+      if (adminUser == null) {
+        // Create admin user if it doesn't exist
+        debugPrint('🔧 Creating admin user with full access');
+        final newAdmin = User(
+          id: 'admin',
+          name: 'Admin',
+          role: UserRole.admin,
+          pin: '7165',
+          adminPanelAccess: true,
+          isActive: true,
+        );
+        
+        await _saveUserToDatabase(newAdmin);
+        _users.add(newAdmin);
+        
+        debugPrint('✅ Admin user created with PIN 7165 and full access');
+      } else {
+        // Check if admin user needs to be updated (role, access, or PIN)
+        if (adminUser.role != UserRole.admin || 
+            !adminUser.adminPanelAccess || 
+            adminUser.pin != '7165') {
+          debugPrint('🔧 Updating admin user to have full admin access and correct PIN');
+          
+          final updatedAdmin = adminUser.copyWith(
+            role: UserRole.admin,
+            adminPanelAccess: true,
+            pin: '7165',
+            isActive: true,
+          );
+          
+          await _updateUserInDatabase(updatedAdmin);
+          
+          // Update in memory
+          final adminIndex = _users.indexWhere((user) => user.id == 'admin');
+          if (adminIndex != -1) {
+            _users[adminIndex] = updatedAdmin;
+          }
+          
+          // Update current user if it's the admin
+          if (_currentUser?.id == 'admin') {
+            _currentUser = updatedAdmin;
+          }
+          
+          debugPrint('✅ Admin user updated with PIN 7165 and full access');
+        } else {
+          debugPrint('✅ Admin user already has full admin access and correct PIN');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error ensuring admin user has full access: $e');
+    }
+  }
+
+  /// Manually fix admin permissions - can be called if admin access is broken
+  Future<void> fixAdminPermissions() async {
+    try {
+      debugPrint('🔧 Manually fixing admin permissions...');
+      
+      // Remove any existing admin user
+      _users.removeWhere((user) => user.id == 'admin');
+      
+      // Create new admin user with proper permissions
+      final adminUser = User(
+        id: 'admin',
+        name: 'Admin',
+        role: UserRole.admin,
+        pin: '7165',
+        adminPanelAccess: true,
+        isActive: true,
+      );
+      
+      await _saveUserToDatabase(adminUser);
+      _users.add(adminUser);
+      
+      debugPrint('✅ Admin permissions fixed successfully');
+      
+      // Notify listeners
+      try {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          try {
+            notifyListeners();
+          } catch (e) {
+            debugPrint('Error notifying listeners during admin fix: $e');
+          }
+        });
+      } catch (e) {
+        debugPrint('Error scheduling notification during admin fix: $e');
+      }
+    } catch (e) {
+      debugPrint('❌ Error fixing admin permissions: $e');
+    }
+  }
+
+  /// Creates additional dummy servers for testing
+  Future<void> createDummyServers() async {
+    try {
+      debugPrint('Creating dummy servers...');
+      
+      // Check if dummy servers already exist
+      final existingEmma = _users.where((u) => u.id == 'server3').isNotEmpty;
+      final existingAlex = _users.where((u) => u.id == 'server4').isNotEmpty;
+      
+      if (existingEmma && existingAlex) {
+        debugPrint('Dummy servers already exist');
+        return;
+      }
+      
+      final dummyServers = [
+        User(id: 'server3', name: 'Emma Thompson', role: UserRole.server, pin: '3333'),
+        User(id: 'server4', name: 'Alex Johnson', role: UserRole.server, pin: '4444'),
+      ];
+      
+      for (final server in dummyServers) {
+        if (!_users.any((u) => u.id == server.id)) {
+          await _saveUserToDatabase(server);
+          _users.add(server);
+        }
+      }
+      
+      debugPrint('✅ Dummy servers created successfully');
+      
+      // Safely notify listeners
+      try {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          try {
+            notifyListeners();
+          } catch (e) {
+            debugPrint('Error notifying listeners during dummy server creation: $e');
+          }
+        });
+      } catch (e) {
+        debugPrint('Error scheduling notification during dummy server creation: $e');
+      }
+    } catch (e) {
+      debugPrint('❌ Error creating dummy servers: $e');
+    }
+  }
+
   Future<void> _saveUserToDatabase(User user) async {
     try {
-      final db = await _databaseService.database;
-      await db.insert(
-        'users',
-        {
+      if (_databaseService.isWeb) {
+        // Web platform - use Hive storage with consistent data format
+        await _databaseService.saveWebUser({
           'id': user.id,
           'name': user.name,
           'role': user.role.toString().split('.').last,
           'pin': user.pin,
           'is_active': user.isActive ? 1 : 0,
+          'admin_panel_access': user.adminPanelAccess ? 1 : 0, // Ensure admin panel access is saved
           'created_at': user.createdAt.toIso8601String(),
           'last_login': user.lastLogin?.toIso8601String(),
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+        });
+      } else {
+        // Mobile/Desktop platform - use SQLite
+        final db = await _databaseService.database;
+        if (db == null) return;
+        
+        await db.insert(
+          'users',
+          {
+            'id': user.id,
+            'name': user.name,
+            'role': user.role.toString().split('.').last,
+            'pin': user.pin,
+            'is_active': user.isActive ? 1 : 0,
+            'admin_panel_access': user.adminPanelAccess ? 1 : 0, // Ensure admin panel access is saved
+            'created_at': user.createdAt.toIso8601String(),
+            'last_login': user.lastLogin?.toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
     } catch (e) {
       debugPrint('Error saving user to database: $e');
       rethrow;
@@ -163,21 +414,42 @@ class UserService with ChangeNotifier {
 
   Future<void> _updateUserInDatabase(User user) async {
     try {
-      final db = await _databaseService.database;
-      await db.update(
-        'users',
-        {
+      if (_databaseService.isWeb) {
+        // Web platform - use Hive storage
+        await _databaseService.saveWebUser({
+          'id': user.id,
           'name': user.name,
           'role': user.role.toString().split('.').last,
           'pin': user.pin,
           'is_active': user.isActive ? 1 : 0,
+          'admin_panel_access': user.adminPanelAccess ? 1 : 0,
+          'created_at': user.createdAt.toIso8601String(),
           'last_login': user.lastLogin?.toIso8601String(),
-        },
-        where: 'id = ?',
-        whereArgs: [user.id],
-      );
+        });
+      } else {
+        // Mobile/Desktop platform - use SQLite
+        final db = await _databaseService.database;
+        if (db == null) return;
+        
+        await db.update(
+          'users',
+          {
+            'id': user.id,
+            'name': user.name,
+            'role': user.role.toString().split('.').last,
+            'pin': user.pin,
+            'is_active': user.isActive ? 1 : 0,
+            'admin_panel_access': user.adminPanelAccess ? 1 : 0,
+            'created_at': user.createdAt.toIso8601String(),
+            'last_login': user.lastLogin?.toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [user.id],
+        );
+      }
+      debugPrint('✅ Updated user in database: ${user.name}');
     } catch (e) {
-      debugPrint('Error updating user in database: $e');
+      debugPrint('❌ Failed to update user in database: $e');
       rethrow;
     }
   }
@@ -185,11 +457,13 @@ class UserService with ChangeNotifier {
   Future<void> _deleteUserFromDatabase(String userId) async {
     try {
       final db = await _databaseService.database;
-      await db.delete(
-        'users',
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+      if (db != null) {
+        await db.delete(
+          'users',
+          where: 'id = ?',
+          whereArgs: [userId],
+        );
+      }
     } catch (e) {
       debugPrint('Error deleting user from database: $e');
       rethrow;
@@ -224,7 +498,9 @@ class UserService with ChangeNotifier {
   Future<void> clearAndSaveUsers(List<User> users) async {
     try {
       final db = await _databaseService.database;
-      await db.delete('users');
+      if (db != null) {
+        await db.delete('users');
+      }
       
       for (final user in users) {
         await _saveUserToDatabase(user);
@@ -249,15 +525,134 @@ class UserService with ChangeNotifier {
     }
   }
 
-  List<User> get users {
-    return _users;
-  }
+  /// Gets all users
+  List<User> get users => List.unmodifiable(_users);
 
+  /// Gets the current logged-in user
   User? get currentUser => _currentUser;
 
+  /// Sets the current user and notifies listeners
   void setCurrentUser(User? user) {
     _currentUser = user;
     notifyListeners();
+  }
+
+  /// Validates user credentials and returns the user if valid
+  User? validateUserCredentials(String id, String pin) {
+    try {
+      return _users.firstWhere((user) => user.id == id && user.pin == pin && user.isActive);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Grants full admin access to a user (both role and admin panel access)
+  Future<bool> grantFullAdminAccess(String userId) async {
+    try {
+      final userIndex = _users.indexWhere((user) => user.id == userId);
+      if (userIndex == -1) {
+        debugPrint('❌ User not found: $userId');
+        return false;
+      }
+
+      final user = _users[userIndex];
+      final updatedUser = user.copyWith(
+        role: UserRole.admin,
+        adminPanelAccess: true,
+      );
+      
+      // Update in database
+      await _updateUserInDatabase(updatedUser);
+      
+      // Update in memory
+      _users[userIndex] = updatedUser;
+      
+      // Update current user if it's the same user
+      if (_currentUser?.id == userId) {
+        _currentUser = updatedUser;
+      }
+      
+      notifyListeners();
+      debugPrint('✅ Granted full admin access to user: ${user.name}');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Failed to grant full admin access: $e');
+      return false;
+    }
+  }
+
+  /// Grants admin panel access to a user
+  Future<bool> grantAdminPanelAccess(String userId) async {
+    try {
+      final userIndex = _users.indexWhere((user) => user.id == userId);
+      if (userIndex == -1) {
+        debugPrint('❌ User not found: $userId');
+        return false;
+      }
+
+      final user = _users[userIndex];
+      final updatedUser = user.copyWith(adminPanelAccess: true);
+      
+      // Update in database
+      await _updateUserInDatabase(updatedUser);
+      
+      // Update in memory
+      _users[userIndex] = updatedUser;
+      
+      // Update current user if it's the same user
+      if (_currentUser?.id == userId) {
+        _currentUser = updatedUser;
+      }
+      
+      notifyListeners();
+      debugPrint('✅ Granted admin panel access to user: ${user.name}');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Failed to grant admin panel access: $e');
+      return false;
+    }
+  }
+
+  /// Revokes admin panel access from a user
+  Future<bool> revokeAdminPanelAccess(String userId) async {
+    try {
+      final userIndex = _users.indexWhere((user) => user.id == userId);
+      if (userIndex == -1) {
+        debugPrint('❌ User not found: $userId');
+        return false;
+      }
+
+      final user = _users[userIndex];
+      final updatedUser = user.copyWith(adminPanelAccess: false);
+      
+      // Update in database
+      await _updateUserInDatabase(updatedUser);
+      
+      // Update in memory
+      _users[userIndex] = updatedUser;
+      
+      // Update current user if it's the same user
+      if (_currentUser?.id == userId) {
+        _currentUser = updatedUser;
+      }
+      
+      notifyListeners();
+      debugPrint('✅ Revoked admin panel access from user: ${user.name}');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Failed to revoke admin panel access: $e');
+      return false;
+    }
+  }
+
+  /// Checks if the current user can access admin panel
+  bool get currentUserCanAccessAdminPanel {
+    return _currentUser?.canAccessAdminPanel ?? false;
+  }
+
+  /// Gets all users with admin panel access
+  List<User> get usersWithAdminAccess {
+    return _users.where((user) => user.canAccessAdminPanel).toList();
   }
 
   Future<List<User>> getUsers() async {

@@ -68,7 +68,8 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
 
   Future<void> _updateFilteredOrders() async {
     final orderService = Provider.of<OrderService>(context, listen: false);
-    final allOrders = await orderService.getAllOrders();
+    await orderService.loadOrders();
+    final allOrders = orderService.allOrders;
     final now = DateTime.now();
     
     DateTime startDate;

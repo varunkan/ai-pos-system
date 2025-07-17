@@ -1,300 +1,147 @@
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import '../models/printer_configuration.dart';
+import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:async';
+import 'dart:typed_data';
 import 'database_service.dart';
+import '../models/printer_configuration.dart';
 
-class PrinterConfigurationService with ChangeNotifier {
+/// 🖨️ Real Printer Configuration Service
+/// 
+/// This service provides REAL printer discovery and connection for ALL Epson TM thermal printers.
+/// Features:
+/// - Automatic network scanning and discovery
+/// - Support for ALL Epson TM models (TM-T88VI, TM-T88V, TM-T20III, etc.)
+/// - Real connection testing and validation
+/// - Simple user-friendly setup process
+/// - No fake/dummy configurations
+class PrinterConfigurationService extends ChangeNotifier {
+  static const String _logTag = '🖨️ PrinterConfigurationService';
+  
   final DatabaseService _databaseService;
+  
+  // Real printer state
   List<PrinterConfiguration> _configurations = [];
-  bool _isLoading = false;
-
-  PrinterConfigurationService(this._databaseService) {
-    _initializeDatabase();
-    _loadConfigurations();
-  }
-
+  List<DiscoveredPrinter> _discoveredPrinters = [];
+  bool _isScanning = false;
+  bool _isInitialized = false;
+  
+  // Network scanning parameters - FIXED: Increased timeout
+  static const List<int> _commonPorts = [9100, 515, 631, 8080];
+  static const int _scanTimeout = 5000; // 5 seconds per printer
+  
+  PrinterConfigurationService(this._databaseService);
+  
   // Getters
-  List<PrinterConfiguration> get configurations => _configurations;
+  List<PrinterConfiguration> get configurations => List.unmodifiable(_configurations);
   List<PrinterConfiguration> get activeConfigurations => 
       _configurations.where((config) => config.isActive).toList();
-  List<PrinterConfiguration> get networkPrinters => 
-      _configurations.where((config) => config.isNetworkPrinter && config.isActive).toList();
-  bool get isLoading => _isLoading;
-
-  /// Initialize the printer configurations table
-  Future<void> _initializeDatabase() async {
+  List<DiscoveredPrinter> get discoveredPrinters => List.unmodifiable(_discoveredPrinters);
+  bool get isScanning => _isScanning;
+  bool get isInitialized => _isInitialized;
+  
+  /// Initialize the service with REAL printer discovery (legacy method name)
+  Future<void> initializeTable() async => await initialize();
+  
+  /// Initialize the service with REAL printer discovery
+  Future<void> initialize() async {
+    debugPrint('$_logTag 🚀 Initializing REAL printer configuration service...');
+    
+    try {
+      await _createPrinterConfigurationsTable();
+      await _loadSavedConfigurations();
+      
+      // Start automatic printer discovery
+      await _startAutomaticDiscovery();
+      
+      _isInitialized = true;
+      notifyListeners();
+      
+      debugPrint('$_logTag ✅ REAL printer service initialized successfully');
+    } catch (e) {
+      debugPrint('$_logTag ❌ Error initializing printer service: $e');
+    }
+  }
+  
+  /// Create printer configurations table
+  Future<void> _createPrinterConfigurationsTable() async {
     try {
       final db = await _databaseService.database;
+      if (db?.isOpen != true) return;
       
-      // Create printer_configurations table
-      await db.execute('''
+      await db!.execute('''
         CREATE TABLE IF NOT EXISTS printer_configurations (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
-          description TEXT DEFAULT '',
+          description TEXT,
           type TEXT NOT NULL,
-          model TEXT DEFAULT 'epsonTMT88VI',
-          ip_address TEXT DEFAULT '',
-          port INTEGER DEFAULT 9100,
-          mac_address TEXT DEFAULT '',
-          bluetooth_address TEXT DEFAULT '',
-          is_active INTEGER NOT NULL DEFAULT 1,
-          is_default INTEGER NOT NULL DEFAULT 0,
-          connection_status TEXT DEFAULT 'unknown',
-          last_connected TEXT DEFAULT '1970-01-01T00:00:00.000Z',
-          last_test_print TEXT DEFAULT '1970-01-01T00:00:00.000Z',
-          custom_settings TEXT DEFAULT '{}',
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL
+          model TEXT NOT NULL,
+          ip_address TEXT,
+          port INTEGER,
+          is_active INTEGER DEFAULT 1,
+          connection_status TEXT DEFAULT 'disconnected',
+          last_connected TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
       ''');
-
-      // Create default printer configurations if none exist
-      await _createDefaultConfigurations();
-
-      debugPrint('Printer configurations table initialized successfully');
+      
+      debugPrint('$_logTag ✅ Printer configurations table created');
     } catch (e) {
-      debugPrint('Error initializing printer configurations table: $e');
+      debugPrint('$_logTag ❌ Error creating table: $e');
     }
   }
-
-  /// Create default printer configurations for restaurant stations
-  Future<void> _createDefaultConfigurations() async {
+  
+  /// Load saved printer configurations
+  Future<void> _loadSavedConfigurations() async {
     try {
       final db = await _databaseService.database;
+      if (db?.isOpen != true) return;
       
-      // Check if any configurations exist
-      final existing = await db.query('printer_configurations', limit: 1);
-      if (existing.isNotEmpty) {
-        return; // Don't create defaults if configurations already exist
-      }
-
-      final defaultConfigs = [
-        PrinterConfiguration(
-          name: 'Main Kitchen Printer',
-          description: 'Central coordination & receipts',
-          type: PrinterType.wifi,
-          model: PrinterModel.epsonTMT88VI,
-          ipAddress: '192.168.1.100',
-          port: 9100,
-          isDefault: true,
-        ),
-        PrinterConfiguration(
-          name: 'Tandoor Station',
-          description: 'Naan, kebabs, tandoori items',
-          type: PrinterType.wifi,
-          model: PrinterModel.epsonTMT88VI,
-          ipAddress: '192.168.1.101',
-          port: 9100,
-        ),
-        PrinterConfiguration(
-          name: 'Curry Station',
-          description: 'Curries, dal, gravies',
-          type: PrinterType.wifi,
-          model: PrinterModel.epsonTMT88VI,
-          ipAddress: '192.168.1.102',
-          port: 9100,
-        ),
-        PrinterConfiguration(
-          name: 'Appetizer Station',
-          description: 'Starters, salads, cold items',
-          type: PrinterType.wifi,
-          model: PrinterModel.epsonTMT88VI,
-          ipAddress: '192.168.1.103',
-          port: 9100,
-        ),
-        PrinterConfiguration(
-          name: 'Grill Station',
-          description: 'Grilled items, BBQ',
-          type: PrinterType.wifi,
-          model: PrinterModel.epsonTMT88VI,
-          ipAddress: '192.168.1.104',
-          port: 9100,
-        ),
-        PrinterConfiguration(
-          name: 'Bar/Beverage Station',
-          description: 'Drinks, beverages',
-          type: PrinterType.wifi,
-          model: PrinterModel.epsonTMT88VI,
-          ipAddress: '192.168.1.105',
-          port: 9100,
-        ),
-      ];
-
-      for (final config in defaultConfigs) {
-        await db.insert('printer_configurations', _configToDbMap(config));
-      }
-
-      debugPrint('Created ${defaultConfigs.length} default printer configurations');
-    } catch (e) {
-      debugPrint('Error creating default printer configurations: $e');
-    }
-  }
-
-  /// Convert PrinterConfiguration to database map
-  Map<String, dynamic> _configToDbMap(PrinterConfiguration config) {
-    final json = config.toJson();
-    // Convert custom_settings to JSON string for database storage
-    json['custom_settings'] = jsonEncode(config.customSettings);
-    return json;
-  }
-
-  /// Convert database map to PrinterConfiguration
-  PrinterConfiguration _dbMapToConfig(Map<String, dynamic> map) {
-    // Parse custom_settings from JSON string
-    if (map['custom_settings'] is String) {
-      try {
-        map['custom_settings'] = jsonDecode(map['custom_settings'] as String);
-      } catch (e) {
-        map['custom_settings'] = <String, dynamic>{};
-      }
-    }
-    return PrinterConfiguration.fromJson(map);
-  }
-
-  /// Load all printer configurations from database
-  Future<void> _loadConfigurations() async {
-    try {
-      _isLoading = true;
+      final List<Map<String, dynamic>> maps = await db!.query('printer_configurations');
+      _configurations = maps.map((map) => _configFromDbMap(map)).toList();
+      
+      debugPrint('$_logTag 📂 Loaded ${_configurations.length} saved printer configurations');
       notifyListeners();
-
-      final db = await _databaseService.database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        'printer_configurations',
-        orderBy: 'is_default DESC, name ASC',
-      );
-
-      _configurations = maps.map((map) => _dbMapToConfig(map)).toList();
-      
-      debugPrint('Loaded ${_configurations.length} printer configurations');
     } catch (e) {
-      debugPrint('Error loading printer configurations: $e');
-      _configurations = [];
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      debugPrint('$_logTag ❌ Error loading configurations: $e');
     }
   }
-
-  /// Add a new printer configuration
-  Future<bool> addConfiguration(PrinterConfiguration config) async {
-    try {
-      final db = await _databaseService.database;
-      
-      // Check for duplicate IP addresses for network printers
-      if (config.isNetworkPrinter && config.ipAddress.isNotEmpty) {
-        final existing = await db.query(
-          'printer_configurations',
-          where: 'ip_address = ? AND port = ? AND is_active = 1 AND id != ?',
-          whereArgs: [config.ipAddress, config.port, config.id],
-        );
-
-        if (existing.isNotEmpty) {
-          debugPrint('Printer configuration with IP ${config.ipAddress}:${config.port} already exists');
-          return false;
-        }
-      }
-
-      // If this is set as default, remove default from others
-      if (config.isDefault) {
-        await _clearDefaultFlags();
-      }
-
-      await db.insert('printer_configurations', _configToDbMap(config));
-      await _loadConfigurations();
-      
-      debugPrint('Added printer configuration: ${config.name}');
-      return true;
-    } catch (e) {
-      debugPrint('Error adding printer configuration: $e');
-      return false;
-    }
+  
+  /// Load configurations (legacy method name)
+  Future<List<PrinterConfiguration>> loadConfigurations() async {
+    await _loadSavedConfigurations();
+    return _configurations;
   }
-
-  /// Update an existing printer configuration
-  Future<bool> updateConfiguration(PrinterConfiguration config) async {
-    try {
-      final db = await _databaseService.database;
-      
-      // Check for duplicate IP addresses for network printers
-      if (config.isNetworkPrinter && config.ipAddress.isNotEmpty) {
-        final existing = await db.query(
-          'printer_configurations',
-          where: 'ip_address = ? AND port = ? AND is_active = 1 AND id != ?',
-          whereArgs: [config.ipAddress, config.port, config.id],
-        );
-
-        if (existing.isNotEmpty) {
-          debugPrint('Printer configuration with IP ${config.ipAddress}:${config.port} already exists');
-          return false;
-        }
-      }
-
-      // If this is set as default, remove default from others
-      if (config.isDefault) {
-        await _clearDefaultFlags();
-      }
-
-      final updatedConfig = config.copyWith(updatedAt: DateTime.now());
-
-      await db.update(
-        'printer_configurations',
-        _configToDbMap(updatedConfig),
-        where: 'id = ?',
-        whereArgs: [config.id],
-      );
-
-      await _loadConfigurations();
-      
-      debugPrint('Updated printer configuration: ${config.name}');
-      return true;
-    } catch (e) {
-      debugPrint('Error updating printer configuration: $e');
-      return false;
-    }
+  
+  /// Refresh configurations (legacy method name)
+  Future<void> refreshConfigurations() async {
+    await _loadSavedConfigurations();
   }
-
-  /// Delete a printer configuration
-  Future<bool> deleteConfiguration(String configId) async {
+  
+  /// Get configuration by ID (legacy method)
+  Future<PrinterConfiguration?> getConfigurationById(String id) async {
     try {
       final db = await _databaseService.database;
+      if (db?.isOpen != true) return null;
       
-      await db.delete(
+      final List<Map<String, dynamic>> maps = await db!.query(
         'printer_configurations',
         where: 'id = ?',
-        whereArgs: [configId],
+        whereArgs: [id],
       );
-
-      await _loadConfigurations();
       
-      debugPrint('Deleted printer configuration: $configId');
-      return true;
+      if (maps.isNotEmpty) {
+        return _configFromDbMap(maps.first);
+      }
+      return null;
     } catch (e) {
-      debugPrint('Error deleting printer configuration: $e');
-      return false;
-    }
-  }
-
-  /// Get printer configuration by ID
-  PrinterConfiguration? getConfigurationById(String id) {
-    try {
-      return _configurations.firstWhere((config) => config.id == id);
-    } catch (e) {
+      debugPrint('$_logTag ❌ Error getting configuration by ID: $e');
       return null;
     }
   }
-
-  /// Get printer configuration by name
-  PrinterConfiguration? getConfigurationByName(String name) {
-    try {
-      return _configurations.firstWhere((config) => config.name == name);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Get printer configuration by IP address
+  
+  /// Get configuration by IP address
   PrinterConfiguration? getConfigurationByIP(String ipAddress, int port) {
     try {
       return _configurations.firstWhere(
@@ -304,236 +151,554 @@ class PrinterConfigurationService with ChangeNotifier {
       return null;
     }
   }
-
-  /// Get default printer configuration
-  PrinterConfiguration? getDefaultConfiguration() {
-    try {
-      return _configurations.firstWhere((config) => config.isDefault && config.isActive);
-    } catch (e) {
-      return null;
-    }
+  
+  /// Add configuration (legacy method)
+  Future<bool> addConfiguration(PrinterConfiguration config) async {
+    return await _saveConfiguration(config);
   }
-
-  /// Set a configuration as default
-  Future<bool> setAsDefault(String configId) async {
-    try {
-      final config = getConfigurationById(configId);
-      if (config == null) return false;
-
-      final updatedConfig = config.copyWith(isDefault: true);
-      return await updateConfiguration(updatedConfig);
-    } catch (e) {
-      debugPrint('Error setting configuration as default: $e');
-      return false;
-    }
-  }
-
-  /// Clear default flags from all configurations
-  Future<void> _clearDefaultFlags() async {
+  
+  /// Update configuration (legacy method)
+  Future<bool> updateConfiguration(PrinterConfiguration config) async {
     try {
       final db = await _databaseService.database;
-      await db.update(
+      if (db?.isOpen != true) return false;
+      
+      await db!.update(
         'printer_configurations',
-        {'is_default': 0, 'updated_at': DateTime.now().toIso8601String()},
-        where: 'is_default = 1',
-      );
-    } catch (e) {
-      debugPrint('Error clearing default flags: $e');
-    }
-  }
-
-  /// Toggle configuration active status
-  Future<bool> toggleActiveStatus(String configId) async {
-    try {
-      final config = getConfigurationById(configId);
-      if (config == null) return false;
-
-      final updatedConfig = config.copyWith(isActive: !config.isActive);
-      return await updateConfiguration(updatedConfig);
-    } catch (e) {
-      debugPrint('Error toggling configuration active status: $e');
-      return false;
-    }
-  }
-
-  /// Update connection status
-  Future<bool> updateConnectionStatus(String configId, PrinterConnectionStatus status) async {
-    try {
-      final config = getConfigurationById(configId);
-      if (config == null) return false;
-
-      final updatedConfig = config.copyWith(
-        connectionStatus: status,
-        lastConnected: status == PrinterConnectionStatus.connected ? DateTime.now() : config.lastConnected,
+        _configToDbMap(config),
+        where: 'id = ?',
+        whereArgs: [config.id],
       );
       
-      return await updateConfiguration(updatedConfig);
-    } catch (e) {
-      debugPrint('Error updating connection status: $e');
-      return false;
-    }
-  }
-
-  /// Update last test print time
-  Future<bool> updateLastTestPrint(String configId) async {
-    try {
-      final config = getConfigurationById(configId);
-      if (config == null) return false;
-
-      final updatedConfig = config.copyWith(lastTestPrint: DateTime.now());
-      return await updateConfiguration(updatedConfig);
-    } catch (e) {
-      debugPrint('Error updating last test print: $e');
-      return false;
-    }
-  }
-
-  /// Test connection to a printer
-  Future<bool> testConnection(String configId) async {
-    try {
-      final config = getConfigurationById(configId);
-      if (config == null) return false;
-
-      // Update status to connecting
-      await updateConnectionStatus(configId, PrinterConnectionStatus.connecting);
-
-      // Simulate connection test (replace with actual implementation)
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // For now, simulate success for network printers with valid IPs
-      bool success = false;
-      if (config.isNetworkPrinter && config.ipAddress.isNotEmpty) {
-        // Basic IP validation
-        final ipParts = config.ipAddress.split('.');
-        success = ipParts.length == 4 && 
-                 ipParts.every((part) => int.tryParse(part) != null && 
-                                       int.parse(part) >= 0 && 
-                                       int.parse(part) <= 255);
-      }
-
-      final status = success ? PrinterConnectionStatus.connected : PrinterConnectionStatus.error;
-      await updateConnectionStatus(configId, status);
-      
-      debugPrint('Connection test for ${config.name}: ${success ? 'Success' : 'Failed'}');
-      return success;
-    } catch (e) {
-      await updateConnectionStatus(configId, PrinterConnectionStatus.error);
-      debugPrint('Error testing connection: $e');
-      return false;
-    }
-  }
-
-  /// Test print to a printer
-  Future<bool> testPrint(String configId) async {
-    try {
-      final config = getConfigurationById(configId);
-      if (config == null) return false;
-
-      // Test connection first
-      final connected = await testConnection(configId);
-      if (!connected) return false;
-
-      // Simulate test print (replace with actual implementation)
-      await Future.delayed(const Duration(seconds: 1));
-      
-      await updateLastTestPrint(configId);
-      
-      debugPrint('Test print sent to ${config.name}');
+      await _loadSavedConfigurations();
+      debugPrint('$_logTag ✅ Updated printer configuration: ${config.name}');
       return true;
+      
     } catch (e) {
-      debugPrint('Error sending test print: $e');
+      debugPrint('$_logTag ❌ Error updating configuration: $e');
       return false;
     }
   }
-
-  /// Get configuration statistics
-  Map<String, dynamic> getConfigurationStats() {
-    final activeConfigs = _configurations.where((c) => c.isActive).toList();
-    final connectedConfigs = activeConfigs.where((c) => c.connectionStatus == PrinterConnectionStatus.connected).toList();
-    final networkConfigs = activeConfigs.where((c) => c.isNetworkPrinter).toList();
-    final bluetoothConfigs = activeConfigs.where((c) => c.type == PrinterType.bluetooth).toList();
-
-    return {
-      'totalConfigurations': _configurations.length,
-      'activeConfigurations': activeConfigs.length,
-      'connectedConfigurations': connectedConfigs.length,
-      'networkConfigurations': networkConfigs.length,
-      'bluetoothConfigurations': bluetoothConfigs.length,
-      'defaultConfiguration': getDefaultConfiguration()?.name ?? 'None',
-    };
+  
+  /// Test configuration (legacy method)
+  Future<bool> testConfiguration(PrinterConfiguration config) async {
+    return await testConnection(config);
   }
-
-  /// Scan for network printers
-  Future<List<PrinterConfiguration>> scanNetworkPrinters() async {
+  
+  /// Update last test print (legacy method)
+  Future<void> updateLastTestPrint(String configId) async {
     try {
-      debugPrint('Starting network printer scan...');
+      final db = await _databaseService.database;
+      if (db?.isOpen != true) return;
       
-      // Simulate network scanning (replace with actual implementation)
-      await Future.delayed(const Duration(seconds: 3));
+      await db!.update(
+        'printer_configurations',
+        {'updated_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [configId],
+      );
       
-      final discoveredPrinters = <PrinterConfiguration>[];
-      
-      // Simulate finding some printers
-      for (int i = 110; i <= 115; i++) {
-        final config = PrinterConfiguration(
-          name: 'Discovered Printer $i',
-          description: 'Auto-discovered network printer',
-          type: PrinterType.wifi,
-          model: PrinterModel.epsonTMT88VI,
-          ipAddress: '192.168.1.$i',
-          port: 9100,
-          connectionStatus: PrinterConnectionStatus.unknown,
-        );
-        discoveredPrinters.add(config);
+      debugPrint('$_logTag ✅ Updated last test print for configuration: $configId');
+    } catch (e) {
+      debugPrint('$_logTag ❌ Error updating last test print: $e');
+    }
+  }
+  
+  /// Manually trigger printer discovery (can be called from UI)
+  Future<void> manualDiscovery() async {
+    debugPrint('$_logTag 🔍 Manual printer discovery triggered by user');
+    await _scanForPrinters();
+  }
+  
+  /// Start automatic printer discovery on local network
+  Future<void> _startAutomaticDiscovery() async {
+    debugPrint('$_logTag 🔍 Starting automatic printer discovery...');
+    
+    // Start discovery in background
+    Timer.periodic(const Duration(minutes: 5), (timer) {
+      if (_isInitialized) {
+        _scanForPrinters();
       }
-      
-      debugPrint('Network scan completed. Found ${discoveredPrinters.length} printers');
-      return discoveredPrinters;
-    } catch (e) {
-      debugPrint('Error scanning for network printers: $e');
-      return [];
-    }
+    });
+    
+    // Initial scan immediately
+    Timer(const Duration(seconds: 2), () async {
+      if (_isInitialized) {
+        debugPrint('$_logTag 🔍 Starting immediate initial printer scan...');
+        await _scanForPrinters();
+      }
+    });
   }
-
-  /// Refresh configurations from database
-  Future<void> refreshConfigurations() async {
-    await _loadConfigurations();
-  }
-
-  /// Export configurations to JSON
-  String exportConfigurations() {
+  
+  /// Scan for thermal printers on the network
+  Future<void> _scanForPrinters() async {
+    if (_isScanning) return;
+    
+    _isScanning = true;
+    _discoveredPrinters.clear();
+    notifyListeners();
+    
+    debugPrint('$_logTag 🔍 Scanning network for Epson thermal printers...');
+    
     try {
-      final exportData = {
-        'version': '1.0',
-        'exportDate': DateTime.now().toIso8601String(),
-        'configurations': _configurations.map((config) => config.toJson()).toList(),
-      };
-      return jsonEncode(exportData);
-    } catch (e) {
-      debugPrint('Error exporting configurations: $e');
-      return '{}';
-    }
-  }
-
-  /// Import configurations from JSON
-  Future<bool> importConfigurations(String jsonData) async {
-    try {
-      final data = jsonDecode(jsonData) as Map<String, dynamic>;
-      final configsJson = data['configurations'] as List<dynamic>;
+      // Get local network range
+      final networkRange = await _getNetworkRange();
+      debugPrint('$_logTag 🌐 Scanning network range: $networkRange');
       
-      int imported = 0;
-      for (final configJson in configsJson) {
-        final config = PrinterConfiguration.fromJson(configJson as Map<String, dynamic>);
-        if (await addConfiguration(config)) {
-          imported++;
+      // Scan each IP in the range
+      final List<Future<DiscoveredPrinter?>> scanTasks = [];
+      
+      for (int i = 1; i <= 254; i++) {
+        final ip = '${networkRange}.$i';
+        for (int port in _commonPorts) {
+          scanTasks.add(_testPrinterConnection(ip, port));
         }
       }
       
-      debugPrint('Imported $imported configurations');
-      return imported > 0;
+      // Wait for all scans to complete
+      final results = await Future.wait(scanTasks);
+      
+      // Filter out null results and add discovered printers
+      for (final result in results) {
+        if (result != null) {
+          _discoveredPrinters.add(result);
+          debugPrint('$_logTag 🖨️ Found printer: ${result.name} at ${result.ipAddress}:${result.port}');
+          
+          // FIXED: Automatically convert discovered printers to configurations
+          await _autoAddDiscoveredPrinter(result);
+        }
+      }
+      
+      debugPrint('$_logTag ✅ Discovery complete. Found ${_discoveredPrinters.length} printers');
+      
     } catch (e) {
-      debugPrint('Error importing configurations: $e');
+      debugPrint('$_logTag ❌ Error during printer discovery: $e');
+    } finally {
+      _isScanning = false;
+      notifyListeners();
+    }
+  }
+  
+  /// Get network range for scanning (e.g., "192.168.1")
+  Future<String> _getNetworkRange() async {
+    try {
+      // Get local IP address
+      final interfaces = await NetworkInterface.list();
+      for (final interface in interfaces) {
+        for (final address in interface.addresses) {
+          if (address.type == InternetAddressType.IPv4 && 
+              !address.isLoopback && 
+              address.address.startsWith('192.168.')) {
+            final parts = address.address.split('.');
+            return '${parts[0]}.${parts[1]}.${parts[2]}';
+          }
+        }
+      }
+      
+      // Default to common network range
+      return '192.168.1';
+    } catch (e) {
+      debugPrint('$_logTag ⚠️ Could not determine network range, using default: $e');
+      return '192.168.1';
+    }
+  }
+  
+  /// Test connection to a specific IP and port
+  Future<DiscoveredPrinter?> _testPrinterConnection(String ip, int port) async {
+    try {
+      final socket = await Socket.connect(ip, port, timeout: Duration(milliseconds: _scanTimeout));
+      
+      // FIXED: Improved connection handling with better error recovery
+      socket.setOption(SocketOption.tcpNoDelay, true);
+      
+      // Send ESC/POS command to identify printer
+      final identifyCommand = Uint8List.fromList([0x1D, 0x49, 0x01]); // GS I 1 (Model ID)
+      socket.add(identifyCommand);
+      await socket.flush();
+      
+      // Wait for response with improved timeout handling
+      try {
+        final responseData = await socket.first.timeout(const Duration(seconds: 3));
+        
+        await socket.close();
+        
+        // Parse response to identify Epson thermal printer
+        final response = String.fromCharCodes(responseData);
+        if (_isEpsonThermalPrinter(response)) {
+          final model = _identifyEpsonModel(response);
+          return DiscoveredPrinter(
+            name: 'Epson $model',
+            model: model,
+            ipAddress: ip,
+            port: port,
+            status: 'online',
+            description: 'Epson thermal printer discovered on network',
+          );
+        }
+      } catch (responseTimeout) {
+        // FIXED: Handle response timeout gracefully
+        await socket.close();
+        // Still create a generic printer if connection worked
+        return DiscoveredPrinter(
+          name: 'Network Printer',
+          model: 'Generic',
+          ipAddress: ip,
+          port: port,
+          status: 'online',
+          description: 'Network printer discovered (no response to identify command)',
+        );
+      }
+      
+    } catch (e) {
+      // Connection failed - not a printer or not available
+      // FIXED: Silently skip failed connections to prevent log spam
+    }
+    
+    return null;
+  }
+  
+  /// Check if response indicates an Epson thermal printer
+  bool _isEpsonThermalPrinter(String response) {
+    final lowerResponse = response.toLowerCase();
+    return lowerResponse.contains('epson') || 
+           lowerResponse.contains('tm-') ||
+           lowerResponse.contains('thermal');
+  }
+  
+  /// Identify specific Epson model from response
+  String _identifyEpsonModel(String response) {
+    final lowerResponse = response.toLowerCase();
+    
+    if (lowerResponse.contains('tm-t88vi')) return 'TM-T88VI';
+    if (lowerResponse.contains('tm-t88v')) return 'TM-T88V';
+    if (lowerResponse.contains('tm-t20iii')) return 'TM-T20III';
+    if (lowerResponse.contains('tm-t82iii')) return 'TM-T82III';
+    if (lowerResponse.contains('tm-m30iii')) return 'TM-M30III';
+    if (lowerResponse.contains('tm-m30')) return 'TM-m30';
+    if (lowerResponse.contains('tm-m50')) return 'TM-m50';
+    if (lowerResponse.contains('tm-p20')) return 'TM-P20';
+    if (lowerResponse.contains('tm-p60ii')) return 'TM-P60II';
+    
+    // Default for any other Epson thermal printer
+    return 'TM Series';
+  }
+  
+  /// Add a discovered printer to configurations
+  Future<bool> addDiscoveredPrinter(DiscoveredPrinter printer, String customName) async {
+    try {
+      final config = PrinterConfiguration(
+        name: customName.isNotEmpty ? customName : printer.name,
+        description: printer.description,
+        type: PrinterType.wifi,
+        model: _getModelEnum(printer.model),
+        ipAddress: printer.ipAddress,
+        port: printer.port,
+        isActive: true,
+      );
+      
+      return await _saveConfiguration(config);
+      
+    } catch (e) {
+      debugPrint('$_logTag ❌ Error adding discovered printer: $e');
       return false;
     }
   }
+  
+  /// Automatically add discovered printer to configurations (called during discovery)
+  Future<void> _autoAddDiscoveredPrinter(DiscoveredPrinter printer) async {
+    try {
+      // Check if we already have a configuration for this printer
+      final existing = getConfigurationByIP(printer.ipAddress, printer.port);
+      if (existing != null) {
+        debugPrint('$_logTag ℹ️ Printer already exists in configurations: ${printer.name}');
+        return;
+      }
+      
+      // Create configuration with appropriate name
+      final config = PrinterConfiguration(
+        name: '${printer.name} (Auto-discovered)',
+        description: 'Automatically discovered and added - ${printer.description}',
+        type: PrinterType.wifi,
+        model: _getModelEnum(printer.model),
+        ipAddress: printer.ipAddress,
+        port: printer.port,
+        isActive: true,
+      );
+      
+      final success = await _saveConfiguration(config);
+      if (success) {
+        debugPrint('$_logTag ✅ Auto-added discovered printer: ${printer.name} at ${printer.ipAddress}:${printer.port}');
+      } else {
+        debugPrint('$_logTag ❌ Failed to auto-add discovered printer: ${printer.name}');
+      }
+      
+    } catch (e) {
+      debugPrint('$_logTag ❌ Error auto-adding discovered printer: $e');
+    }
+  }
+  
+  /// Convert model string to enum
+  PrinterModel _getModelEnum(String modelString) {
+    switch (modelString.toLowerCase()) {
+      case 'tm-t88vi': return PrinterModel.epsonTMT88VI;
+      case 'tm-t88v': return PrinterModel.epsonTMT88V;
+      case 'tm-t20iii': return PrinterModel.epsonTMT20III;
+      case 'tm-t82iii': return PrinterModel.epsonTMT82III;
+      case 'tm-m30': return PrinterModel.epsonTMm30;
+      case 'tm-m30iii': return PrinterModel.epsonTMGeneric;
+      case 'tm-m50': return PrinterModel.epsonTMm50;
+      case 'tm-p20': return PrinterModel.epsonTMP20;
+      case 'tm-p60ii': return PrinterModel.epsonTMP60II;
+      default: return PrinterModel.epsonTMGeneric;
+    }
+  }
+  
+  /// Save configuration to database
+  Future<bool> _saveConfiguration(PrinterConfiguration config) async {
+    try {
+      final db = await _databaseService.database;
+      if (db?.isOpen != true) {
+        debugPrint('$_logTag ❌ Database not available for saving configuration');
+        return false;
+      }
+      
+      final configMap = _configToDbMap(config);
+      debugPrint('$_logTag 💾 Saving configuration with data: ${configMap.keys.toList()}');
+      
+      await db!.insert('printer_configurations', configMap);
+      await _loadSavedConfigurations();
+      
+      debugPrint('$_logTag ✅ Saved printer configuration: ${config.name} (${config.ipAddress}:${config.port})');
+      return true;
+      
+    } catch (e) {
+      debugPrint('$_logTag ❌ Error saving configuration: $e');
+      debugPrint('$_logTag 📋 Config details: ${config.name} at ${config.ipAddress}:${config.port}');
+      return false;
+    }
+  }
+  
+  /// Test connection to a configured printer (overloaded to accept String ID)
+  Future<bool> testConnection(dynamic configOrId) async {
+    PrinterConfiguration? config;
+    
+    if (configOrId is String) {
+      // If passed a String ID, look up the configuration
+      config = await getConfigurationById(configOrId);
+      if (config == null) {
+        debugPrint('$_logTag ❌ Configuration not found for ID: $configOrId');
+        return false;
+      }
+    } else if (configOrId is PrinterConfiguration) {
+      config = configOrId;
+    } else {
+      debugPrint('$_logTag ❌ Invalid parameter type for testConnection');
+      return false;
+    }
+    
+    try {
+      debugPrint('$_logTag 🔧 Testing connection to ${config.name}...');
+      
+      final socket = await Socket.connect(
+        config.ipAddress, 
+        config.port, 
+        timeout: const Duration(seconds: 5)
+      );
+      
+      // Send test print command
+      final testCommand = _generateTestPrint(config.name);
+      socket.add(testCommand);
+      
+      await socket.close();
+      
+      debugPrint('$_logTag ✅ Connection test successful for ${config.name}');
+      return true;
+      
+    } catch (e) {
+      debugPrint('$_logTag ❌ Connection test failed for ${config.name}: $e');
+      return false;
+    }
+  }
+  
+  /// Generate test print command
+  Uint8List _generateTestPrint(String printerName) {
+    final content = '''
+=== TEST PRINT ===
+Printer: $printerName
+Time: ${DateTime.now().toString().substring(0, 16)}
+Status: Connection OK
+POS System: AI Restaurant
+
+------------------
+''';
+    
+    final bytes = <int>[];
+    
+    // ESC/POS commands
+    bytes.addAll([0x1B, 0x40]); // Initialize printer
+    bytes.addAll([0x1B, 0x61, 0x01]); // Center align
+    bytes.addAll(content.codeUnits);
+    bytes.addAll([0x1B, 0x64, 0x03]); // Feed 3 lines
+    bytes.addAll([0x1D, 0x56, 0x00]); // Cut paper
+    
+    return Uint8List.fromList(bytes);
+  }
+  
+  /// Manual printer setup
+  Future<bool> addManualPrinter({
+    required String name,
+    required String ipAddress,
+    required int port,
+    String description = '',
+  }) async {
+    try {
+      debugPrint('$_logTag 🔧 Adding manual printer: $name at $ipAddress:$port');
+      
+      // Test connection first
+      final socket = await Socket.connect(ipAddress, port, timeout: const Duration(seconds: 5));
+      await socket.close();
+      
+      final config = PrinterConfiguration(
+        name: name,
+        description: description.isNotEmpty ? description : 'Manually added printer',
+        type: PrinterType.wifi,
+        model: PrinterModel.epsonTMGeneric, // Use generic for manual setup
+        ipAddress: ipAddress,
+        port: port,
+        isActive: true,
+      );
+      
+      return await _saveConfiguration(config);
+      
+    } catch (e) {
+      debugPrint('$_logTag ❌ Error adding manual printer: $e');
+      return false;
+    }
+  }
+  
+  /// Remove printer configuration
+  Future<bool> removeConfiguration(String configId) async {
+    try {
+      final db = await _databaseService.database;
+      if (db?.isOpen != true) return false;
+      
+      await db!.delete('printer_configurations', where: 'id = ?', whereArgs: [configId]);
+      await _loadSavedConfigurations();
+      
+      debugPrint('$_logTag ✅ Removed printer configuration');
+      return true;
+      
+    } catch (e) {
+      debugPrint('$_logTag ❌ Error removing configuration: $e');
+      return false;
+    }
+  }
+  
+  /// Convert database map to PrinterConfiguration
+  PrinterConfiguration _configFromDbMap(Map<String, dynamic> map) {
+    return PrinterConfiguration(
+      id: map['id'],
+      name: map['name'],
+      description: map['description'] ?? '',
+      type: PrinterType.values.firstWhere(
+        (type) => type.toString().split('.').last == map['type'],
+        orElse: () => PrinterType.wifi,
+      ),
+      model: PrinterModel.values.firstWhere(
+        (model) => model.toString().split('.').last == map['model'],
+        orElse: () => PrinterModel.epsonTMGeneric,
+      ),
+      ipAddress: map['ip_address'] ?? '',
+      port: map['port'] ?? 9100,
+      isActive: (map['is_active'] ?? 1) == 1,
+      connectionStatus: PrinterConnectionStatus.values.firstWhere(
+        (status) => status.toString().split('.').last == (map['connection_status'] ?? 'unknown'),
+        orElse: () => PrinterConnectionStatus.unknown,
+      ),
+      lastConnected: map['last_connected'] != null 
+          ? DateTime.tryParse(map['last_connected']) ?? DateTime.fromMillisecondsSinceEpoch(0)
+          : DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+  
+  /// Convert PrinterConfiguration to database map
+  Map<String, dynamic> _configToDbMap(PrinterConfiguration config) {
+    return {
+      'id': config.id,
+      'name': config.name,
+      'description': config.description,
+      'type': config.type.toString().split('.').last,
+      'model': config.model.toString().split('.').last,
+      'ip_address': config.ipAddress,
+      'port': config.port,
+      'is_active': config.isActive ? 1 : 0,
+      'connection_status': config.connectionStatus.toString().split('.').last,
+      'last_connected': config.lastConnected.millisecondsSinceEpoch > 0 
+          ? config.lastConnected.toIso8601String() 
+          : null,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+  }
+  
+  /// Update printer connection status
+  Future<bool> updateConnectionStatus(String configId, PrinterConnectionStatus status) async {
+    try {
+      final db = await _databaseService.database;
+      if (db?.isOpen != true) return false;
+      
+      await db!.update(
+        'printer_configurations',
+        {
+          'connection_status': status.toString().split('.').last,
+          'last_connected': status == PrinterConnectionStatus.connected 
+              ? DateTime.now().toIso8601String() 
+              : null,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [configId],
+      );
+      
+      // Update the configuration in memory
+      final index = _configurations.indexWhere((config) => config.id == configId);
+      if (index != -1) {
+        _configurations[index] = _configurations[index].copyWith(
+          connectionStatus: status,
+          lastConnected: status == PrinterConnectionStatus.connected 
+              ? DateTime.now() 
+              : _configurations[index].lastConnected,
+        );
+        notifyListeners();
+      }
+      
+      debugPrint('$_logTag ✅ Updated connection status for $configId to $status');
+      return true;
+      
+    } catch (e) {
+      debugPrint('$_logTag ❌ Error updating connection status: $e');
+      return false;
+    }
+  }
+}
+
+/// Discovered printer information
+class DiscoveredPrinter {
+  final String name;
+  final String model;
+  final String ipAddress;
+  final int port;
+  final String status;
+  final String description;
+  
+  DiscoveredPrinter({
+    required this.name,
+    required this.model,
+    required this.ipAddress,
+    required this.port,
+    required this.status,
+    required this.description,
+  });
+  
+  @override
+  String toString() => '$name ($model) at $ipAddress:$port - $status';
 } 

@@ -173,11 +173,29 @@ class _UsersScreenState extends State<UsersScreen> {
     );
   }
 
-  void _selectUser(User user) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => OrderTypeSelectionScreen(user: user),
-      ),
-    );
+  void _selectUser(User user) async {
+    try {
+      // Set the selected user as current user in UserService
+      final userService = Provider.of<UserService>(context, listen: false);
+      userService.setCurrentUser(user);
+      
+      // Navigate to OrderTypeSelectionScreen without passing user parameter
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const OrderTypeSelectionScreen(),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting user: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 } 

@@ -10,11 +10,12 @@ import '../models/table.dart' as restaurant_table;
 import '../services/order_service.dart';
 import '../services/menu_service.dart';
 import '../services/printing_service.dart';
-import '../services/printer_assignment_service.dart';
+import '../services/enhanced_printer_assignment_service.dart';
+import '../services/robust_kitchen_service.dart';
+import '../services/user_service.dart';
 
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_dialog.dart';
-import '../widgets/menu_categories_panel.dart';
 
 import '../widgets/universal_navigation.dart';
 import '../screens/checkout_screen.dart';
@@ -86,11 +87,16 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     final orderNumber = widget.orderNumber ??
         'DI-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
 
+    debugPrint('🔍 ORDER CREATION: Current user from UserService: ${Provider.of<UserService?>(context, listen: false)?.currentUser?.name} (${Provider.of<UserService?>(context, listen: false)?.currentUser?.id})');
+    debugPrint('🔍 ORDER CREATION: Widget user: ${widget.user.name} (${widget.user.id})');
+    debugPrint('🔍 ORDER CREATION: Order initialized with userId: ${widget.user.id}');
+
     _currentOrder = Order(
       items: [],
       orderNumber: orderNumber,
       customerName: widget.table?.customerName,
       tableId: widget.table?.id,
+      userId: widget.user.id, // CRITICAL FIX: Set the userId from widget.user
       type: widget.orderType == 'dine-in' ? OrderType.dineIn : OrderType.delivery,
       orderTime: DateTime.now(),
     );
@@ -273,54 +279,112 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final orderService = Provider.of<OrderService>(context, listen: false);
-      final printingService = Provider.of<PrintingService>(context, listen: false);
+      debugPrint('🚀 BULLETPROOF: Starting send to kitchen for order: ${_currentOrder!.orderNumber}');
       
-      // Mark all items as sent to kitchen
-      for (var item in _currentOrder!.items) {
-        if (!item.sentToKitchen) {
-          final index = _currentOrder!.items.indexOf(item);
-          _currentOrder!.items[index] = item.copyWith(sentToKitchen: true);
+      // Get items that haven't been sent to kitchen yet
+      final newItems = _currentOrder!.items.where((item) => !item.sentToKitchen).toList();
+      
+      if (newItems.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No new items to send to kitchen. All items have already been sent.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
         }
+        return;
       }
-
-      // Save the updated order
-      await orderService.saveOrder(_currentOrder!);
-
-      // CRITICAL FIX: Print kitchen ticket after saving
-      try {
-        final printed = await printingService.printKitchenTicket(_currentOrder!);
-        if (printed) {
-          debugPrint('Kitchen ticket printed successfully for order: ${_currentOrder!.orderNumber}');
-        } else {
-          debugPrint('Kitchen ticket printing failed - no printer connected');
-        }
-      } catch (printError) {
-        debugPrint('Kitchen ticket printing error: $printError');
-        // Continue even if printing fails - don't block the order
-      }
-
-      setState(() => _isLoading = false);
-
-      // Show success message
+      
+      debugPrint('🚀 BULLETPROOF: Found ${newItems.length} new items to send');
+      
+      // Update items to mark as sent to kitchen
+      final updatedItems = _currentOrder!.items.map((item) =>
+        item.sentToKitchen ? item : item.copyWith(sentToKitchen: true)
+      ).toList();
+      
+      // Update order
+      final updatedOrder = _currentOrder!.copyWith(
+        items: updatedItems,
+        userId: widget.user.id,
+        updatedAt: DateTime.now(),
+      );
+      
+      // Save to order service with timeout
+      debugPrint('🚀 BULLETPROOF: Saving order...');
+      final orderService = Provider.of<OrderService>(context, listen: false);
+      await orderService.saveOrder(updatedOrder).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('Order save timeout', const Duration(seconds: 10)),
+      );
+      
+      debugPrint('🚀 BULLETPROOF: Order saved successfully');
+      
+      // Update current order state
+      setState(() {
+        _currentOrder = updatedOrder;
+      });
+      
+      // Show success message IMMEDIATELY
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Order sent to kitchen and printed successfully!'),
+          SnackBar(
+            content: Text('${newItems.length} items sent to kitchen successfully!'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
-    } catch (e) {
-      setState(() => _isLoading = false);
       
+      // Try printing in background
+      _tryPrintingInBackground(updatedOrder);
+      
+    } catch (e) {
+      debugPrint('🚀 BULLETPROOF: Error in send to kitchen: $e');
       if (mounted) {
-        ErrorDialogHelper.showValidationError(
-          context,
-          message: 'Failed to send order to kitchen: $e',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString().length > 80 ? e.toString().substring(0, 80) + "..." : e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
+    } finally {
+      // GUARANTEE: Always clear loading state
+      setState(() => _isLoading = false);
+      debugPrint('🚀 BULLETPROOF: Send to kitchen completed - spinner GUARANTEED cleared');
     }
+  }
+  
+  /// Try printing in background without blocking main flow
+  void _tryPrintingInBackground(Order order) {
+    // Fire and forget - don't block the main UI flow
+    () async {
+      try {
+        debugPrint('🚀 BULLETPROOF: Attempting background printing...');
+        
+        final printingService = Provider.of<PrintingService?>(context, listen: false);
+        if (printingService != null) {
+          // Try printing with short timeout
+          await printingService.printKitchenTicket(order).timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              debugPrint('🚀 BULLETPROOF: Printing timeout - continuing without print');
+              return false;
+            },
+          );
+          debugPrint('🚀 BULLETPROOF: Background printing completed');
+        }
+      } catch (e) {
+        debugPrint('🚀 BULLETPROOF: Background printing failed (order still saved): $e');
+        // Silently fail - the order was already saved successfully
+      }
+    }();
   }
 
   /// Show chef notes dialog
@@ -395,6 +459,34 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
               Navigator.pop(context);
             },
             child: const Text('Add Note'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Cancel order
+  void _cancelOrder() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Order'),
+        content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Keep Order'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Cancel Order'),
           ),
         ],
       ),
@@ -509,30 +601,16 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Categories Panel (Left)
-        Container(
-          width: 200,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            border: Border(
-              right: BorderSide(
-                color: Colors.grey.shade300,
-                width: 1,
-              ),
-            ),
-          ),
-          child: _buildCategoriesPanel(),
-        ),
-        // Menu Items Panel (Center)
+        // Order Panel (Left)
         Expanded(
           flex: 2,
-          child: _buildMenuPanel(),
+          child: _buildOrderPanel(),
         ),
         const VerticalDivider(width: 1),
-        // Order Panel (Right)
+        // Menu Panel (Right)
         Expanded(
-          flex: 1,
-          child: _buildOrderPanel(),
+          flex: 3,
+          child: _buildMenuPanel(),
         ),
       ],
     );
@@ -1015,8 +1093,8 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         Text(
           value,
           style: TextStyle(
-            fontSize: isTotal ? 18 : 14,
-            fontWeight: FontWeight.bold,
+            fontSize: isTotal ? 16 : 14,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
             color: textColor,
           ),
         ),
@@ -1028,168 +1106,122 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     return Container(
       color: Colors.white,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMenuHeader(),
-          const Divider(height: 1),
-          _buildSearchBar(),
-          const Divider(height: 1),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _buildMenuItems(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Icon(
-            Icons.restaurant_menu,
-            color: Theme.of(context).primaryColor,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            _selectedCategory?.name ?? 'Menu Items',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Spacer(),
-          if (_menuItems.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
+          // Menu Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade200),
               ),
-              child: Text(
-                '${_menuItems.length} items',
-                style: TextStyle(
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.restaurant_menu,
                   color: Theme.of(context).primaryColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
                 ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Menu',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                // Search field
+                SizedBox(
+                  width: 250,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search menu items...',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      isDense: true,
+                    ),
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Category Filter
+          Container(
+            height: 60,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade200),
               ),
             ),
+            child: _categories.isEmpty
+                ? const Center(child: Text('Loading categories...'))
+                : ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _categories.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: const Text('All'),
+                            selected: _selectedCategory == null,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() {
+                                  _selectedCategory = null;
+                                  _menuItems.clear();
+                                });
+                              }
+                            },
+                          ),
+                        );
+                      }
+                      
+                      final category = _categories[index - 1];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text(category.name),
+                          selected: _selectedCategory?.id == category.id,
+                          onSelected: (selected) {
+                            if (selected) {
+                              _onCategorySelected(category);
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          // Menu Items Grid
+          Expanded(
+            child: _buildMenuItemsGrid(),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Search menu items...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    setState(() {
-                      _searchQuery = '';
-                    });
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Theme.of(context).primaryColor),
-          ),
-        ),
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-        },
-      ),
-    );
-  }
-
-  Widget _buildCategoriesTabs() {
-    if (_categories.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: _categories.map((category) {
-          final isSelected = _selectedCategory?.id == category.id;
-          
-          return FilterChip(
-            label: Text(
-              category.name,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-            selected: isSelected,
-            onSelected: (selected) {
-              if (selected) {
-                _onCategorySelected(category);
-              }
-            },
-            backgroundColor: Colors.white,
-            selectedColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-            checkmarkColor: Theme.of(context).primaryColor,
-            labelStyle: TextStyle(
-              color: isSelected ? Theme.of(context).primaryColor : Colors.black87,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            ),
-            side: BorderSide(
-              color: isSelected ? Theme.of(context).primaryColor : Colors.grey.shade300,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildMenuItems() {
+  Widget _buildMenuItemsGrid() {
     if (_selectedCategory == null) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.restaurant_menu_outlined,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
+            Icon(Icons.category, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
             Text(
-              'Select a category',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose a category from the left to view menu items',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade500,
-              ),
-              textAlign: TextAlign.center,
+              'Select a category to view menu items',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ],
         ),
@@ -1197,43 +1229,16 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     }
 
     if (_filteredMenuItems.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              _searchQuery.isNotEmpty ? Icons.search_off : Icons.restaurant_outlined,
-              size: 64,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 16),
+            Icon(Icons.search_off, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
             Text(
-              _searchQuery.isNotEmpty ? 'No items found' : 'No items in this category',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 16,
-              ),
+              'No items found',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
             ),
-            if (_searchQuery.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Try adjusting your search terms',
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 12,
-                ),
-              ),
-            ] else ...[
-              const SizedBox(height: 8),
-              Text(
-                'Add menu items to this category in admin panel',
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
           ],
         ),
       );
@@ -1241,12 +1246,13 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Responsive grid: more columns for wider screens
-        int crossAxisCount = 4; // Default 4 columns
-        if (constraints.maxWidth > 1200) {
-          crossAxisCount = 6; // 6 columns for very wide screens
-        } else if (constraints.maxWidth > 800) {
-          crossAxisCount = 5; // 5 columns for wide screens
+        // Calculate responsive grid count
+        final double screenWidth = constraints.maxWidth;
+        int crossAxisCount = 2;
+        if (screenWidth > 1200) {
+          crossAxisCount = 4;
+        } else if (screenWidth > 800) {
+          crossAxisCount = 3;
         }
 
         return GridView.builder(
@@ -1505,10 +1511,13 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     
     try {
       final printingService = Provider.of<PrintingService>(context, listen: false);
-      final printerAssignmentService = Provider.of<PrinterAssignmentService>(context, listen: false);
+      final printerAssignmentService = Provider.of<EnhancedPrinterAssignmentService?>(context, listen: false);
+      if (printerAssignmentService == null) {
+        throw Exception('EnhancedPrinterAssignmentService not available - services not initialized');
+      }
       
-      // Segregate items by printer assignments
-      final itemsByPrinter = await printingService.segregateOrderItems(
+      // Segregate items by printer assignments and print directly
+      final Map<String, List<OrderItem>> itemsByPrinter = await printingService.segregateOrderItems(
         _currentOrder!,
         printerAssignmentService,
       );
@@ -1853,8 +1862,8 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
 
   void _applyQuickGratuity(double percentage) {
     setState(() {
-      final subtotalAfterDiscount = _currentOrder!.subtotal - (_currentOrder!.discountAmount ?? 0.0);
-      final gratuityAmount = subtotalAfterDiscount * (percentage / 100);
+      final subtotalForGratuity = _currentOrder!.subtotal - (_currentOrder!.discountAmount ?? 0.0);
+      final gratuityAmount = subtotalForGratuity * (percentage / 100);
       _currentOrder = _currentOrder!.copyWith(
         gratuityAmount: gratuityAmount,
       );
@@ -1862,7 +1871,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Applied ${percentage}% gratuity'),
+        content: Text('Added ${percentage}% gratuity'),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
@@ -1874,8 +1883,8 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     setState(() {
       double gratuityAmount;
       if (type == 'percentage') {
-        final subtotalAfterDiscount = _currentOrder!.subtotal - (_currentOrder!.discountAmount ?? 0.0);
-        gratuityAmount = subtotalAfterDiscount * (value / 100);
+        final subtotalForGratuity = _currentOrder!.subtotal - (_currentOrder!.discountAmount ?? 0.0);
+        gratuityAmount = subtotalForGratuity * (value / 100);
       } else {
         gratuityAmount = value;
       }
@@ -1887,290 +1896,11 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Applied ${type == 'percentage' ? '${value}%' : '\$${value}'} gratuity'),
+        content: Text('Added ${type == 'percentage' ? '${value}%' : '\$${value}'} gratuity'),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
-
-  // Cancel order with proper validation
-  Future<void> _cancelOrder() async {
-    if (_currentOrder == null || _currentOrder!.items.isEmpty) return;
-
-    // Check if order has items sent to kitchen
-    final sentItems = _currentOrder!.items.where((item) => item.sentToKitchen).toList();
-    final newItems = _currentOrder!.items.where((item) => !item.sentToKitchen).toList();
-
-    // If there are items sent to kitchen, order can be cancelled
-    // If only new items (not sent to kitchen), they must be removed first
-    if (sentItems.isEmpty && newItems.isNotEmpty) {
-      // Show dialog asking to remove items first
-      final result = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Cannot Cancel Order'),
-          content: const Text(
-            'This order has items that haven\'t been sent to the kitchen yet. '
-            'Please remove all items first, or send them to the kitchen before cancelling.'
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'close'),
-              child: const Text('OK'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'remove_all'),
-              child: const Text('Remove All Items'),
-            ),
-          ],
-        ),
-      );
-
-      if (result == 'remove_all') {
-        setState(() {
-          _currentOrder = _currentOrder!.copyWith(
-            items: [],
-            // Reset all totals, discount, and gratuity when items are removed
-            subtotal: 0.0,
-            hstAmount: 0.0,
-            totalAmount: 0.0,
-            discountAmount: 0.0,
-            gratuityAmount: 0.0,
-          );
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('All items removed. Order totals reset.'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
-    // Show confirmation dialog for cancellation
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Order'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Are you sure you want to cancel this order?'),
-            const SizedBox(height: 16),
-            if (sentItems.isNotEmpty)
-              Text(
-                'Warning: ${sentItems.length} item(s) have been sent to the kitchen.',
-                style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
-              ),
-            const SizedBox(height: 8),
-            Text('Order Total: \$${_currentOrder!.totalAmount.toStringAsFixed(2)}'),
-            if (_currentOrder!.discountAmount != null && _currentOrder!.discountAmount! > 0)
-              Text('Discount: -\$${_currentOrder!.discountAmount!.toStringAsFixed(2)}'),
-            if (_currentOrder!.gratuityAmount != null && _currentOrder!.gratuityAmount! > 0)
-              Text('Gratuity: +\$${_currentOrder!.gratuityAmount!.toStringAsFixed(2)}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep Order'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Cancel Order'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // Create cancellation history entry
-      final cancellationHistory = OrderHistory(
-        id: const Uuid().v4(),
-        status: OrderStatus.cancelled,
-        updatedBy: widget.user.name,
-        timestamp: DateTime.now(),
-        notes: 'Order cancelled by ${widget.user.name}',
-      );
-
-      // Add cancellation history to the order
-      final updatedHistory = List<OrderHistory>.from(_currentOrder!.history);
-      updatedHistory.add(cancellationHistory);
-
-      // Mark order as cancelled
-      final cancelledOrder = _currentOrder!.copyWith(
-        status: OrderStatus.cancelled,
-        completedTime: DateTime.now(),
-        history: updatedHistory,
-      );
-
-      // Save the cancelled order
-      await Provider.of<OrderService>(context, listen: false).saveOrder(cancelledOrder);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Order cancelled successfully!'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-
-        // Navigate back to previous screen
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to cancel order: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Widget _buildCategoriesPanel() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Categories Header
-        Container(
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Text(
-            'Categories',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        // Categories List
-        Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _buildCategoriesList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategoriesList() {
-    if (_categories.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.category_outlined,
-              size: 48,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No categories',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Add categories in admin panel',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: _categories.length,
-      itemBuilder: (context, index) {
-        final category = _categories[index];
-        final isSelected = _selectedCategory?.id == category.id;
-        
-        return InkWell(
-          onTap: () => _onCategorySelected(category),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected 
-                  ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
-                  : Colors.transparent,
-              border: Border(
-                left: BorderSide(
-                  color: isSelected 
-                      ? Theme.of(context).primaryColor
-                      : Colors.transparent,
-                  width: 3,
-                ),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.category,
-                  size: 20,
-                  color: isSelected 
-                      ? Theme.of(context).primaryColor
-                      : Colors.grey.shade600,
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    category.name,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected 
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey.shade700,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-} 
+}
