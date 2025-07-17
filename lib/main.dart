@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'config/environment_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 
@@ -39,10 +40,17 @@ import 'services/enhanced_printer_manager.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Set environment (default to production if not set)
+  if (!EnvironmentConfig.isDevelopment && !EnvironmentConfig.isProduction) {
+    EnvironmentConfig.setEnvironment(Environment.production);
+  }
+  
   // Disable Provider debug check to allow nullable service types
   Provider.debugCheckInvalidValueType = null;
   
   debugPrint('🚀 Starting Multi-Tenant AI POS System...');
+  debugPrint('🌍 Environment: ${EnvironmentConfig.environment.name.toUpperCase()}');
+  debugPrint('🗄️ Database: ${EnvironmentConfig.databaseName}');
   
   // Initialize Flutter services
   final prefs = await SharedPreferences.getInstance();
