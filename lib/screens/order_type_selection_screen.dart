@@ -249,7 +249,15 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => EditActiveOrderScreen(order: order, user: orderUser!),
+          builder: (context) => OrderCreationScreen(
+            user: orderUser!,
+            orderType: order.type == OrderType.dineIn ? 'dine-in' : 'takeout',
+            existingOrder: order, // Pass the existing order for editing
+            table: order.tableId != null ? 
+              Provider.of<TableService?>(context, listen: false)?.getTableById(order.tableId!) : null,
+            numberOfPeople: order.type == OrderType.dineIn ? order.items.length : null,
+            orderNumber: order.orderNumber,
+          ),
         ),
       ).then((_) {
         debugPrint('🔄 DASHBOARD: Returned from edit order, reloading orders...');
@@ -913,19 +921,45 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
               SizedBox(
                 height: 400, // Set a fixed height for the scrollable area
                 child: SingleChildScrollView(
-                  child: Column(
-                    children: _filteredOrders.map((order) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: _buildOrderTile(order),
-                      );
-                    }).toList(),
-                  ),
+                  child: _buildOrderTilesGrid(),
                 ),
               ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildOrderTilesGrid() {
+    // Calculate how many rows we need for 4 tiles per row
+    final tilesPerRow = 4;
+    final rowCount = (_filteredOrders.length / tilesPerRow).ceil();
+    
+    return Column(
+      children: List.generate(rowCount, (rowIndex) {
+        final startIndex = rowIndex * tilesPerRow;
+        final endIndex = (startIndex + tilesPerRow).clamp(0, _filteredOrders.length);
+        final rowOrders = _filteredOrders.sublist(startIndex, endIndex);
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              ...rowOrders.map((order) => Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: _buildSquareOrderTile(order),
+                ),
+              )).toList(),
+              // Fill remaining spaces in incomplete rows
+              ...List.generate(
+                tilesPerRow - rowOrders.length,
+                (index) => const Expanded(child: SizedBox()),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -1089,6 +1123,152 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  Widget _buildSquareOrderTile(Order order) {
+    final statusColor = _getStatusColor(order.status);
+    
+    return GestureDetector(
+      onTap: () => _editOrder(order),
+      child: AspectRatio(
+        aspectRatio: 1.0, // Square aspect ratio
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: statusColor.withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 3,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top section: Order number and status
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          '#${order.orderNumber}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    order.status.toString().split('.').last.toUpperCase(),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              
+              // Middle section: Table info (if dine-in)
+              if (order.type == OrderType.dineIn && order.tableId != null && order.tableId!.isNotEmpty)
+                Consumer<TableService>(
+                  builder: (context, tableService, child) {
+                    final table = tableService.getTableById(order.tableId!);
+                    
+                    String tableDisplay;
+                    if (table != null) {
+                      tableDisplay = table.number.toString();
+                    } else {
+                      final match = RegExp(r'table_(\d+)').firstMatch(order.tableId!);
+                      if (match != null) {
+                        tableDisplay = match.group(1)!;
+                      } else {
+                        final numbers = RegExp(r'\d+').allMatches(order.tableId!);
+                        if (numbers.isNotEmpty) {
+                          tableDisplay = numbers.first.group(0)!;
+                        } else {
+                          tableDisplay = '?';
+                        }
+                      }
+                    }
+                    
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade100,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.table_restaurant,
+                            size: 10,
+                            color: Colors.blue.shade700,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            'T$tableDisplay',
+                            style: TextStyle(
+                              color: Colors.blue.shade700,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                )
+              else
+                const SizedBox.shrink(),
+              
+              // Bottom section: Total and items count
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '\$${order.total.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    '${order.items.length} items',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildQuickAccessSection() {

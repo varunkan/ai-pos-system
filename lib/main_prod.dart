@@ -38,5 +38,5 @@ void main() async {
   );
   
   // Run the main application with production configuration
-  await prod_main.main();
+  prod_main.main();
 } 

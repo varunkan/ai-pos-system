@@ -6,12 +6,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+// import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart'; // Temporarily disabled
 import '../models/order.dart';
 import '../models/app_settings.dart';
 import '../models/printer_configuration.dart';
 import 'printer_configuration_service.dart';
 import 'database_service.dart';
+
+// Temporary Bluetooth stubs for compilation
+class BluetoothConnection {
+  bool get isConnected => false;
+  Future<void> close() async {}
+  BluetoothOutput get output => BluetoothOutput();
+  static Future<BluetoothConnection> toAddress(String address) async {
+    throw UnimplementedError('Bluetooth functionality temporarily disabled');
+  }
+}
+
+class BluetoothOutput {
+  void add(dynamic data) {}
+  Future get allSent => Future.value();
+}
+
+class BluetoothDevice {
+  String get name => '';
+  String get address => '';
+  BluetoothDevice get device => this;
+  int get rssi => -50;
+}
+
+class FlutterBluetoothSerial {
+  static FlutterBluetoothSerial get instance => FlutterBluetoothSerial();
+  Future<bool?> get isEnabled => Future.value(false);
+  Future<List<BluetoothDevice>> getBondedDevices() => Future.value([]);
+  Stream<BluetoothDevice> startDiscovery() => Stream.empty();
+}
 
 /// Enum for printer connection types
 enum PrinterType {

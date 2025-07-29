@@ -11,7 +11,7 @@ import 'package:universal_io/io.dart' as universal_io;
 
 /// Cross-platform database service that provides seamless state synchronization
 /// across Android, iOS, and web platforms using local storage with cloud backup.
-class CrossPlatformDatabaseService {
+class CrossPlatformDatabaseService extends ChangeNotifier {
   static CrossPlatformDatabaseService? _instance;
   static final _lock = Object();
   
@@ -77,6 +77,7 @@ class CrossPlatformDatabaseService {
       _isInitialized = true;
       
       debugPrint('✅ Cross-Platform Database Service initialized successfully');
+      notifyListeners();
     } catch (e) {
       debugPrint('❌ Failed to initialize database service: $e');
       rethrow;
@@ -259,6 +260,8 @@ class CrossPlatformDatabaseService {
       } else if (wasOnline && !_isOnline) {
         debugPrint('📵 Connection lost - enabling offline mode');
       }
+      
+      notifyListeners();
     });
   }
   

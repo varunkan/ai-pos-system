@@ -27,6 +27,7 @@ import 'services/cross_platform_printer_sync_service.dart';
 import 'services/printer_validation_service.dart';
 import 'services/robust_kitchen_service.dart';
 import 'services/free_cloud_printing_service.dart';
+import 'services/cross_platform_database_service.dart';
 // Removed redundant printer services for streamlined architecture
 import 'services/analytics_service.dart';
 import 'services/settings_service.dart';
@@ -37,7 +38,7 @@ import 'services/order_log_service.dart';
 import 'services/activity_log_service.dart';
 import 'services/enhanced_printer_manager.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Set environment (default to production if not set)
@@ -116,6 +117,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   PrinterValidationService? _printerValidationService;
   RobustKitchenService? _robustKitchenService;
   FreeCloudPrintingService? _freeCloudPrintingService;
+  
+  // Cross-platform database synchronization
+  CrossPlatformDatabaseService? _crossPlatformDatabaseService;
 
   @override
   void initState() {
@@ -463,6 +467,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         debugPrint('⚠️ Could not initialize FreeCloudPrintingService - required services not available');
       }
       
+      // Initialize cross-platform database synchronization
+      widget.progressService.addMessage('🌐 Setting up cross-platform database sync...');
+      _crossPlatformDatabaseService = CrossPlatformDatabaseService();
+      await _crossPlatformDatabaseService!.initialize();
+      debugPrint('✅ CrossPlatformDatabaseService initialized - data sync across devices enabled');
+      
       // Initialize auto printer discovery service (requires printing service, printer config service, and multi printer manager)
       widget.progressService.addMessage('🔍 Setting up automatic printer discovery...');
       if (_printingService != null && _printerConfigurationService != null && _enhancedPrinterAssignmentService != null) {
@@ -610,6 +620,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     providers.add(ChangeNotifierProvider<PrinterValidationService?>.value(value: _printerValidationService));
     providers.add(ChangeNotifierProvider<RobustKitchenService?>.value(value: _robustKitchenService));
     providers.add(ChangeNotifierProvider<FreeCloudPrintingService?>.value(value: _freeCloudPrintingService));
+    providers.add(ChangeNotifierProvider<CrossPlatformDatabaseService?>.value(value: _crossPlatformDatabaseService));
     
     return MultiProvider(
       providers: [

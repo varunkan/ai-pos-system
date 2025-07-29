@@ -34,7 +34,7 @@ android {
         versionName = flutter.versionName
         
         // Tablet-specific settings
-        resConfigs("en", "xxhdpi", "xxxhdpi")
+        // resConfigs("en", "xxhdpi", "xxxhdpi")
     }
 
 
@@ -65,6 +65,7 @@ android {
     }
     
     // Enable split APKs by ABI for smaller downloads
+    /*
     splits {
         abi {
             isEnable = true
@@ -73,6 +74,7 @@ android {
             isUniversalApk = false
         }
     }
+    */
 
     // Tablet-specific packaging options
     packagingOptions {

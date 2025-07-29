@@ -30,6 +30,7 @@ import '../screens/user_management_screen.dart';
 import '../screens/user_activity_monitoring_screen.dart';
 import '../screens/free_cloud_setup_screen.dart';
 import '../services/activity_log_service.dart';
+import '../services/cross_platform_database_service.dart';
 import '../widgets/printer_status_widget.dart';
 
 enum UserManagementView { addUser, existingUsers }
@@ -2276,6 +2277,55 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                   ),
                   const SizedBox(height: 16),
                   
+                  // Force Sync Button
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      border: Border.all(color: Colors.blue.shade200),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.sync, color: Colors.blue.shade600, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Force Cross-Platform Sync',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Manually trigger synchronization between Android and macOS devices. Use this to ensure data consistency across all platforms.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: _forceSyncNow,
+                          icon: const Icon(Icons.sync, size: 16),
+                          label: const Text('Force Sync Now'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
                   // Database Reset Button
                   Container(
                     width: double.infinity,
@@ -2470,6 +2520,74 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+
+  /// Force cross-platform database synchronization
+  Future<void> _forceSyncNow() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final crossPlatformDb = Provider.of<CrossPlatformDatabaseService?>(context, listen: false);
+      
+      if (crossPlatformDb == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cross-platform database service not available'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Trigger force sync
+      await crossPlatformDb.forceSyncNow();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Cross-platform sync completed successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+
+      // Log the sync action
+      try {
+        final activityLogService = Provider.of<ActivityLogService>(context, listen: false);
+        activityLogService.logAdminPanelAccess(
+          userId: widget.user.id,
+          userName: widget.user.name,
+          userRole: widget.user.role.toString(),
+          tabName: 'Force Cross-Platform Sync',
+        );
+      } catch (e) {
+        debugPrint('⚠️ Failed to log sync action: $e');
+      }
+
+    } catch (e) {
+      debugPrint('❌ Error during force sync: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Sync failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
