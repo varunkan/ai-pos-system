@@ -192,8 +192,9 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
   void _showServerSelectionError() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Please select a server first'),
-        backgroundColor: Colors.red,
+        content: Text('Cannot create orders in "All Servers" view. Please select a specific server first.'),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 4),
       ),
     );
   }
@@ -736,6 +737,53 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
   }
 
   Widget _buildActionCardsSection() {
+    // Only show order creation when a specific server is selected
+    // "All Servers" should be read-only monitoring view
+    if (_selectedServerId == null) {
+      return Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              colors: [Colors.blue.shade50, Colors.blue.shade100],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.visibility, color: Colors.blue.shade600),
+                  const SizedBox(width: 8),
+                  Text(
+                    'All Servers - Monitoring View',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'This is a read-only view showing orders from all servers. Select a specific server to create new orders.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
