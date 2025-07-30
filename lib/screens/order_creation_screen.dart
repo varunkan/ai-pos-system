@@ -97,7 +97,13 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         tableId: widget.table?.id,
         type: widget.orderType == 'dine-in' ? OrderType.dineIn : OrderType.delivery,
         orderTime: DateTime.now(),
+        userId: widget.user.id, // Assign order to current user immediately
+        status: OrderStatus.pending, // Set initial status
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
+      
+      debugPrint('🆕 Created new order: ${_currentOrder!.orderNumber} for user: ${widget.user.name}');
     }
   }
 
@@ -169,6 +175,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         }
       });
       _updateOrderWithHST();
+      _autoSaveOrder(); // Auto-save order when items are added
     }
   }
 
@@ -178,6 +185,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         _currentOrder!.items.removeAt(index);
       });
       _updateOrderWithHST();
+      _autoSaveOrder(); // Auto-save order when items are removed
     }
   }
 
@@ -191,6 +199,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
           _currentOrder!.items[index] = item.copyWith(quantity: newQuantity);
         });
         _updateOrderWithHST();
+        _autoSaveOrder(); // Auto-save order when quantities are updated
       }
     }
   }
@@ -206,6 +215,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
           items: List<OrderItem>.from(_currentOrder!.items),
         );
       });
+      _autoSaveOrder(); // Auto-save when notes are updated
     }
   }
 
@@ -220,6 +230,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
           items: List<OrderItem>.from(_currentOrder!.items),
         );
       });
+      _autoSaveOrder(); // Auto-save when special instructions are updated
     }
   }
 
@@ -233,6 +244,38 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       setState(() {
         _currentOrder = _currentOrder!.copyWith(hstAmount: hstAmount);
       });
+    }
+  }
+
+  /// Auto-save order to database so it appears in active orders immediately
+  Future<void> _autoSaveOrder() async {
+    if (_currentOrder == null || _currentOrder!.items.isEmpty) {
+      return; // Don't save empty orders
+    }
+
+    try {
+      final orderService = Provider.of<OrderService>(context, listen: false);
+      
+      // Set the order status and user ID for proper tracking
+      final updatedOrder = _currentOrder!.copyWith(
+        userId: widget.user.id, // Ensure order is assigned to current user
+        status: OrderStatus.pending, // Set proper status
+        updatedAt: DateTime.now(),
+      );
+      
+      debugPrint('💾 Auto-saving order: ${updatedOrder.orderNumber} with ${updatedOrder.items.length} items');
+      
+      final saved = await orderService.saveOrder(updatedOrder, logAction: 'updated');
+      if (saved) {
+        // Update our local reference
+        _currentOrder = updatedOrder;
+        debugPrint('✅ Order auto-saved successfully');
+      } else {
+        debugPrint('⚠️ Order auto-save failed');
+      }
+    } catch (e) {
+      debugPrint('❌ Error auto-saving order: $e');
+      // Don't show error to user for auto-save failures
     }
   }
 
@@ -250,6 +293,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         final updatedNotes = List<OrderNote>.from(_currentOrder!.notes)..add(chefNote);
         _currentOrder = _currentOrder!.copyWith(notes: updatedNotes);
       });
+      _autoSaveOrder(); // Auto-save when chef notes are updated
     }
   }
 

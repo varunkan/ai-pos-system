@@ -74,11 +74,13 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
       final activeOrders = orderService.activeOrders;
       
       if (_selectedServerId == null) {
+        // "All Servers" view - don't load individual orders, only show counts
         setState(() {
-          _filteredOrders = activeOrders;
+          _filteredOrders = []; // Empty list - we'll show server summary instead
         });
-        debugPrint('📋 Loaded ${_filteredOrders.length} ACTIVE orders for ALL servers');
+        debugPrint('📊 ALL SERVERS VIEW: Showing server summary with order counts');
       } else {
+        // Specific server selected - show only orders created by that server
         final serverOrders = activeOrders.where((order) => order.userId == _selectedServerId).toList();
         setState(() {
           _filteredOrders = serverOrders;
@@ -771,13 +773,13 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Text(
-                'This is a read-only view showing orders from all servers. Select a specific server to create new orders.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.blue.shade700,
-                ),
+                          Text(
+              'This shows order counts per server. Select a specific server to view orders and create new ones.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.blue.shade700,
               ),
+            ),
             ],
           ),
         ),
@@ -886,6 +888,12 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
   }
 
   Widget _buildActiveOrdersSection(OrderService orderService) {
+    // If "All Servers" is selected, show server summary instead of individual orders
+    if (_selectedServerId == null) {
+      return _buildServerSummarySection(orderService);
+    }
+    
+    // Show individual orders for the selected server
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -910,7 +918,7 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                     Icon(Icons.receipt_long, color: Colors.blue.shade600),
                     const SizedBox(width: 8),
                     Text(
-                      'Active Orders',
+                      'My Active Orders',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -973,6 +981,178 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServerSummarySection(OrderService orderService) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [Colors.orange.shade50, Colors.orange.shade100],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.analytics, color: Colors.orange.shade600),
+                const SizedBox(width: 8),
+                Text(
+                  'Order Summary by Server',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Select a specific server to view and create orders',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.orange.shade700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Consumer<UserService?>(
+              builder: (context, userService, _) {
+                if (userService == null) return const SizedBox.shrink();
+                
+                final servers = userService.users.where((user) =>
+                  user.role == UserRole.server ||
+                  user.role == UserRole.admin ||
+                  user.role == UserRole.manager
+                ).toList();
+                
+                if (servers.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No servers available',
+                      style: TextStyle(
+                        color: Colors.orange.shade600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  );
+                }
+                
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: servers.length,
+                  itemBuilder: (context, index) {
+                    final server = servers[index];
+                    final orderCount = orderService.getActiveOrdersCountByServer(server.id);
+                    
+                    return _buildServerSummaryTile(server, orderCount);
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServerSummaryTile(User server, int orderCount) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: () => _selectServer(server.id),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.7),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.orange.shade300,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: orderCount > 0 ? Colors.orange.shade600 : Colors.grey.shade400,
+                child: Text(
+                  server.name.substring(0, 1).toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      server.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    Text(
+                      server.role.toString().split('.').last.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: orderCount > 0 ? Colors.orange.shade600 : Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.receipt_long,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$orderCount',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey.shade500,
+              ),
+            ],
+          ),
         ),
       ),
     );
