@@ -62,7 +62,7 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
       _selectedType = config.type;
       _selectedModel = config.model;
       
-      if (config.type == PrinterType.bluetooth) {
+      // if (config.type == PrinterType.bluetooth) { // Bluetooth temporarily disabled
         _ipController.text = config.bluetoothAddress ?? '';
         _portController.text = '';
       } else {
@@ -213,7 +213,7 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
                     ],
                   ),
                   subtitle: const Text('Wireless Bluetooth connection'),
-                  value: PrinterType.bluetooth,
+                  // value: PrinterType.bluetooth, // Temporarily disabled
                   groupValue: _selectedType,
                   onChanged: (value) => setState(() => _selectedType = value!),
                 ),
@@ -317,7 +317,7 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
           ],
           
           // Bluetooth Address (only for Bluetooth)
-          if (_selectedType == PrinterType.bluetooth) ...[
+                      // if (_selectedType == PrinterType.bluetooth) ...[ // Bluetooth temporarily disabled
             _buildConfigField(
               'Bluetooth Address',
               _ipController,
@@ -1083,7 +1083,8 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
       });
       
       // Real Bluetooth scanning using PrintingService
-      final discoveredPrinters = await printingService.scanForPrinters(printing_service.PrinterType.bluetooth);
+                // final discoveredPrinters = await printingService.scanForPrinters(printing_service.PrinterType.bluetooth); // Bluetooth temporarily disabled
+          final discoveredPrinters = <PrinterDevice>[]; // Empty list since bluetooth disabled
       
       setState(() {
         _bluetoothPrinters = discoveredPrinters;
@@ -1290,7 +1291,8 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
           );
         }
         
-      } else if (_selectedType == PrinterType.bluetooth) {
+      } 
+      // else if (_selectedType == PrinterType.bluetooth) { // Bluetooth temporarily disabled
         final address = _ipController.text.trim();
         
         // Validate Bluetooth address format
@@ -1405,7 +1407,8 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
       _nameController.text = printer.name;
       _ipController.text = printer.address; // Bluetooth address
       _portController.text = ''; // Not used for Bluetooth
-      _selectedType = PrinterType.bluetooth;
+              // _selectedType = PrinterType.bluetooth; // Bluetooth temporarily disabled
+        _selectedType = PrinterType.wifi; // Default to wifi
       _selectedModel = PrinterModel.epsonTMGeneric; // Default for Bluetooth
     });
     
@@ -1473,7 +1476,8 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
         );
         return;
       }
-    } else if (_selectedType == PrinterType.bluetooth) {
+          } 
+      // else if (_selectedType == PrinterType.bluetooth) { // Bluetooth temporarily disabled
       if (_validateBluetoothAddress(_ipController.text) != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1494,9 +1498,9 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
         name: _nameController.text,
         type: _selectedType,
         model: _selectedModel,
-        ipAddress: _selectedType == PrinterType.bluetooth ? '' : _ipController.text,
-        port: _selectedType == PrinterType.bluetooth ? 0 : (int.tryParse(_portController.text) ?? 9100),
-        bluetoothAddress: _selectedType == PrinterType.bluetooth ? _ipController.text : '',
+        ipAddress: _ipController.text, // _selectedType == PrinterType.bluetooth ? '' : _ipController.text,
+        port: (int.tryParse(_portController.text) ?? 9100), // _selectedType == PrinterType.bluetooth ? 0 : (int.tryParse(_portController.text) ?? 9100),
+        bluetoothAddress: '', // _selectedType == PrinterType.bluetooth ? _ipController.text : '',
       );
       
       bool success;

@@ -6,46 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart'; // Temporarily disabled
 import '../models/order.dart';
 import '../models/app_settings.dart';
 import '../models/printer_configuration.dart';
 import 'printer_configuration_service.dart';
 import 'database_service.dart';
 
-// Temporary Bluetooth stubs for compilation
-class BluetoothConnection {
-  bool get isConnected => false;
-  Future<void> close() async {}
-  BluetoothOutput get output => BluetoothOutput();
-  static Future<BluetoothConnection> toAddress(String address) async {
-    throw UnimplementedError('Bluetooth functionality temporarily disabled');
-  }
-}
-
-class BluetoothOutput {
-  void add(dynamic data) {}
-  Future get allSent => Future.value();
-}
-
-class BluetoothDevice {
-  String get name => '';
-  String get address => '';
-  BluetoothDevice get device => this;
-  int get rssi => -50;
-}
-
-class FlutterBluetoothSerial {
-  static FlutterBluetoothSerial get instance => FlutterBluetoothSerial();
-  Future<bool?> get isEnabled => Future.value(false);
-  Future<List<BluetoothDevice>> getBondedDevices() => Future.value([]);
-  Stream<BluetoothDevice> startDiscovery() => Stream.empty();
-}
-
 /// Enum for printer connection types
 enum PrinterType {
   wifi,
-  bluetooth,
 }
 
 /// Model for discovered printer devices
@@ -112,7 +81,6 @@ class PrinterConnection {
   final String printerId;
   final PrinterConfiguration config;
   final Socket? wifiSocket;
-  final BluetoothConnection? bluetoothConnection;
   final DateTime connectedAt;
   final bool isActive;
 
@@ -120,7 +88,6 @@ class PrinterConnection {
     required this.printerId,
     required this.config,
     this.wifiSocket,
-    this.bluetoothConnection,
     DateTime? connectedAt,
     this.isActive = true,
   }) : connectedAt = connectedAt ?? DateTime.now();
@@ -128,8 +95,6 @@ class PrinterConnection {
   bool get isConnected {
     if (config.type == PrinterType.wifi) {
       return wifiSocket != null;
-    } else if (config.type == PrinterType.bluetooth) {
-      return bluetoothConnection != null && bluetoothConnection!.isConnected;
     }
     return false;
   }
@@ -138,9 +103,6 @@ class PrinterConnection {
     try {
       if (wifiSocket != null) {
         await wifiSocket!.close();
-      }
-      if (bluetoothConnection != null) {
-        await bluetoothConnection!.close();
       }
     } catch (e) {
       debugPrint('Error disconnecting printer ${config.name}: $e');
@@ -151,9 +113,6 @@ class PrinterConnection {
     if (config.type == PrinterType.wifi && wifiSocket != null) {
       wifiSocket!.add(data);
       await wifiSocket!.flush();
-    } else if (config.type == PrinterType.bluetooth && bluetoothConnection != null) {
-      bluetoothConnection!.output.add(data);
-      await bluetoothConnection!.output.allSent;
     } else {
       throw Exception('No valid connection for printer ${config.name}');
     }
@@ -203,7 +162,6 @@ class PrintingService with ChangeNotifier {
   
   // Legacy connection variables
   Socket? _wifiSocket;
-  BluetoothConnection? _bluetoothConnection;
 
   PrintingService(this._prefs, this._networkInfo) : _settings = AppSettings() {
     _loadSettings();
@@ -363,8 +321,6 @@ class PrintingService with ChangeNotifier {
       switch (type) {
         case PrinterType.wifi:
           return await _scanWiFiPrinters();
-        case PrinterType.bluetooth:
-          return await _scanBluetoothPrinters();
       }
     } finally {
       _isCurrentlyScanning = false;
@@ -581,72 +537,7 @@ class PrintingService with ChangeNotifier {
     }
   }
 
-  /// Scan for Bluetooth printers
-  Future<List<PrinterDevice>> _scanBluetoothPrinters() async {
-    final List<PrinterDevice> printers = [];
-    
-    try {
-      debugPrint('Scanning for Bluetooth printers...');
-      
-      // Check if Bluetooth is enabled
-      final isEnabled = await FlutterBluetoothSerial.instance.isEnabled;
-      if (isEnabled != true) {
-        debugPrint('Bluetooth is not enabled');
-        return printers;
-      }
-      
-      // Get bonded devices first (previously paired printers)
-      final bondedDevices = await FlutterBluetoothSerial.instance.getBondedDevices();
-      
-      for (final device in bondedDevices) {
-        if (_isPrinterDevice(device.name ?? '')) {
-          printers.add(PrinterDevice(
-            id: 'bt_bonded_${device.address.replaceAll(':', '_')}',
-            name: device.name ?? 'Unknown Printer',
-            address: device.address,
-            type: PrinterType.bluetooth,
-            model: 'Bluetooth Printer',
-            signalStrength: 90, // Bonded devices typically have good signal
-          ));
-        }
-      }
-      
-      // Discover new devices
-      try {
-        final discoveryResults = await FlutterBluetoothSerial.instance.startDiscovery();
-        
-        await for (final result in discoveryResults) {
-          final device = result.device;
-          final deviceName = device.name ?? '';
-          
-          // Check if this looks like a printer and isn't already in our list
-          if (_isPrinterDevice(deviceName) && 
-              !printers.any((p) => p.address == device.address)) {
-            
-            final signalStrength = (result.rssi + 100).clamp(0, 100); // Convert RSSI to percentage
-            
-            printers.add(PrinterDevice(
-              id: 'bt_discovered_${device.address.replaceAll(':', '_')}',
-              name: deviceName,
-              address: device.address,
-              type: PrinterType.bluetooth,
-              model: 'Bluetooth Printer',
-              signalStrength: signalStrength,
-            ));
-          }
-        }
-      } catch (discoveryError) {
-        debugPrint('Bluetooth discovery error (using bonded devices only): $discoveryError');
-      }
-      
-      debugPrint('Found ${printers.length} Bluetooth printers');
-      
-    } catch (e) {
-      debugPrint('Error scanning Bluetooth printers: $e');
-    }
 
-    return printers;
-  }
 
   /// Test if a network printer is available at the given IP and port
   Future<bool> _testPrinterConnection(String ip, int port) async {
@@ -814,9 +705,12 @@ class PrintingService with ChangeNotifier {
       
              if (printer.type == PrinterType.wifi) {
          connection = await _connectToWiFiPrinterAsync(printer);
-       } else if (printer.type == PrinterType.bluetooth) {
-         connection = await _connectToBluetoothPrinterAsync(printer);
-       }
+       } 
+       // Bluetooth support temporarily disabled
+       // else if (printer.type == PrinterType.bluetooth) {
+       //   debugPrint('⚠️ Bluetooth printing temporarily disabled');
+       //   return false;
+       // }
       
       if (connection != null) {
         _activeConnections[printer.id] = connection;
@@ -854,21 +748,7 @@ class PrintingService with ChangeNotifier {
     }
   }
 
-  /// Connect to Bluetooth printer (async version)
-  Future<PrinterConnection?> _connectToBluetoothPrinterAsync(PrinterConfiguration printer) async {
-    try {
-      final bluetoothConnection = await BluetoothConnection.toAddress(printer.bluetoothAddress);
-      
-      return PrinterConnection(
-        printerId: printer.id,
-        config: printer,
-        bluetoothConnection: bluetoothConnection,
-      );
-    } catch (e) {
-      debugPrint('❌ Bluetooth connection failed for ${printer.name}: $e');
-      return null;
-    }
-  }
+
 
   /// Disconnect from a specific printer
   Future<bool> disconnectFromPrinter(String printerId) async {
@@ -1192,8 +1072,8 @@ class PrintingService with ChangeNotifier {
       switch (_connectedPrinter!.type) {
         case PrinterType.wifi:
           return _wifiSocket != null;
-        case PrinterType.bluetooth:
-          return _bluetoothConnection != null && _bluetoothConnection!.isConnected;
+        // case PrinterType.bluetooth:  // Temporarily disabled
+        //   return false;
       }
     } catch (e) {
       debugPrint('Error validating printer connection: $e');
@@ -1366,24 +1246,10 @@ class PrintingService with ChangeNotifier {
             throw Exception('WiFi printer connection not established - please reconnect to printer');
           }
           break;
-        case PrinterType.bluetooth:
-          if (_bluetoothConnection != null && _bluetoothConnection!.isConnected) {
-            try {
-              debugPrint('📡 Sending ${data.length} bytes via Bluetooth');
-              _bluetoothConnection!.output.add(data);
-              await _bluetoothConnection!.output.allSent;
-              debugPrint('✅ Bluetooth data sent successfully');
-            } catch (bluetoothError) {
-              debugPrint('❌ Bluetooth error: $bluetoothError');
-              _bluetoothConnection = null;
-              _connectedPrinter = _connectedPrinter!.copyWith(isConnected: false);
-              throw Exception('Bluetooth connection failed: $bluetoothError');
-            }
-          } else {
-            debugPrint('❌ Bluetooth printer connection not established');
-            throw Exception('Bluetooth printer connection not established - please reconnect to printer');
-          }
-          break;
+        // case PrinterType.bluetooth:  // Temporarily disabled
+        //   debugPrint('❌ Bluetooth printing temporarily disabled');
+        //   throw Exception('Bluetooth printing is temporarily disabled');
+        //   break;
       }
       
       debugPrint('✅ Content sent to printer successfully');
@@ -1785,7 +1651,8 @@ class PrintingService with ChangeNotifier {
         case 'network':
           return PrinterType.wifi;
         case 'bluetooth':
-          return PrinterType.bluetooth;
+          // return PrinterType.bluetooth;  // Temporarily disabled
+          return PrinterType.wifi; // Default to wifi
         default:
           return PrinterType.wifi;
       }
@@ -1799,7 +1666,8 @@ class PrintingService with ChangeNotifier {
       case 'network':
         return PrinterType.wifi;
       case 'bluetooth':
-        return PrinterType.bluetooth;
+        // return PrinterType.bluetooth;  // Temporarily disabled
+        return PrinterType.wifi; // Default to wifi
       default:
         return PrinterType.wifi;
     }
@@ -2007,8 +1875,8 @@ class PrintingService with ChangeNotifier {
       switch (printer.type) {
         case PrinterType.wifi:
           return await _connectToWiFiPrinterLegacy(printer);
-        case PrinterType.bluetooth:
-          return await _connectToBluetoothPrinterLegacy(printer);
+        // case PrinterType.bluetooth:  // Temporarily disabled
+        //   return await _connectToBluetoothPrinterLegacy(printer);
       }
     } catch (e) {
       debugPrint('Error connecting to printer: $e');
@@ -2102,20 +1970,11 @@ class PrintingService with ChangeNotifier {
     }
   }
 
-  /// Connect to Bluetooth printer (legacy method)
+  /// Connect to Bluetooth printer (legacy method) - DISABLED
   Future<bool> _connectToBluetoothPrinterLegacy(PrinterDevice printer) async {
-    try {
-      final bluetoothConnection = await BluetoothConnection.toAddress(printer.address);
-      _connectedPrinter = printer.copyWith(isConnected: true);
-      await _saveConnectedPrinter();
-      _safeNotifyListeners();
-      
-      debugPrint('Connected to Bluetooth printer: ${printer.address}');
-      return true;
-    } catch (e) {
-      debugPrint('Failed to connect to Bluetooth printer: $e');
-      return false;
-    }
+    // Bluetooth functionality temporarily disabled
+    debugPrint('❌ Bluetooth printing temporarily disabled');
+    return false;
   }
 
   /// Disconnect from current printer (legacy method)

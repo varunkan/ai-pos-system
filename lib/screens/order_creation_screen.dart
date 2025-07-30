@@ -18,6 +18,7 @@ import '../widgets/error_dialog.dart';
 import '../widgets/universal_navigation.dart';
 import '../screens/checkout_screen.dart';
 import 'package:uuid/uuid.dart';
+import '../screens/order_type_selection_screen.dart'; // Added import for OrderTypeSelectionScreen
 
 class OrderCreationScreen extends StatefulWidget {
   final User user;
@@ -51,22 +52,12 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   final TextEditingController _orderNotesController = TextEditingController();
   final TextEditingController _chefNotesController = TextEditingController();
   
-  // Search functionality
-  String _searchQuery = '';
+  // Remove search functionality - no longer needed
+  // String _searchQuery = '';
   
-  // Filtered menu items based on search and category
+  // Filtered menu items based only on category (no search)
   List<MenuItem> get _filteredMenuItems {
-    List<MenuItem> items = _menuItems;
-    
-    // Filter by search query
-    if (_searchQuery.isNotEmpty) {
-      items = items.where((item) {
-        return item.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               item.description.toLowerCase().contains(_searchQuery.toLowerCase());
-      }).toList();
-    }
-    
-    return items;
+    return _menuItems; // Return all loaded items for selected category
   }
 
   @override
@@ -440,51 +431,56 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return UniversalAppBar(
-      currentUser: widget.user,
-      title: '${widget.existingOrder != null ? 'Edit' : 'Create'} Order #${_currentOrder!.orderNumber} - ${widget.orderType == 'dine-in' ? 'Dine-In' : 'Takeout'}',
-      additionalActions: [
-        // Chef notes quick access
-        IconButton(
-          icon: Stack(
-            children: [
-              const Icon(Icons.restaurant, color: Colors.orange),
-              if (_currentOrder!.notes.any((note) => note.isInternal))
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          onPressed: _showChefNotesDialog,
-          tooltip: 'Chef Notes',
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(50), // Reduced from default 56 to 50
+      child: AppBar(
+        title: Text(
+          '${widget.existingOrder != null ? 'Edit' : 'Create'} Order #${_currentOrder!.orderNumber}',
+          style: const TextStyle(fontSize: 16), // Smaller title font
         ),
-        // Server info
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            'Server: ${widget.user.name}',
-            style: TextStyle(
-              color: Colors.grey.shade700,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        elevation: 1, // Reduced elevation
+        toolbarHeight: 50, // Explicit reduced height
+        leading: IconButton(
+          icon: const Icon(Icons.dashboard, size: 20), // Smaller icon
+          onPressed: () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const OrderTypeSelectionScreen(),
             ),
           ),
+          tooltip: 'POS Dashboard',
         ),
-      ],
+        actions: [
+          // Compact chef notes button
+          IconButton(
+            icon: Icon(
+              Icons.restaurant, 
+              color: Colors.orange,
+              size: 20, // Smaller icon
+            ),
+            onPressed: _showChefNotesDialog,
+            tooltip: 'Chef Notes',
+          ),
+          // Compact server info
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), // Reduced padding
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(8), // Smaller radius
+            ),
+            child: Text(
+              widget.user.name,
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontSize: 10, // Smaller font
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1029,184 +1025,154 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       color: Colors.white,
       child: Column(
         children: [
-          _buildMenuHeader(),
-          const Divider(height: 1),
-          _buildSearchBar(),
-          const Divider(height: 1),
-          _buildCategoriesTabs(),
+          // Remove search bar completely - no longer needed
+          // Optimized categories display - full width
+          _buildOptimizedCategoriesDisplay(),
           const Divider(height: 1),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _buildMenuItems(),
+                : _selectedCategory == null
+                    ? _buildCategorySelectionPrompt()
+                    : _buildMenuItems(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMenuHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Icon(
-            Icons.restaurant_menu,
-            color: Theme.of(context).primaryColor,
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'Menu Items',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Spacer(),
-          if (_selectedCategory != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                _selectedCategory!.name,
-                style: TextStyle(
-                  color: Theme.of(context).primaryColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Search menu items...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    setState(() {
-                      _searchQuery = '';
-                    });
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Theme.of(context).primaryColor),
-          ),
-        ),
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-        },
-      ),
-    );
-  }
-
-  Widget _buildCategoriesTabs() {
+  Widget _buildOptimizedCategoriesDisplay() {
     if (_categories.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // Calculate how many categories per row (distribute evenly across 2 rows)
-    final categoriesPerRow = (_categories.length / 2).ceil();
-    
-    // Split categories into two rows
-    final firstRow = _categories.take(categoriesPerRow).toList();
-    final secondRow = _categories.skip(categoriesPerRow).toList();
-
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Reduced padding
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // First row of categories
-          _buildCategoryRow(firstRow),
+          Text(
+            'Menu Categories',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
           const SizedBox(height: 8),
-          // Second row of categories
-          if (secondRow.isNotEmpty)
-            _buildCategoryRow(secondRow),
+          // Dynamic grid layout for categories
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate optimal columns based on screen width
+              int columns = (constraints.maxWidth / 120).floor(); // 120px per category
+              if (columns < 2) columns = 2;
+              if (columns > 6) columns = 6;
+              
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  childAspectRatio: 2.5, // Wide rectangular tiles
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: _categories.length,
+                itemBuilder: (context, index) {
+                  final category = _categories[index];
+                  final isSelected = _selectedCategory?.id == category.id;
+                  
+                  return InkWell(
+                    onTap: () => _onCategorySelected(category),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected 
+                            ? Theme.of(context).primaryColor.withValues(alpha: 0.15)
+                            : Colors.grey.shade50,
+                        border: Border.all(
+                          color: isSelected 
+                              ? Theme.of(context).primaryColor 
+                              : Colors.grey.shade300,
+                          width: isSelected ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: isSelected ? [
+                          BoxShadow(
+                            color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ] : null,
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.restaurant_menu,
+                              size: 24,
+                              color: isSelected 
+                                  ? Theme.of(context).primaryColor 
+                                  : Colors.grey.shade600,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              category.name,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                color: isSelected 
+                                    ? Theme.of(context).primaryColor 
+                                    : Colors.black87,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryRow(List<pos_category.Category> categories) {
-    return Row(
-      children: categories.map((category) {
-        final isSelected = _selectedCategory?.id == category.id;
-        
-        return Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            child: InkWell(
-              onTap: () => _onCategorySelected(category),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? Theme.of(context).primaryColor.withValues(alpha: 0.1) : Colors.white,
-                  border: Border.all(
-                    color: isSelected ? Theme.of(context).primaryColor : Colors.grey.shade300,
-                    width: isSelected ? 2 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.category,
-                      size: 20,
-                      color: isSelected ? Theme.of(context).primaryColor : Colors.grey.shade600,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      category.name,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        color: isSelected ? Theme.of(context).primaryColor : Colors.black87,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (isSelected)
-                      Container(
-                        margin: const EdgeInsets.only(top: 4),
-                        child: Icon(
-                          Icons.check_circle,
-                          size: 16,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+  Widget _buildCategorySelectionPrompt() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.touch_app,
+            size: 64,
+            color: Colors.grey.shade300,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Select a Category',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        );
-      }).toList(),
+          const SizedBox(height: 8),
+          Text(
+            'Choose a category above to view menu items',
+            style: TextStyle(
+              color: Colors.grey.shade400,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1217,28 +1183,26 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.search_off,
+              Icons.restaurant,
               size: 64,
               color: Colors.grey.shade300,
             ),
             const SizedBox(height: 16),
             Text(
-              _searchQuery.isNotEmpty ? 'No items found' : 'No menu items available',
+              'No menu items available',
               style: TextStyle(
                 color: Colors.grey.shade500,
                 fontSize: 16,
               ),
             ),
-            if (_searchQuery.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Try adjusting your search terms',
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 12,
-                ),
+            const SizedBox(height: 8),
+            Text(
+              'This category appears to be empty',
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 12,
               ),
-            ],
+            ),
           ],
         ),
       );
@@ -1246,109 +1210,122 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Responsive grid: more columns for wider screens
-        int crossAxisCount = 4; // Default 4 columns
-        if (constraints.maxWidth > 1200) {
-          crossAxisCount = 6; // 6 columns for very wide screens
-        } else if (constraints.maxWidth > 800) {
-          crossAxisCount = 5; // 5 columns for wide screens
+        // Optimized responsive grid: more columns for wider screens
+        int crossAxisCount = 3; // Default 3 columns for better item visibility
+        if (constraints.maxWidth > 1400) {
+          crossAxisCount = 5; // 5 columns for very wide screens
+        } else if (constraints.maxWidth > 1000) {
+          crossAxisCount = 4; // 4 columns for wide screens
+        } else if (constraints.maxWidth < 600) {
+          crossAxisCount = 2; // 2 columns for narrow screens
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(8), // Increased padding for better spacing
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 1.1, // Slightly wider than square for better text layout
-            crossAxisSpacing: 6,
-            mainAxisSpacing: 6,
+            childAspectRatio: 0.85, // Slightly taller for better text layout
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
           ),
           itemCount: _filteredMenuItems.length,
           itemBuilder: (context, index) {
             final item = _filteredMenuItems[index];
-            return _buildMenuItemCard(item);
+            return _buildEnhancedMenuItemCard(item);
           },
         );
       },
     );
   }
 
-  Widget _buildMenuItemCard(MenuItem item) {
+  Widget _buildEnhancedMenuItemCard(MenuItem item) {
     return Card(
-      elevation: 1,
-      margin: EdgeInsets.zero,
+      elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
         onTap: () => _addItemToOrder(item),
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Colors.grey.shade50,
+              ],
+            ),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
+              // Item image placeholder or icon
+              Container(
+                height: 60,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.restaurant,
+                  size: 32,
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 8),
               // Item name
-              Flexible(
-                flex: 3,
-                child: Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                    height: 1.2,
+              Text(
+                item.name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              // Item description
+              if (item.description.isNotEmpty)
+                Text(
+                  item.description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: 2),
-              // Description (optional, only if space allows)
-              if (item.description.isNotEmpty)
-                Flexible(
-                  flex: 2,
-                  child: Text(
-                    item.description,
+              const Spacer(),
+              // Price and add button row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '\$${item.price.toStringAsFixed(2)}',
                     style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 9,
-                      height: 1.1,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              // Price and add button
-              Flexible(
-                flex: 2,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        '\$${item.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        color: Colors.white,
-                        size: 12,
-                      ),
+                    child: const Icon(
+                      Icons.add,
+                      color: Colors.white,
+                      size: 20,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),

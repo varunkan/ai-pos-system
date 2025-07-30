@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 enum PrinterType {
   wifi,
   ethernet,
-  bluetooth,
+  // bluetooth, // Temporarily disabled - dependencies removed
   usb,
   remote, // New: For remote/internet access
   vpn,    // New: For VPN-based access
@@ -341,7 +341,7 @@ class PrinterConfiguration {
 
   /// Check if printer is wireless
   bool get isWirelessPrinter {
-    return type == PrinterType.wifi || type == PrinterType.bluetooth;
+    return type == PrinterType.wifi; // || type == PrinterType.bluetooth; // Bluetooth temporarily disabled
   }
 
   /// Get connection display text

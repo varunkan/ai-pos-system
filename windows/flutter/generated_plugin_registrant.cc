@@ -8,19 +8,10 @@
 
 #include <audioplayers_windows/audioplayers_windows_plugin.h>
 #include <connectivity_plus/connectivity_plus_windows_plugin.h>
-#include <flutter_pos_printer_platform_image_3_sdt/flutter_pos_printer_platform_plugin.h>
-#include <permission_handler_windows/permission_handler_windows_plugin.h>
-#include <universal_ble/universal_ble_plugin_c_api.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   AudioplayersWindowsPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("AudioplayersWindowsPlugin"));
   ConnectivityPlusWindowsPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ConnectivityPlusWindowsPlugin"));
-  FlutterPosPrinterPlatformPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("FlutterPosPrinterPlatformPlugin"));
-  PermissionHandlerWindowsPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("PermissionHandlerWindowsPlugin"));
-  UniversalBlePluginCApiRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("UniversalBlePluginCApi"));
 }
