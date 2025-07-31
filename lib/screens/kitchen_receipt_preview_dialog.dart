@@ -85,9 +85,9 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
                 ),
                 child: SingleChildScrollView(
                   child: Container(
-                    // 80mm thermal printer width simulation (about 384 pixels)
-                    width: 384,
-                    padding: const EdgeInsets.all(16),
+                    // Increased from 384 to 1150 (about 3x for larger text)
+                    width: 1150, 
+                    padding: const EdgeInsets.all(48), // Increased padding from 16 to 48 (16*3)
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -161,36 +161,27 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Restaurant Header
-        _buildReceiptLine('================================', bold: true, fontSize: 12),
-        const SizedBox(height: 8),
-        _buildReceiptLine('OH BOMBAY MILTON', bold: true, fontSize: 18),
-        _buildReceiptLine('KITCHEN ORDER', bold: true, fontSize: 16),
-        const SizedBox(height: 8),
-        _buildReceiptLine('================================', bold: true, fontSize: 12),
-        const SizedBox(height: 16),
+        _buildReceiptLine('================================', bold: true, fontSize: 36), // 12*3
+        const SizedBox(height: 24), // 8*3
+        _buildReceiptLine('${_getOrderTypeDisplay(order.type)} ORDER', bold: true, fontSize: 48), // 16*3 - Dynamic order type
+        const SizedBox(height: 24), // 8*3
+        _buildReceiptLine('================================', bold: true, fontSize: 36), // 12*3
+        const SizedBox(height: 48), // 16*3
         
         // Order Details Header
-        _buildReceiptLine('ORDER #${order.orderNumber}', bold: true, fontSize: 20),
-        const SizedBox(height: 12),
+        _buildReceiptLine('ORDER #${order.orderNumber}', bold: true, fontSize: 60), // 20*3
+        const SizedBox(height: 36), // 12*3
         
         // Server & Time Info
-        _buildReceiptRow('Server:', serverName, bold: true),
-        _buildReceiptRow('Date:', dateFormat.format(now)),
-        _buildReceiptRow('Time:', timeFormat.format(now)),
+        _buildReceiptRow('Server:', serverName, bold: true, fontSize: 36), // 12*3
+        _buildReceiptRow('Date:', dateFormat.format(now), fontSize: 36), // 12*3
+        _buildReceiptRow('Time:', timeFormat.format(now), fontSize: 36), // 12*3
         _buildReceiptRow('Ready by:', timeFormat.format(estimatedReadyTime), 
-            valueStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+            valueStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 36, fontFamily: 'monospace')), // 12*3
         
-        const SizedBox(height: 16),
-        _buildReceiptLine('================================', fontSize: 12),
-        
-        // Order Type & Table
-        if (order.type == OrderType.dineIn && order.tableId != null)
-          _buildReceiptRow('Table:', _getTableNumber(order.tableId!), bold: true),
-        _buildReceiptRow('Type:', _getOrderTypeDisplay(order.type), bold: true),
-        
-        const SizedBox(height: 16),
-        _buildReceiptLine('================================', bold: true, fontSize: 12),
-        const SizedBox(height: 16),
+        const SizedBox(height: 48), // 16*3
+        _buildReceiptLine('================================', bold: true, fontSize: 36), // 12*3
+        const SizedBox(height: 48), // 16*3
         
         // Items grouped by category
         FutureBuilder<Widget>(
@@ -203,38 +194,42 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
           },
         ),
         
-        const SizedBox(height: 16),
-        _buildReceiptLine('================================', bold: true, fontSize: 12),
+        const SizedBox(height: 48), // 16*3
+        _buildReceiptLine('================================', bold: true, fontSize: 36), // 12*3
         
         // Special Instructions
         if (order.specialInstructions != null && order.specialInstructions!.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          _buildReceiptLine('SPECIAL INSTRUCTIONS:', bold: true, fontSize: 14),
-          const SizedBox(height: 8),
-          _buildReceiptLine(order.specialInstructions!, fontSize: 12),
-          const SizedBox(height: 16),
-          _buildReceiptLine('================================', fontSize: 12),
+          const SizedBox(height: 48), // 16*3
+          _buildReceiptLine('SPECIAL INSTRUCTIONS:', bold: true, fontSize: 42), // 14*3
+          const SizedBox(height: 24), // 8*3
+          _buildReceiptLine(order.specialInstructions!, bold: true, fontSize: 36), // 12*3, made bold
+          const SizedBox(height: 48), // 16*3
+          _buildReceiptLine('================================', fontSize: 36), // 12*3
         ],
-        
-        // Footer
-        const SizedBox(height: 16),
-        _buildReceiptLine('TOTAL ITEMS: ${_getTotalQuantity()}', bold: true, fontSize: 14),
-        const SizedBox(height: 8),
-        _buildReceiptLine('Please prepare items carefully', fontSize: 11),
-        _buildReceiptLine('and mark ready when complete', fontSize: 11),
-        const SizedBox(height: 16),
-        _buildReceiptLine('================================', fontSize: 12),
-        const SizedBox(height: 8),
-        _buildReceiptLine('Thank you!', bold: true, fontSize: 14),
       ],
     );
   }
 
   Future<Widget> _buildGroupedItems(BuildContext context, MenuService menuService) async {
-    // Group items by category
+    // Filter items that haven't been sent to kitchen yet
+    final newItems = order.items.where((item) => !item.sentToKitchen).toList();
+    
+    // If no new items, show appropriate message
+    if (newItems.isEmpty) {
+      return Column(
+        children: [
+          _buildReceiptLine('NO NEW ITEMS TO PREPARE', bold: true, fontSize: 48, color: Colors.orange.shade700),
+          const SizedBox(height: 24),
+          _buildReceiptLine('All items have already been sent to kitchen', bold: true, fontSize: 33, color: Colors.grey.shade600),
+          const SizedBox(height: 48),
+        ],
+      );
+    }
+    
+    // Group new items by category
     final Map<String, List<OrderItem>> groupedItems = {};
     
-    for (final item in order.items.where((item) => !item.sentToKitchen)) {
+    for (final item in newItems) {
       final categoryId = item.menuItem.categoryId;
       final category = await menuService.getCategoryById(categoryId);
       final categoryName = category?.name ?? 'Other Items';
@@ -245,25 +240,31 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
       groupedItems[categoryName]!.add(item);
     }
 
-    // Build UI for each category
+    // Build UI for each category in specific order
     final List<Widget> categoryWidgets = [];
     
-    for (final categoryName in groupedItems.keys) {
+    // Get sorted category names based on predefined order
+    final sortedCategoryNames = _getSortedCategoryNames(groupedItems.keys.toList());
+    
+    for (final categoryName in sortedCategoryNames) {
       final items = groupedItems[categoryName]!;
       
+      // Skip empty categories (safety check)
+      if (items.isEmpty) continue;
+      
       // Category header
-      categoryWidgets.add(_buildReceiptLine(categoryName.toUpperCase(), bold: true, fontSize: 14));
-      categoryWidgets.add(const SizedBox(height: 8));
-      categoryWidgets.add(_buildReceiptLine('--------------------------------', fontSize: 10));
-      categoryWidgets.add(const SizedBox(height: 8));
+      categoryWidgets.add(_buildReceiptLine(categoryName.toUpperCase(), bold: true, fontSize: 42)); // 14*3
+      categoryWidgets.add(const SizedBox(height: 24)); // 8*3
+      categoryWidgets.add(_buildReceiptLine('--------------------------------', bold: true, fontSize: 30)); // 10*3, made bold
+      categoryWidgets.add(const SizedBox(height: 24)); // 8*3
       
       // Items in this category
       for (final item in items) {
         categoryWidgets.add(_buildItemDetails(item));
-        categoryWidgets.add(const SizedBox(height: 12));
+        categoryWidgets.add(const SizedBox(height: 36)); // 12*3
       }
       
-      categoryWidgets.add(const SizedBox(height: 8));
+      categoryWidgets.add(const SizedBox(height: 24)); // 8*3
     }
     
     return Column(children: categoryWidgets);
@@ -274,19 +275,19 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Item name and quantity
-        _buildReceiptRow('${item.quantity}x', item.menuItem.name, bold: true),
+        _buildReceiptRow('${item.quantity}x', item.menuItem.name, bold: true, fontSize: 36), // 12*3
         
         // Special instructions
         if (item.specialInstructions != null && item.specialInstructions!.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          _buildReceiptLine('  → ${item.specialInstructions!}', fontSize: 11, 
+          const SizedBox(height: 12), // 4*3
+          _buildReceiptLine('  → ${item.specialInstructions!}', fontSize: 33, bold: true, // 11*3, made bold
               color: Colors.blue.shade700),
         ],
         
         // Spice level
         if (item.notes != null && item.notes!.contains('Spice:')) ...[
-          const SizedBox(height: 4),
-          _buildReceiptLine('  → ${item.notes!}', fontSize: 11, 
+          const SizedBox(height: 12), // 4*3
+          _buildReceiptLine('  → ${item.notes!}', fontSize: 33, bold: true, // 11*3, made bold
               color: Colors.red.shade700),
         ],
       ],
@@ -294,8 +295,8 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
   }
 
   Widget _buildReceiptLine(String text, {
-    bool bold = false,
-    double fontSize = 12,
+    bool bold = true, // Changed default to true
+    double fontSize = 36, // Changed default from 12 to 36 (12*3)
     Color? color,
     TextAlign textAlign = TextAlign.center,
   }) {
@@ -315,8 +316,9 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
   }
 
   Widget _buildReceiptRow(String label, String value, {
-    bool bold = false,
+    bool bold = true, // Changed default to true
     TextStyle? valueStyle,
+    double fontSize = 36, // Changed default from 12 to 36 (12*3)
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -324,7 +326,7 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: fontSize,
             fontWeight: bold ? FontWeight.bold : FontWeight.normal,
             fontFamily: 'monospace',
           ),
@@ -334,7 +336,7 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: valueStyle ?? TextStyle(
-              fontSize: 12,
+              fontSize: fontSize,
               fontWeight: bold ? FontWeight.bold : FontWeight.normal,
               fontFamily: 'monospace',
             ),
@@ -370,9 +372,44 @@ class KitchenReceiptPreviewDialog extends StatelessWidget {
     }
   }
 
-  int _getTotalQuantity() {
-    return order.items
-        .where((item) => !item.sentToKitchen)
-        .fold(0, (sum, item) => sum + item.quantity);
+  List<String> _getSortedCategoryNames(List<String> categoryNames) {
+    // Define the preferred order for categories
+    final categoryOrder = [
+      'starters', 'starter', 'appetizers', 'appetizer', 'starter-veg', 'starter-non-veg',
+      'main course', 'main', 'curry', 'curries', 'main-veg', 'main-non-veg',
+      'breads', 'bread', 'naan', 'roti', 'paratha',
+      'rice', 'rice items', 'biryani', 'fried rice',
+      'desserts', 'dessert', 'sweets', 'sweet',
+      'beverages', 'beverage', 'drinks', 'drink', 'juice', 'lassi',
+      'sides', 'side dishes', 'extras',
+      'other items', 'other', 'miscellaneous'
+    ];
+    
+    // Function to get priority index for a category (lower number = higher priority)
+    int getPriority(String categoryName) {
+      final lowerCaseName = categoryName.toLowerCase();
+      for (int i = 0; i < categoryOrder.length; i++) {
+        if (lowerCaseName.contains(categoryOrder[i]) || categoryOrder[i].contains(lowerCaseName)) {
+          return i;
+        }
+      }
+      return categoryOrder.length; // Unknown categories go to the end
+    }
+    
+    // Sort categories based on predefined order
+    final sortedNames = List<String>.from(categoryNames);
+    sortedNames.sort((a, b) {
+      final priorityA = getPriority(a);
+      final priorityB = getPriority(b);
+      
+      if (priorityA != priorityB) {
+        return priorityA.compareTo(priorityB);
+      }
+      
+      // If same priority, sort alphabetically
+      return a.compareTo(b);
+    });
+    
+    return sortedNames;
   }
 } 

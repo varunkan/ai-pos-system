@@ -162,144 +162,602 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Calculate responsive dimensions based on screen size
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final screenHeight = MediaQuery.of(context).size.height;
+                  
+                  // Responsive width: 80% of screen width, but between 400-600px
+                  final dialogWidth = (screenWidth * 0.8).clamp(400.0, 600.0);
+                  
+                  // Responsive height: 85% of screen height, but max 650px
+                  final maxDialogHeight = (screenHeight * 0.85).clamp(500.0, 650.0);
+                  
+                  return Container(
+                    width: dialogWidth,
+                    constraints: BoxConstraints(
+                      maxHeight: maxDialogHeight,
+                      maxWidth: dialogWidth,
                     ),
-                  ),
-                ],
-              ),
-              content: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 400, maxWidth: 400),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Item price
-                      Text(
-                        '\$${item.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).primaryColor,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white,
+                          Colors.grey.shade50,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Quantity selection
-                      const Text(
-                        'Quantity:',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton(
-                            onPressed: () {
-                              if (quantity > 1) {
-                                setDialogState(() {
-                                  quantity--;
-                                });
-                              }
-                            },
-                            icon: const Icon(Icons.remove_circle_outline),
-                          ),
+                          // Elegant Header (Fixed height)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Theme.of(context).primaryColor,
+                                  Theme.of(context).primaryColor.withValues(alpha: 0.8),
+                                ],
+                              ),
                             ),
-                            child: Text(
-                              '$quantity',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.restaurant,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Configure Item',
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(alpha: 0.9),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            item.name,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 20, // Reduced for better fit
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '\$${item.price.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          IconButton(
-                            onPressed: () {
-                              setDialogState(() {
-                                quantity++;
-                              });
-                            },
-                            icon: const Icon(Icons.add_circle_outline),
+                          
+                          // Content Section with Scrolling
+                          Flexible(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Responsive layout based on screen width
+                                  if (dialogWidth > 500) ...[
+                                    // Wide screen: Two column layout
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Left column - Quantity
+                                        Expanded(
+                                          flex: 1,
+                                          child: _buildElegantSection(
+                                            'Quantity',
+                                            Icons.add_circle_outline,
+                                            Theme.of(context).primaryColor,
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey.shade50,
+                                                borderRadius: BorderRadius.circular(16),
+                                                border: Border.all(color: Colors.grey.shade200),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  _buildQuantityButton(
+                                                    Icons.remove,
+                                                    quantity > 1,
+                                                    () {
+                                                      if (quantity > 1) {
+                                                        setDialogState(() {
+                                                          quantity--;
+                                                        });
+                                                      }
+                                                    },
+                                                  ),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                                    child: Text(
+                                                      '$quantity',
+                                                      style: TextStyle(
+                                                        fontSize: 20,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Theme.of(context).primaryColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  _buildQuantityButton(
+                                                    Icons.add,
+                                                    true,
+                                                    () {
+                                                      setDialogState(() {
+                                                        quantity++;
+                                                      });
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        
+                                        const SizedBox(width: 20),
+                                        
+                                        // Right column - Spice Level
+                                        Expanded(
+                                          flex: 2,
+                                          child: _buildElegantSection(
+                                            'Spice Level',
+                                            Icons.local_fire_department,
+                                            Colors.orange,
+                                            Row(
+                                              children: ['Regular', 'Mild', 'Spicy'].map((level) {
+                                                final isSelected = selectedSpiceLevel == level;
+                                                final color = level == 'Spicy' ? Colors.red :
+                                                             level == 'Mild' ? Colors.green :
+                                                             Colors.grey;
+                                                
+                                                return Expanded(
+                                                  child: Container(
+                                                    margin: const EdgeInsets.only(right: 8),
+                                                    child: InkWell(
+                                                      onTap: () {
+                                                        setDialogState(() {
+                                                          selectedSpiceLevel = level;
+                                                        });
+                                                      },
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                                        decoration: BoxDecoration(
+                                                          color: isSelected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
+                                                          borderRadius: BorderRadius.circular(12),
+                                                          border: Border.all(
+                                                            color: isSelected ? color : Colors.grey.shade300,
+                                                            width: isSelected ? 2 : 1,
+                                                          ),
+                                                        ),
+                                                        child: Column(
+                                                          children: [
+                                                            Container(
+                                                              width: 20,
+                                                              height: 20,
+                                                              decoration: BoxDecoration(
+                                                                color: isSelected ? color : Colors.transparent,
+                                                                shape: BoxShape.circle,
+                                                                border: Border.all(
+                                                                  color: color,
+                                                                  width: 2,
+                                                                ),
+                                                              ),
+                                                              child: isSelected
+                                                                  ? const Icon(
+                                                                      Icons.check,
+                                                                      color: Colors.white,
+                                                                      size: 14,
+                                                                    )
+                                                                  : null,
+                                                            ),
+                                                            const SizedBox(height: 8),
+                                                            Text(
+                                                              level,
+                                                              style: TextStyle(
+                                                                fontSize: 14,
+                                                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                                                color: isSelected ? color : Colors.grey.shade700,
+                                                              ),
+                                                              textAlign: TextAlign.center,
+                                                            ),
+                                                            if (level == 'Spicy') ...[
+                                                              const SizedBox(height: 4),
+                                                              Icon(
+                                                                Icons.local_fire_department,
+                                                                color: Colors.red.shade400,
+                                                                size: 16,
+                                                              ),
+                                                            ],
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              }).toList(),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ] else ...[
+                                    // Narrow screen: Single column layout
+                                    _buildElegantSection(
+                                      'Quantity',
+                                      Icons.add_circle_outline,
+                                      Theme.of(context).primaryColor,
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade50,
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            _buildQuantityButton(
+                                              Icons.remove,
+                                              quantity > 1,
+                                              () {
+                                                if (quantity > 1) {
+                                                  setDialogState(() {
+                                                    quantity--;
+                                                  });
+                                                }
+                                              },
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                              child: Text(
+                                                '$quantity',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Theme.of(context).primaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                            _buildQuantityButton(
+                                              Icons.add,
+                                              true,
+                                              () {
+                                                setDialogState(() {
+                                                  quantity++;
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _buildElegantSection(
+                                      'Spice Level',
+                                      Icons.local_fire_department,
+                                      Colors.orange,
+                                      Column(
+                                        children: ['Regular', 'Mild', 'Spicy'].map((level) {
+                                          final isSelected = selectedSpiceLevel == level;
+                                          final color = level == 'Spicy' ? Colors.red :
+                                                       level == 'Mild' ? Colors.green :
+                                                       Colors.grey;
+                                          
+                                          return Container(
+                                            margin: const EdgeInsets.only(bottom: 8),
+                                            child: InkWell(
+                                              onTap: () {
+                                                setDialogState(() {
+                                                  selectedSpiceLevel = level;
+                                                });
+                                              },
+                                              borderRadius: BorderRadius.circular(12),
+                                              child: Container(
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                                decoration: BoxDecoration(
+                                                  color: isSelected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: isSelected ? color : Colors.grey.shade300,
+                                                    width: isSelected ? 2 : 1,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Container(
+                                                      width: 20,
+                                                      height: 20,
+                                                      decoration: BoxDecoration(
+                                                        color: isSelected ? color : Colors.transparent,
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(
+                                                          color: color,
+                                                          width: 2,
+                                                        ),
+                                                      ),
+                                                      child: isSelected
+                                                          ? const Icon(
+                                                              Icons.check,
+                                                              color: Colors.white,
+                                                              size: 14,
+                                                            )
+                                                          : null,
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    Text(
+                                                      level,
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                                        color: isSelected ? color : Colors.grey.shade700,
+                                                      ),
+                                                    ),
+                                                    if (level == 'Spicy') ...[
+                                                      const Spacer(),
+                                                      Icon(
+                                                        Icons.local_fire_department,
+                                                        color: Colors.red.shade400,
+                                                        size: 18,
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                  ],
+                                  
+                                  const SizedBox(height: 20),
+                                  
+                                  // Special Instructions Section - Always full width
+                                  _buildElegantSection(
+                                    'Special Instructions',
+                                    Icons.edit_note,
+                                    Colors.blue,
+                                    Container(
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade50,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: Colors.blue.shade200),
+                                      ),
+                                      child: TextField(
+                                        maxLength: 30,
+                                        maxLines: 2,
+                                        style: const TextStyle(fontSize: 16),
+                                        decoration: InputDecoration(
+                                          hintText: 'e.g., No onions, extra sauce...',
+                                          hintStyle: TextStyle(
+                                            color: Colors.grey.shade500,
+                                            fontSize: 14,
+                                          ),
+                                          border: InputBorder.none,
+                                          contentPadding: const EdgeInsets.all(16),
+                                          counterText: '',
+                                        ),
+                                        onChanged: (value) {
+                                          specialInstructions = value;
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8, left: 4),
+                                    child: Text(
+                                      '${specialInstructions.length}/30 characters',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          
+                          // Action Buttons (Fixed at bottom)
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              border: Border(
+                                top: BorderSide(color: Colors.grey.shade200),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _buildActionButton(
+                                    'Cancel',
+                                    Colors.grey.shade600,
+                                    Colors.grey.shade100,
+                                    () => Navigator.of(dialogContext).pop(),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  flex: 2,
+                                  child: _buildActionButton(
+                                    'Add to Order',
+                                    Colors.white,
+                                    Theme.of(context).primaryColor,
+                                    () {
+                                      Navigator.of(dialogContext).pop();
+                                      _addConfiguredItemToOrder(item, quantity, selectedSpiceLevel, specialInstructions);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      
-                      // Spice level selection
-                      const Text(
-                        'Spice Level:',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 8),
-                      Column(
-                        children: ['Regular', 'Mild', 'Spicy'].map((level) {
-                          return RadioListTile<String>(
-                            title: Text(level),
-                            value: level,
-                            groupValue: selectedSpiceLevel,
-                            onChanged: (value) {
-                              setDialogState(() {
-                                selectedSpiceLevel = value!;
-                              });
-                            },
-                            contentPadding: EdgeInsets.zero,
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Special instructions
-                      const Text(
-                        'Special Instructions:',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        maxLength: 30,
-                        maxLines: 2,
-                        decoration: const InputDecoration(
-                          hintText: 'Add special instructions...',
-                          border: OutlineInputBorder(),
-                          counterText: '',
-                          helperText: 'Max 30 characters',
-                        ),
-                        onChanged: (value) {
-                          specialInstructions = value;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    _addConfiguredItemToOrder(item, quantity, selectedSpiceLevel, specialInstructions);
-                  },
-                  child: const Text('Add to Order'),
-                ),
-              ],
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildElegantSection(String title, IconData icon, Color color, Widget content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10), // Increased from 8 to 10
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10), // Increased border radius
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24, // Increased from 20 to 24
+              ),
+            ),
+            const SizedBox(width: 16), // Increased from 12 to 16
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 20, // Increased from 18 to 20
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20), // Increased from 16 to 20
+        content,
+      ],
+    );
+  }
+
+  Widget _buildQuantityButton(IconData icon, bool enabled, VoidCallback onPressed) {
+    return InkWell(
+      onTap: enabled ? onPressed : null,
+      borderRadius: BorderRadius.circular(14), // Increased border radius
+      child: Container(
+        padding: const EdgeInsets.all(16), // Increased from 12 to 16
+        child: Icon(
+          icon,
+          color: enabled ? Theme.of(context).primaryColor : Colors.grey.shade400,
+          size: 28, // Increased from 24 to 28
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton(String text, Color textColor, Color backgroundColor, VoidCallback onPressed) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(18), // Increased border radius
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20), // Increased from 16 to 20
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(18), // Increased border radius
+          boxShadow: backgroundColor != Colors.grey.shade100 ? [
+            BoxShadow(
+              color: backgroundColor.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ] : null,
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 18, // Increased from 16 to 18
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -2381,4 +2839,6 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   String _getServerName() {
     return widget.table?.customerName ?? widget.user.name;
   }
+
+
 } 
