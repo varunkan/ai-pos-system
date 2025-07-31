@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../models/user.dart';
 import '../models/table.dart' as restaurant_table;
 import '../services/table_service.dart';
-import '../widgets/back_button.dart';
 import 'order_creation_screen.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
@@ -1094,8 +1093,10 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                         // Quick selection buttons - flexible spacing
                         Flexible(
                           flex: 1,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          child: Wrap(
+                            alignment: WrapAlignment.spaceEvenly,
+                            spacing: 8.0,
+                            runSpacing: 8.0,
                             children: [2, 4, 6, 8].map((count) {
                               final isSelected = _numberOfPeople == count;
                               final buttonSize = math.min(
@@ -1286,14 +1287,17 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            _currentStep == 0
-                                ? 'Configure Guests'
-                                : 'Start Dining Experience',
-                            style: TextStyle(
-                              color: Colors.deepPurple,
-                              fontSize: math.min(constraints.maxHeight * 0.02, 16),
-                              fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: Text(
+                              _currentStep == 0
+                                  ? 'Configure Guests'
+                                  : 'Start Dining Experience',
+                              style: TextStyle(
+                                color: Colors.deepPurple,
+                                fontSize: math.min(constraints.maxHeight * 0.02, 16),
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           SizedBox(width: constraints.maxWidth * 0.01),

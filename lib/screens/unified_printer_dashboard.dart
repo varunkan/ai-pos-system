@@ -766,15 +766,38 @@ class _UnifiedPrinterDashboardState extends State<UnifiedPrinterDashboard>
     );
   }
 
-  void _removeAssignment(String assignmentId) {
-    // TODO: Implement remove assignment in UnifiedPrinterService
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Assignment removed'),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 2),
-      ),
-    );
+  void _removeAssignment(String assignmentId) async {
+    try {
+      final success = await _printerService?.removeAssignment(assignmentId) ?? false;
+      
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Assignment removed successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to remove assignment'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing assignment: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _testPrinter(String printerId) async {
@@ -785,6 +808,27 @@ class _UnifiedPrinterDashboardState extends State<UnifiedPrinterDashboard>
         content: Text(success ? '✅ Test successful' : '❌ Test failed'),
         backgroundColor: success ? Colors.green : Colors.red,
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
       ),
     );
   }
@@ -809,17 +853,41 @@ class _UnifiedPrinterDashboardState extends State<UnifiedPrinterDashboard>
     );
   }
 
-  void _configurePrinter(PrinterConfiguration printer) {
-    // TODO: Open printer configuration dialog
+    void _configurePrinter(PrinterConfiguration printer) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Configure ${printer.name}'),
-        content: const Text('Printer configuration dialog would open here'),
+        title: Row(
+          children: [
+            Icon(Icons.print, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('${printer.name}'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow('Type', printer.type.toString().split('.').last.toUpperCase()),
+            _buildInfoRow('Status', printer.isActive ? 'Active' : 'Inactive'),
+            if (printer.ipAddress.isNotEmpty)
+              _buildInfoRow('IP Address', printer.ipAddress),
+            if (printer.port > 0)
+              _buildInfoRow('Port', printer.port.toString()),
+            _buildInfoRow('Model', printer.model.toString().split('.').last),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _testPrinter(printer.id);
+            },
+            child: const Text('Test Print'),
           ),
         ],
       ),

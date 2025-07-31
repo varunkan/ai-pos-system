@@ -275,8 +275,20 @@ class EnhancedPrinterManager extends ChangeNotifier {
       final db = await _databaseService.database;
       if (db?.isOpen != true) return false;
       
+      // Check if table exists before trying to use it
+      final tableExists = await db!.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='menu_printer_assignments'"
+      );
+      
+      if (tableExists.isEmpty) {
+        debugPrint('$_logTag ⚠️ menu_printer_assignments table does not exist, using in-memory assignments only');
+        // Store in memory only for now
+        _menuItemAssignments[menuItemId] = printerId;
+        return true;
+      }
+      
       // Remove existing assignment
-      await db!.delete(
+      await db.delete(
         'menu_printer_assignments',
         where: 'menu_item_id = ?',
         whereArgs: [menuItemId],
@@ -293,14 +305,20 @@ class EnhancedPrinterManager extends ChangeNotifier {
       });
       
       _menuItemAssignments[menuItemId] = printerId;
-      notifyListeners();
-      
-      debugPrint('$_logTag ✅ Assigned menu item $menuItemId to printer $printerId');
+      debugPrint('$_logTag ✅ Menu item $menuItemId assigned to printer $printerId');
       return true;
       
     } catch (e) {
-      debugPrint('$_logTag ❌ Error assigning menu item: $e');
-      return false;
+      debugPrint('$_logTag ❌ Error assigning menu item to printer: $e');
+      // Fallback to in-memory assignment
+      try {
+        _menuItemAssignments[menuItemId] = printerId;
+        debugPrint('$_logTag ✅ Fallback: Stored assignment in memory only');
+        return true;
+      } catch (fallbackError) {
+        debugPrint('$_logTag ❌ Even fallback assignment failed: $fallbackError');
+        return false;
+      }
     }
   }
   
@@ -653,7 +671,17 @@ Status: Connection Test
       final db = await _databaseService.database;
       if (db?.isOpen != true) return;
       
-      final results = await db!.query('menu_printer_assignments');
+      // Check if table exists before trying to query it
+      final tableExists = await db!.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='menu_printer_assignments'"
+      );
+      
+      if (tableExists.isEmpty) {
+        debugPrint('$_logTag ⚠️ menu_printer_assignments table does not exist, skipping load');
+        return;
+      }
+      
+      final results = await db.query('menu_printer_assignments');
       _menuItemAssignments.clear();
       
       for (final row in results) {
@@ -664,6 +692,7 @@ Status: Connection Test
       
     } catch (e) {
       debugPrint('$_logTag ❌ Error loading assignments: $e');
+      // Continue without loading assignments - app should still work
     }
   }
 } 

@@ -649,6 +649,35 @@ class UnifiedPrinterService extends ChangeNotifier {
     }
   }
   
+  /// Remove assignment
+  Future<bool> removeAssignment(String assignmentId) async {
+    try {
+      final db = await _databaseService.database;
+      if (db?.isOpen != true) return false;
+      
+      // Remove from database
+      await db!.delete(
+        'unified_assignments',
+        where: 'id = ?',
+        whereArgs: [assignmentId],
+      );
+      
+      // Remove from memory
+      _assignments.removeWhere((a) => a.id == assignmentId);
+      
+      // Rebuild maps
+      _rebuildAssignmentMaps();
+      
+      debugPrint('$_logTag ✅ Assignment removed successfully');
+      notifyListeners();
+      return true;
+      
+    } catch (e) {
+      debugPrint('$_logTag ❌ Error removing assignment: $e');
+      return false;
+    }
+  }
+  
   /// Get assigned printers for menu item
   List<String> getAssignedPrinters(String menuItemId, String categoryId) {
     // Check direct menu item assignment first

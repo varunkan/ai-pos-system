@@ -119,45 +119,68 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          // App Logo
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.3)),
-            ),
-            child: const Icon(
-              Icons.restaurant_menu,
-              size: 40,
-              color: Colors.white,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive header sizing
+        final isTablet = constraints.maxWidth > 600;
+        final logoSize = isTablet ? 90.0 : 70.0;
+        final iconSize = isTablet ? 45.0 : 35.0;
+        
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isTablet ? 32 : 24,
+            vertical: isTablet ? 32 : 20,
           ),
-          const SizedBox(height: 16),
-
-          // Title
-          Text(
-            'Restaurant POS',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          child: Column(
+            children: [
+              // App Logo
+              Container(
+                width: logoSize,
+                height: logoSize,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(isTablet ? 24 : 18),
+                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.restaurant_menu,
+                  size: iconSize,
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
                 ),
-          ),
-          const SizedBox(height: 8),
+              ),
+              SizedBox(height: isTablet ? 20 : 16),
 
-          Text(
-            'Multi-Tenant Point of Sale System',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.9),
-                ),
+              // Title
+              Text(
+                'Restaurant POS',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: isTablet ? 32 : 24,
+                      letterSpacing: 0.5,
+                    ),
+              ),
+              SizedBox(height: isTablet ? 12 : 8),
+
+              Text(
+                'Multi-Tenant Point of Sale System',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: isTablet ? 16 : 14,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -217,224 +240,230 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
   Widget _buildRegistrationTab() {
     return Consumer<MultiTenantAuthService>(
       builder: (context, authService, child) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _registrationFormKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Register Your Restaurant',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.grey.shade800,
-                        fontWeight: FontWeight.bold,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // Responsive form width - constrain on larger screens
+            final formWidth = constraints.maxWidth > 800 
+                ? 500.0  // Fixed width for tablets
+                : constraints.maxWidth > 600 
+                    ? constraints.maxWidth * 0.8  // 80% width for medium screens
+                    : constraints.maxWidth - 48;  // Full width minus padding for phones
+            
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+              child: Center(
+                child: SizedBox(
+                  width: formWidth,
+                  child: Form(
+                    key: _registrationFormKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Register Your Restaurant',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.grey.shade800,
+                                fontWeight: FontWeight.bold,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
 
-                // Restaurant Name
-                _buildTextField(
-                  controller: _regNameController,
-                  label: 'Restaurant Name',
-                  icon: Icons.restaurant,
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'Restaurant name is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Business Type
-                _buildTextField(
-                  controller: _regBusinessTypeController,
-                  label: 'Business Type (e.g., Fine Dining, Fast Food)',
-                  icon: Icons.business,
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'Business type is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Address
-                _buildTextField(
-                  controller: _regAddressController,
-                  label: 'Address',
-                  icon: Icons.location_on,
-                  maxLines: 2,
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'Address is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Phone
-                _buildTextField(
-                  controller: _regPhoneController,
-                  label: 'Phone Number',
-                  icon: Icons.phone,
-                  keyboardType: TextInputType.phone,
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'Phone number is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Email
-                _buildTextField(
-                  controller: _regEmailController,
-                  label: 'Email Address',
-                  icon: Icons.email,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'Email is required';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // Admin Credentials Section
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Admin Credentials',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.blue.shade800,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'These will be used to access your restaurant\'s POS system',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.blue.shade600,
-                            ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Admin User ID
-                      _buildTextField(
-                        controller: _regAdminUserController,
-                        label: 'Admin User ID',
-                        icon: Icons.person,
-                        validator: (value) {
-                          if (value?.trim().isEmpty ?? true) {
-                            return 'Admin user ID is required';
-                          }
-                          if (value!.length < 3) {
-                            return 'User ID must be at least 3 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Admin Password
-                      _buildTextField(
-                        controller: _regAdminPasswordController,
-                        label: 'Admin Password',
-                        icon: Icons.lock,
-                        obscureText: _obscureRegPassword,
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _obscureRegPassword = !_obscureRegPassword;
-                            });
+                        // Restaurant Name
+                        _buildTextField(
+                          controller: _regNameController,
+                          label: 'Restaurant Name',
+                          icon: Icons.restaurant,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'Restaurant name is required';
+                            }
+                            return null;
                           },
-                          icon: Icon(
-                            _obscureRegPassword ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Business Type
+                        _buildTextField(
+                          controller: _regBusinessTypeController,
+                          label: 'Business Type (e.g., Fine Dining, Fast Food)',
+                          icon: Icons.business,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'Business type is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Address
+                        _buildTextField(
+                          controller: _regAddressController,
+                          label: 'Address',
+                          icon: Icons.location_on,
+                          maxLines: 2,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'Address is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Phone
+                        _buildTextField(
+                          controller: _regPhoneController,
+                          label: 'Phone Number',
+                          icon: Icons.phone,
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'Phone number is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Email
+                        _buildTextField(
+                          controller: _regEmailController,
+                          label: 'Email Address',
+                          icon: Icons.email,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'Email is required';
+                            }
+                            if (!value!.contains('@')) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        Text(
+                          'Admin User Setup',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade700,
+                              ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Admin Username
+                        _buildTextField(
+                          controller: _regAdminUserController,
+                          label: 'Admin Username',
+                          icon: Icons.admin_panel_settings,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'Admin username is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Admin Password
+                        _buildTextField(
+                          controller: _regAdminPasswordController,
+                          label: 'Admin Password',
+                          icon: Icons.lock,
+                          obscureText: _obscureRegPassword,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureRegPassword ? Icons.visibility : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureRegPassword = !_obscureRegPassword;
+                              });
+                            },
+                          ),
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'Password is required';
+                            }
+                            if (value!.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Error message
+                        if (authService.lastError != null)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Text(
+                              authService.lastError!,
+                              style: TextStyle(color: Colors.red.shade700),
+                            ),
+                          ),
+
+                        // Register Button
+                        Container(
+                          width: double.infinity,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF667eea).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: authService.isLoading ? null : _handleRegistration,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: authService.isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Register Restaurant',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
-                        validator: (value) {
-                          if (value?.trim().isEmpty ?? true) {
-                            return 'Password is required';
-                          }
-                          if (value!.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
-
-                // Error message
-                if (authService.lastError != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Text(
-                      authService.lastError!,
-                      style: TextStyle(color: Colors.red.shade700),
-                    ),
-                  ),
-
-                if (authService.lastError != null) const SizedBox(height: 16),
-
-                // Register Button
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: authService.isLoading ? null : _handleRegistration,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF667eea),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: authService.isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Register Restaurant',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -443,195 +472,239 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
   Widget _buildLoginTab() {
     return Consumer<MultiTenantAuthService>(
       builder: (context, authService, child) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _loginFormKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Restaurant Login',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.grey.shade800,
-                        fontWeight: FontWeight.bold,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-
-                // Restaurant Email
-                _buildTextField(
-                  controller: _loginEmailController,
-                  label: 'Restaurant Email',
-                  icon: Icons.email,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'Restaurant email is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // User ID
-                _buildTextField(
-                  controller: _loginUserController,
-                  label: 'User ID',
-                  icon: Icons.person,
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'User ID is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Password
-                _buildTextField(
-                  controller: _loginPasswordController,
-                  label: 'Password',
-                  icon: Icons.lock,
-                  obscureText: _obscureLoginPassword,
-                  suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _obscureLoginPassword = !_obscureLoginPassword;
-                      });
-                    },
-                    icon: Icon(
-                      _obscureLoginPassword ? Icons.visibility : Icons.visibility_off,
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'Password is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // Error message
-                if (authService.lastError != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Text(
-                      authService.lastError!,
-                      style: TextStyle(color: Colors.red.shade700),
-                    ),
-                  ),
-
-                if (authService.lastError != null) const SizedBox(height: 16),
-
-                // Login Button
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: authService.isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF764ba2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: authService.isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Login',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Registered Restaurants Info
-                if (authService.registeredRestaurants.isNotEmpty) ...[
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Registered Restaurants',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...authService.registeredRestaurants.map((restaurant) => 
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.restaurant, color: Colors.grey.shade600),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  restaurant.name,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  restaurant.email,
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              _loginEmailController.text = restaurant.email;
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF667eea),
-                                borderRadius: BorderRadius.circular(4),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // Responsive form width - constrain on larger screens
+            final formWidth = constraints.maxWidth > 800 
+                ? 450.0  // Slightly smaller width for login (fewer fields)
+                : constraints.maxWidth > 600 
+                    ? constraints.maxWidth * 0.8  // 80% width for medium screens
+                    : constraints.maxWidth - 48;  // Full width minus padding for phones
+            
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+              child: Center(
+                child: SizedBox(
+                  width: formWidth,
+                  child: Form(
+                    key: _loginFormKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Restaurant Login',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.grey.shade800,
+                                fontWeight: FontWeight.bold,
                               ),
-                              child: const Text(
-                                'Use',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Restaurant Email
+                        _buildTextField(
+                          controller: _loginEmailController,
+                          label: 'Restaurant Email',
+                          icon: Icons.email,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'Restaurant email is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // User ID
+                        _buildTextField(
+                          controller: _loginUserController,
+                          label: 'User ID',
+                          icon: Icons.person,
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'User ID is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Password
+                        _buildTextField(
+                          controller: _loginPasswordController,
+                          label: 'Password',
+                          icon: Icons.lock,
+                          obscureText: _obscureLoginPassword,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureLoginPassword ? Icons.visibility : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureLoginPassword = !_obscureLoginPassword;
+                              });
+                            },
+                          ),
+                          validator: (value) {
+                            if (value?.trim().isEmpty ?? true) {
+                              return 'Password is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Error message
+                        if (authService.lastError != null)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Text(
+                              authService.lastError!,
+                              style: TextStyle(color: Colors.red.shade700),
+                            ),
+                          ),
+
+                        // Login Button
+                        Container(
+                          width: double.infinity,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF667eea).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: authService.isLoading ? null : _handleLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: authService.isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Login',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Help text
+                        Text(
+                          'New restaurant? Switch to the Register tab to create your account.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey.shade600,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                        
+                        // Registered Restaurants Info
+                        if (authService.registeredRestaurants.isNotEmpty) ...[
+                          const SizedBox(height: 24),
+                          const Divider(),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Registered Restaurants',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade700,
                                 ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...authService.registeredRestaurants.map((restaurant) => 
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.restaurant, color: Colors.grey.shade600),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          restaurant.name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        Text(
+                                          restaurant.email,
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      _loginEmailController.text = restaurant.email;
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'Use',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
                   ),
-                ],
-              ],
-            ),
-          ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -653,27 +726,36 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
       obscureText: obscureText,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      style: const TextStyle(fontSize: 16), // Optimize font size
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon),
+        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+        prefixIcon: Icon(icon, color: Colors.grey.shade600, size: 20),
         suffixIcon: suffixIcon,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // Better padding
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFF667eea), width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         filled: true,
         fillColor: Colors.grey.shade50,
+        // Add subtle elevation effect
+        isDense: true,
       ),
     );
   }
@@ -730,6 +812,4 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
       );
     }
   }
-
-
 } 

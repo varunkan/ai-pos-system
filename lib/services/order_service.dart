@@ -1046,6 +1046,60 @@ class OrderService extends ChangeNotifier {
     }
   }
 
+  /// Delete all orders from database (for testing/reset purposes)
+  /// This preserves users, menu items, and categories - only clears orders
+  Future<void> deleteAllOrders() async {
+    try {
+      debugPrint('🗑️ Starting to delete all orders...');
+      
+      final Database? database = await _databaseService.database;
+      if (database == null) {
+        throw OrderServiceException('Database not available', operation: 'delete_all_orders');
+      }
+      
+      await database.transaction((txn) async {
+        // Delete all order items first (foreign key constraint)
+        final orderItemsDeleted = await txn.delete('order_items');
+        debugPrint('✅ Deleted $orderItemsDeleted order items');
+        
+        // Delete all orders
+        final ordersDeleted = await txn.delete('orders');
+        debugPrint('✅ Deleted $ordersDeleted orders');
+        
+        // Delete all order logs
+        final orderLogsDeleted = await txn.delete('order_logs');
+        debugPrint('✅ Deleted $orderLogsDeleted order logs');
+      });
+      
+      // Clear local state
+      _activeOrders.clear();
+      _completedOrders.clear();
+      _allOrders.clear();
+      _currentOrder = null;
+      
+      // Clear any cached data
+      final Map<String, MenuItem> _menuItemCache = {};
+      _menuItemCache.clear();
+      
+      debugPrint('✅ All orders deleted successfully - users and menu items preserved');
+      notifyListeners();
+      
+      // Notify streams
+      _ordersStreamController.add([]);
+      if (_currentOrder == null) {
+        _currentOrderStreamController.add(Order(
+          items: [],
+          orderNumber: 'TEMP-${DateTime.now().millisecondsSinceEpoch}',
+          orderTime: DateTime.now(),
+        ));
+      }
+      
+    } catch (e) {
+      debugPrint('❌ Error deleting all orders: $e');
+      throw OrderServiceException('Failed to delete all orders: $e', operation: 'delete_all_orders', originalError: e);
+    }
+  }
+
   /// Get orders for today
   List<Order> getTodaysOrders() {
     final today = DateTime.now();

@@ -130,9 +130,9 @@ class DatabaseService {
     }
   }
 
-  /// Initializes the database with proper error handling.
+  /// Initializes the database connection.
   /// 
-  /// Creates the database file and sets up all tables if they don't exist.
+  /// Opens the SQLite database and enables foreign key constraints.
   /// Throws [DatabaseException] if initialization fails.
   Future<Database> _initDatabase() async {
     try {
@@ -153,6 +153,24 @@ class DatabaseService {
           // Enable foreign key constraints
           await db.execute('PRAGMA foreign_keys = ON');
           debugPrint('Database opened successfully with foreign keys enabled');
+          
+          // Try to enable WAL mode with fallback
+          try {
+            await db.execute('PRAGMA journal_mode = WAL');
+            debugPrint('✅ WAL mode enabled successfully');
+          } catch (e) {
+            debugPrint('⚠️ WAL mode not supported, using default journal mode: $e');
+            // Continue without WAL mode - this is fine for development
+          }
+          
+          // Set synchronous mode
+          try {
+            await db.execute('PRAGMA synchronous = NORMAL');
+            debugPrint('✅ Synchronous mode set to NORMAL');
+          } catch (e) {
+            debugPrint('⚠️ Could not set synchronous mode: $e');
+            // Continue anyway
+          }
           
           // Perform schema migrations for existing databases
           await _performSchemaMigrations(db);

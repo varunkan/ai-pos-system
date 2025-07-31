@@ -7,6 +7,10 @@
 -keep class io.flutter.plugin.platform.** { *; }
 -keep class io.flutter.embedding.** { *; }
 
+# Keep Google Play Core classes (fix for R8 minification issues)
+-keep class com.google.android.play.core.** { *; }
+-dontwarn com.google.android.play.core.**
+
 # Keep printer-related classes
 -keep class net.posprinter.** { *; }
 -keep class com.dantsu.escposprinter.** { *; }

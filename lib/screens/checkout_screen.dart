@@ -10,7 +10,6 @@ import '../services/table_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/back_button.dart';
 import '../widgets/error_dialog.dart';
-import 'unified_printer_dashboard.dart';
 import 'print_preview_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {

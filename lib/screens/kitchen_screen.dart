@@ -1109,7 +1109,13 @@ class _OrderDetailModal extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Order #${order.orderNumber}', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+            Flexible(
+              child: Text(
+                'Order #${order.orderNumber}', 
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const SizedBox(width: 12),
             if (isUrgent)
               _buildBadge('URGENT', Colors.red.shade700, Colors.red.shade100),

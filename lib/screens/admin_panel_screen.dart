@@ -5,7 +5,6 @@ import '../models/category.dart' as pos_category;
 import '../models/menu_item.dart';
 import '../models/order.dart';
 
-import '../models/reservation.dart';
 import '../services/menu_service.dart';
 import '../services/order_service.dart';
 import '../services/order_log_service.dart';
@@ -20,7 +19,6 @@ import '../widgets/error_dialog.dart';
 import '../widgets/confirmation_dialog.dart';
 import '../widgets/form_field.dart';
 
-import '../screens/unified_printer_dashboard.dart';
 import '../screens/admin_orders_screen.dart';
 import '../screens/kitchen_screen.dart';
 import '../screens/reports_screen.dart';
@@ -1175,6 +1173,57 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         appBar: _buildAppBar(),
         body: Column(
           children: [
+            // Admin action buttons for specific tabs
+            if (_selectedIndex == 4) // Clear orders button on orders tab
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.delete_sweep),
+                    label: const Text('Clear All Orders (Testing)'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade700,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () async {
+                      final confirmed = await ConfirmationDialogHelper.showConfirmation(
+                        context,
+                        title: 'Clear All Orders',
+                        message: 'This will permanently delete ALL orders from the database. Users, menu items, and categories will be preserved. This action cannot be undone. Are you sure?',
+                        confirmText: 'Clear Orders',
+                        cancelText: 'Cancel',
+                      );
+                      if (confirmed == true) {
+                        setState(() { _isLoading = true; });
+                        try {
+                          final orderService = Provider.of<OrderService>(context, listen: false);
+                          await orderService.deleteAllOrders();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('✅ All orders cleared successfully! Database ready for testing.'),
+                                backgroundColor: Colors.green,
+                                duration: Duration(seconds: 4),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            await ErrorDialogHelper.showError(
+                              context,
+                              title: 'Error Clearing Orders',
+                              message: 'Failed to clear orders: $e',
+                            );
+                          }
+                        } finally {
+                          if (mounted) setState(() { _isLoading = false; });
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ),
             if (_selectedIndex == 9) // Only show reset button on tables tab
               Padding(
                 padding: const EdgeInsets.all(16.0),

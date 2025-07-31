@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 import '../models/order.dart';
 import '../models/user.dart';
 import '../services/order_service.dart';
 import '../services/user_service.dart';
 import '../services/table_service.dart';
+import '../services/database_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/back_button.dart';
-import 'edit_active_order_screen.dart';
+import 'order_creation_screen.dart';
 import 'order_audit_screen.dart';
 
 class AdminOrdersScreen extends StatefulWidget {
@@ -28,42 +28,9 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   String _searchQuery = '';
   OrderStatus? _statusFilter;
   OrderType? _typeFilter;
+  bool _showActiveOnly = true;  // Default to active only to match "All Servers" view
 
-  /// Enhanced text styles for better prominence and visual appeal
-  static const _headerTextStyle = TextStyle(
-    fontSize: 26,
-    fontWeight: FontWeight.w900,
-    color: Color(0xFF1F2937),
-    letterSpacing: 0.8,
-  );
 
-  static const _orderNumberStyle = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w800,
-    color: Color(0xFF1F2937),
-    letterSpacing: 0.4,
-  );
-
-  static const _orderTypeStyle = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w700,
-    color: Color(0xFF6B7280),
-    letterSpacing: 0.8,
-  );
-
-  static const _itemNameStyle = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w700,
-    color: Color(0xFF1F2937),
-    letterSpacing: 0.3,
-  );
-
-  static const _priceStyle = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w800,
-    color: Color(0xFF059669),
-    letterSpacing: 0.2,
-  );
 
   static const _statusBadgeStyle = TextStyle(
     fontSize: 11,
@@ -125,6 +92,11 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
 
   List<Order> get _filteredOrders {
     var filtered = _allOrders.where((order) {
+      // Active Only filter (like "All Servers" view)
+      if (_showActiveOnly && !order.isActive) {
+        return false;
+      }
+
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -203,30 +175,88 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       return;
     }
 
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditActiveOrderScreen(
-          order: order,
-          user: widget.user,
-        ),
-      ),
-    );
-
-    if (result != null) {
-      // Refresh orders if order was modified
-      await _loadOrders();
+    try {
+      final userService = Provider.of<UserService?>(context, listen: false);
       
-      // If coming from send to kitchen, show a success message
-      if (result is Map && result['showActiveOrders'] == true && mounted) {
+      if (userService == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Items sent to kitchen successfully!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
+            content: Text('Services are still loading. Please wait a moment.'),
+            backgroundColor: Colors.orange,
           ),
         );
+        return;
       }
+      
+      // Find the user who created the order or use admin as fallback
+      User? orderUser;
+      try {
+        orderUser = userService.users.firstWhere((user) => user.id == order.userId);
+      } catch (e) {
+        // If original user not found, use admin or first available user
+        try {
+          orderUser = userService.users.firstWhere(
+            (user) => user.role == UserRole.admin,
+          );
+        } catch (e) {
+          // If no admin found, use first available user
+          if (userService.users.isNotEmpty) {
+            orderUser = userService.users.first;
+          }
+        }
+      }
+      
+      if (orderUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Unable to edit order: No valid user found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      debugPrint('🔍 ADMIN: Editing order ${order.orderNumber} with user ${orderUser.name} (${orderUser.id})');
+      
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OrderCreationScreen(
+            user: orderUser!,
+            orderType: order.type == OrderType.dineIn ? 'dine-in' : 'takeout',
+            existingOrder: order, // Pass the existing order for editing
+            table: order.tableId != null ? 
+              Provider.of<TableService?>(context, listen: false)?.getTableById(order.tableId!) : null,
+            numberOfPeople: order.type == OrderType.dineIn ? order.items.length : null,
+            orderNumber: order.orderNumber,
+          ),
+        ),
+      );
+
+      if (result != null) {
+        // Refresh orders if order was modified
+        debugPrint('🔄 ADMIN: Returned from edit order, reloading orders...');
+        await _loadOrders();
+        
+        // If coming from send to kitchen, show a success message
+        if (result is Map && result['showActiveOrders'] == true && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Items sent to kitchen successfully!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error editing order: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Unable to edit order. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -275,29 +305,30 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         _isLoading = true;
       });
 
-      // Create cancellation history entry
-      final cancellationHistory = OrderHistory(
-        id: const Uuid().v4(),
-        status: OrderStatus.cancelled,
-        updatedBy: widget.user.name,
-        timestamp: DateTime.now(),
-        notes: 'Order cancelled by ${widget.user.name} from Admin Panel',
-      );
-
-      // Add cancellation history to the order
-      final updatedHistory = List<OrderHistory>.from(order.history);
-      updatedHistory.add(cancellationHistory);
-
-      // Mark order as cancelled
-      final cancelledOrder = order.copyWith(
-        status: OrderStatus.cancelled,
-        completedTime: DateTime.now(),
-        history: updatedHistory,
-      );
-
-      // Save the cancelled order
+      // Update order status to cancelled using the proper method
       final orderService = Provider.of<OrderService>(context, listen: false);
-      await orderService.saveOrder(cancelledOrder);
+      final success = await orderService.updateOrderStatus(order.id, 'cancelled');
+      
+      if (!success) {
+        throw Exception('Failed to update order status to cancelled');
+      }
+      
+      // Also update the completed_time for cancelled orders
+      try {
+        final databaseService = Provider.of<DatabaseService>(context, listen: false);
+        final database = await databaseService.database;
+        if (database != null) {
+          await database.update(
+            'orders',
+            {'completed_time': DateTime.now().toIso8601String()},
+            where: 'id = ?',
+            whereArgs: [order.id],
+          );
+        }
+      } catch (e) {
+        debugPrint('⚠️ Failed to update completed_time: $e');
+        // Don't fail the cancellation if this fails
+      }
       await _loadOrders();
       
       if (mounted) {
@@ -517,17 +548,32 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                   child: Row(
                     children: [
                       _buildFilterChip(
+                        label: 'ACTIVE ONLY',
+                        isSelected: _showActiveOnly && _statusFilter == null,
+                        onTap: () => setState(() {
+                          _showActiveOnly = true;
+                          _statusFilter = null;
+                        }),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(
                         label: 'All',
-                        isSelected: _statusFilter == null,
-                        onTap: () => setState(() => _statusFilter = null),
+                        isSelected: !_showActiveOnly && _statusFilter == null,
+                        onTap: () => setState(() {
+                          _statusFilter = null;
+                          _showActiveOnly = false;
+                        }),
                       ),
                       const SizedBox(width: 8),
                       ...OrderStatus.values.map((status) => Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: _buildFilterChip(
                           label: status.name.toUpperCase(),
-                          isSelected: _statusFilter == status,
-                          onTap: () => setState(() => _statusFilter = status),
+                          isSelected: _statusFilter == status && !_showActiveOnly,
+                          onTap: () => setState(() {
+                            _statusFilter = status;
+                            _showActiveOnly = false;
+                          }),
                         ),
                       )),
                     ],

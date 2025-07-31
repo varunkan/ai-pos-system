@@ -129,7 +129,15 @@ class UnifiedDatabaseService {
         onCreate: _createTables,
         onOpen: (db) async {
           await db.execute('PRAGMA foreign_keys = ON');
-          await db.execute('PRAGMA journal_mode = WAL');
+          
+          // Try to enable WAL mode with fallback
+          try {
+            await db.execute('PRAGMA journal_mode = WAL');
+            debugPrint('✅ Unified SQLite (mobile): WAL mode enabled');
+          } catch (e) {
+            debugPrint('⚠️ Unified SQLite (mobile): WAL mode not supported, using default: $e');
+            // Continue without WAL mode - this is fine for Android emulator
+          }
         },
       );
       
@@ -155,7 +163,15 @@ class UnifiedDatabaseService {
         onCreate: _createTables,
         onOpen: (db) async {
           await db.execute('PRAGMA foreign_keys = ON');
-          await db.execute('PRAGMA journal_mode = WAL');
+          
+          // Try to enable WAL mode with fallback
+          try {
+            await db.execute('PRAGMA journal_mode = WAL');
+            debugPrint('✅ Unified SQLite (desktop): WAL mode enabled');
+          } catch (e) {
+            debugPrint('⚠️ Unified SQLite (desktop): WAL mode not supported, using default: $e');
+            // Continue without WAL mode
+          }
         },
       );
       

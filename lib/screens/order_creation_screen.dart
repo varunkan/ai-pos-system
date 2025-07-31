@@ -19,6 +19,7 @@ import '../widgets/universal_navigation.dart';
 import '../screens/checkout_screen.dart';
 import 'package:uuid/uuid.dart';
 import '../screens/order_type_selection_screen.dart'; // Added import for OrderTypeSelectionScreen
+import 'kitchen_receipt_preview_dialog.dart'; // Kitchen receipt preview dialog
 
 class OrderCreationScreen extends StatefulWidget {
   final User user;
@@ -150,6 +151,196 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   }
 
   void _addItemToOrder(MenuItem item) {
+    // Show item configuration dialog first
+    _showItemConfigurationDialog(item);
+  }
+
+  void _showItemConfigurationDialog(MenuItem item) {
+    String selectedSpiceLevel = 'Regular';
+    String specialInstructions = '';
+    int quantity = 1;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.name,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 400, maxWidth: 400),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Item price
+                      Text(
+                        '\$${item.price.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Quantity selection
+                      const Text(
+                        'Quantity:',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              if (quantity > 1) {
+                                setDialogState(() {
+                                  quantity--;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.remove_circle_outline),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '$quantity',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              setDialogState(() {
+                                quantity++;
+                              });
+                            },
+                            icon: const Icon(Icons.add_circle_outline),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Spice level selection
+                      const Text(
+                        'Spice Level:',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Column(
+                        children: ['Regular', 'Mild', 'Spicy'].map((level) {
+                          return RadioListTile<String>(
+                            title: Text(level),
+                            value: level,
+                            groupValue: selectedSpiceLevel,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                selectedSpiceLevel = value!;
+                              });
+                            },
+                            contentPadding: EdgeInsets.zero,
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Special instructions
+                      const Text(
+                        'Special Instructions:',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        maxLength: 30,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          hintText: 'Add special instructions...',
+                          border: OutlineInputBorder(),
+                          counterText: '',
+                          helperText: 'Max 30 characters',
+                        ),
+                        onChanged: (value) {
+                          specialInstructions = value;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    _addConfiguredItemToOrder(item, quantity, selectedSpiceLevel, specialInstructions);
+                  },
+                  child: const Text('Add to Order'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _addConfiguredItemToOrder(MenuItem item, int quantity, String spiceLevel, String specialInstructions) {
+    if (_currentOrder != null) {
+      try {
+        setState(() {
+          // Create special instructions text with spice level
+          String finalInstructions = '';
+          if (spiceLevel != 'Regular') {
+            finalInstructions = 'Spice: $spiceLevel';
+          }
+          if (specialInstructions.isNotEmpty) {
+            if (finalInstructions.isNotEmpty) {
+              finalInstructions += ', $specialInstructions';
+            } else {
+              finalInstructions = specialInstructions;
+            }
+          }
+
+          // Add new item with configuration
+          final orderItem = OrderItem(
+            menuItem: item,
+            quantity: quantity,
+            unitPrice: item.price,
+            sentToKitchen: false,
+            specialInstructions: finalInstructions.isEmpty ? null : finalInstructions,
+          );
+          _currentOrder!.items.add(orderItem);
+        });
+        _updateOrderWithHST();
+        _autoSaveOrder();
+      } catch (e) {
+        debugPrint('Error adding configured item: $e');
+        // Fallback to simple add if there's an error
+        _addSimpleItemToOrder(item);
+      }
+    }
+  }
+
+  void _addSimpleItemToOrder(MenuItem item) {
     if (_currentOrder != null) {
       setState(() {
         // Look for existing item that hasn't been sent to kitchen yet
@@ -319,6 +510,28 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       return;
     }
 
+    // Show kitchen receipt preview first
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => KitchenReceiptPreviewDialog(
+        order: _currentOrder!, 
+        serverName: _getServerName(),
+      ),
+    );
+
+    if (confirmed != true) {
+      // User cancelled the preview
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kitchen receipt preview cancelled.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -336,7 +549,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       // Save the updated order
       await orderService.saveOrder(_currentOrder!);
 
-      // CRITICAL FIX: Print kitchen ticket after saving
+      // Print kitchen ticket after saving
       try {
         final printed = await printingService.printKitchenTicket(_currentOrder!);
         if (printed) {
@@ -355,7 +568,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Order sent to kitchen and printed successfully!'),
+            content: Text('Order sent to kitchen & printed successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -687,10 +900,11 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     final bool hasChefNotes = item.notes?.isNotEmpty == true;
     final bool hasSpecialInstructions = item.specialInstructions?.isNotEmpty == true;
     final bool isSentToKitchen = item.sentToKitchen;
+    final bool hasNotes = hasChefNotes || hasSpecialInstructions;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 6),
+      elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(
@@ -699,200 +913,286 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
           children: [
-            // Item header
-            Row(
-              children: [
-                Expanded(
+            // Item info - name and price (flexible to take remaining space)
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.menuItem.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isSentToKitchen)
+                        Container(
+                          margin: const EdgeInsets.only(left: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'SENT',
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  Text(
+                    '\$${item.unitPrice.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(width: 8),
+            
+            // Quantity controls (compact)
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: () => _updateItemQuantity(index, item.quantity - 1),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      child: const Icon(Icons.remove, size: 14),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Text(
+                      '${item.quantity}',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => _updateItemQuantity(index, item.quantity + 1),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      child: const Icon(Icons.add, size: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(width: 8),
+            
+            // Total price
+            Text(
+              '\$${(item.unitPrice * item.quantity).toStringAsFixed(2)}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            
+            const SizedBox(width: 8),
+            
+            // Notes indicator and action button
+            if (hasNotes)
+              GestureDetector(
+                onTap: () => _showItemNotesMenu(item, index),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: hasSpecialInstructions ? Colors.blue.shade50 : Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: hasSpecialInstructions ? Colors.blue.shade200 : Colors.orange.shade200,
+                    ),
+                  ),
+                  child: Icon(
+                    hasSpecialInstructions ? Icons.note : Icons.restaurant,
+                    size: 16,
+                    color: hasSpecialInstructions ? Colors.blue.shade700 : Colors.orange.shade700,
+                  ),
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: () => _showItemNotesMenu(item, index),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.note_add,
+                    size: 16,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ),
+            
+            const SizedBox(width: 8),
+            
+            // Delete button
+            GestureDetector(
+              onTap: () => _removeItemFromOrder(index),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                child: const Icon(
+                  Icons.delete_outline,
+                  size: 16,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show notes menu with options for chef notes and special instructions
+  void _showItemNotesMenu(OrderItem item, int index) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.menuItem.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Current notes display
+              if (item.notes?.isNotEmpty == true) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    border: Border.all(color: Colors.orange.shade200),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.menuItem.name,
-                        style: const TextStyle(
+                        'Chef Notes:',
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
                           fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                          fontSize: 12,
                         ),
                       ),
+                      const SizedBox(height: 4),
                       Text(
-                        '\$${item.unitPrice.toStringAsFixed(2)} each',
+                        item.notes!,
                         style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
+                          color: Colors.orange.shade700,
+                          fontSize: 14,
                         ),
                       ),
                     ],
                   ),
                 ),
-                if (isSentToKitchen)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'SENT',
-                      style: TextStyle(
-                        color: Colors.green.shade700,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: 8),
               ],
-            ),
-            const SizedBox(height: 12),
-            // Quantity controls
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => _updateItemQuantity(index, item.quantity - 1),
-                            icon: const Icon(Icons.remove, size: 16),
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              '${item.quantity}',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => _updateItemQuantity(index, item.quantity + 1),
-                            icon: const Icon(Icons.add, size: 16),
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '\$${(item.unitPrice * item.quantity).toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  onPressed: () => _removeItemFromOrder(index),
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  tooltip: 'Remove item',
-                ),
-              ],
-            ),
-            // Notes and instructions
-            if (hasChefNotes || hasSpecialInstructions) ...[
-              const SizedBox(height: 8),
-              if (hasChefNotes)
+              
+              if (item.specialInstructions?.isNotEmpty == true) ...[
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    border: Border.all(color: Colors.orange.shade200),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'Chef Notes: ${item.notes}',
-                    style: TextStyle(
-                      color: Colors.orange.shade700,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              if (hasSpecialInstructions) ...[
-                if (hasChefNotes) const SizedBox(height: 4),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
                     border: Border.all(color: Colors.blue.shade200),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(
-                    'Special Instructions: ${item.specialInstructions}',
-                    style: TextStyle(
-                      color: Colors.blue.shade700,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Special Instructions:',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.specialInstructions!,
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 16),
               ],
+              
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showItemChefNotesDialog(item, index);
+                      },
+                      icon: const Icon(Icons.restaurant, size: 16),
+                      label: const Text('Chef Notes'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showItemSpecialInstructionsDialog(item, index);
+                      },
+                      icon: const Icon(Icons.note_add, size: 16),
+                      label: const Text('Instructions'),
+                    ),
+                  ),
+                ],
+              ),
             ],
-            const SizedBox(height: 8),
-            // Action buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showItemChefNotesDialog(item, index),
-                    icon: Icon(
-                      Icons.restaurant,
-                      size: 16,
-                      color: hasChefNotes ? Colors.orange : Colors.grey.shade600,
-                    ),
-                    label: Text(
-                      hasChefNotes ? 'Edit Chef Notes' : 'Chef Notes',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: hasChefNotes ? Colors.orange : Colors.grey.shade600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: hasChefNotes ? Colors.orange : Colors.grey.shade300,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showItemSpecialInstructionsDialog(item, index),
-                    icon: Icon(
-                      Icons.note_add,
-                      size: 16,
-                      color: hasSpecialInstructions ? Colors.blue : Colors.grey.shade600,
-                    ),
-                    label: Text(
-                      hasSpecialInstructions ? 'Edit Instructions' : 'Special Instructions',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: hasSpecialInstructions ? Colors.blue : Colors.grey.shade600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: hasSpecialInstructions ? Colors.blue : Colors.grey.shade300,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1069,153 +1369,166 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       color: Colors.white,
       child: Column(
         children: [
-          // Remove search bar completely - no longer needed
-          // Optimized categories display - full width
-          _buildOptimizedCategoriesDisplay(),
-          const Divider(height: 1),
+          // Menu header - shows back button when category is selected
+          if (_selectedCategory != null) _buildMenuHeader(),
+          // Categories display or divider
+          if (_selectedCategory == null) 
+            _buildCategoriesView()
+          else 
+            const Divider(height: 1),
+          // Main content area
+          if (_selectedCategory != null)
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildMenuItems(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _selectedCategory = null;
+                _menuItems.clear();
+              });
+            },
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Back to Categories',
+          ),
+          const SizedBox(width: 8),
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _selectedCategory == null
-                    ? _buildCategorySelectionPrompt()
-                    : _buildMenuItems(),
+            child: Text(
+              _selectedCategory?.name ?? '',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            '${_menuItems.length} items',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 14,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOptimizedCategoriesDisplay() {
+  Widget _buildCategoriesView() {
     if (_categories.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Reduced padding
+    return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Menu Categories',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Select a Category',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          // Dynamic grid layout for categories
-          LayoutBuilder(
-            builder: (context, constraints) {
-              // Calculate optimal columns based on screen width
-              int columns = (constraints.maxWidth / 120).floor(); // 120px per category
-              if (columns < 2) columns = 2;
-              if (columns > 6) columns = 6;
-              
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  childAspectRatio: 2.5, // Wide rectangular tiles
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, // Always show 3 categories per row
+                  childAspectRatio: 1.2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
                 itemCount: _categories.length,
                 itemBuilder: (context, index) {
                   final category = _categories[index];
-                  final isSelected = _selectedCategory?.id == category.id;
-                  
-                  return InkWell(
-                    onTap: () => _onCategorySelected(category),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isSelected 
-                            ? Theme.of(context).primaryColor.withValues(alpha: 0.15)
-                            : Colors.grey.shade50,
-                        border: Border.all(
-                          color: isSelected 
-                              ? Theme.of(context).primaryColor 
-                              : Colors.grey.shade300,
-                          width: isSelected ? 2 : 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: isSelected ? [
-                          BoxShadow(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ] : null,
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.restaurant_menu,
-                              size: 24,
-                              color: isSelected 
-                                  ? Theme.of(context).primaryColor 
-                                  : Colors.grey.shade600,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              category.name,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                color: isSelected 
-                                    ? Theme.of(context).primaryColor 
-                                    : Colors.black87,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
+                  return _buildElegantCategoryCard(category);
                 },
-              );
-            },
+              ),
+            ),
           ),
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  Widget _buildCategorySelectionPrompt() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.touch_app,
-            size: 64,
-            color: Colors.grey.shade300,
+  Widget _buildElegantCategoryCard(pos_category.Category category) {
+    return InkWell(
+      onTap: () => _onCategorySelected(category),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.blue.shade50,
+              Colors.indigo.shade50,
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Select a Category',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
+          border: Border.all(color: Colors.blue.shade200),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.shade100.withValues(alpha: 0.5),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Choose a category above to view menu items',
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 14,
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.restaurant_menu,
+                size: 32,
+                color: Colors.blue.shade700,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                category.name,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue.shade800,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2063,5 +2376,9 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         });
       }
     }
+  }
+
+  String _getServerName() {
+    return widget.table?.customerName ?? widget.user.name;
   }
 } 

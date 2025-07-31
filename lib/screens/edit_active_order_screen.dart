@@ -10,7 +10,6 @@ import 'package:ai_pos_system/services/menu_service.dart';
 import 'package:ai_pos_system/services/table_service.dart';
 import 'package:ai_pos_system/services/printing_service.dart';
 import 'package:ai_pos_system/services/enhanced_printer_assignment_service.dart';
-import 'package:ai_pos_system/services/robust_kitchen_service.dart';
 import 'package:ai_pos_system/services/database_service.dart';
 import 'package:ai_pos_system/services/activity_log_service.dart';
 import 'package:ai_pos_system/models/activity_log.dart';
@@ -21,7 +20,6 @@ import 'package:ai_pos_system/models/category.dart' as pos_category;
 import 'package:ai_pos_system/models/user.dart';
 import 'package:ai_pos_system/widgets/back_button.dart';
 import 'package:ai_pos_system/screens/checkout_screen.dart';
-import 'package:ai_pos_system/screens/order_type_selection_screen.dart';
 
 class EditActiveOrderScreen extends StatefulWidget {
   final Order order;
@@ -39,9 +37,6 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   pos_category.Category? _selectedCategory;
   bool _isLoading = true;
   String? _error;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-
   // Local order state that can be modified
   late Order _currentOrder;
 
@@ -49,6 +44,9 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   final List<Order> _changeHistory = [];
   int _currentHistoryIndex = -1;
   bool _isUndoRedoAction = false;
+
+  // New: View state management for drill-down navigation
+  bool _isViewingCategory = false;  // false = showing categories, true = showing items
 
   @override
   void initState() {
@@ -60,7 +58,6 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -176,6 +173,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         _menuItems.clear();
         _menuItems.addAll(items);
         _isLoading = false;
+        _isViewingCategory = true;  // Switch to items view
       });
     } catch (e) {
       setState(() {
@@ -183,6 +181,15 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         _error = 'Error loading menu items: $e';
       });
     }
+  }
+
+  // New: Navigate back to categories view
+  void _navigateBackToCategories() {
+    setState(() {
+      _isViewingCategory = false;
+      _selectedCategory = null;
+      _menuItems.clear();
+    });
   }
 
   Future<void> _addItemToOrder(MenuItem item) async {
@@ -319,7 +326,6 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   }
 
   Future<void> _sendToKitchen() async {
-    debugPrint('🚀 BULLETPROOF: Starting send to kitchen for order: ${_currentOrder.orderNumber}');
     
     // Guard to prevent multiple simultaneous operations
     if (_isLoading) return;
@@ -349,7 +355,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         return;
       }
       
-      debugPrint('🚀 BULLETPROOF: Found ${newItems.length} new items to send');
+
       
       // Step 2: Update items to mark as sent to kitchen
       final updatedItems = _currentOrder.items.map((item) =>
@@ -364,7 +370,6 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       );
       
       // Step 4: Save to database with timeout protection
-      debugPrint('🚀 BULLETPROOF: Saving order to database...');
       final databaseService = Provider.of<DatabaseService>(context, listen: false);
       
       // Use Future.timeout to prevent hanging
@@ -372,8 +377,6 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         const Duration(seconds: 10),
         onTimeout: () => throw TimeoutException('Database save timeout', const Duration(seconds: 10)),
       );
-      
-      debugPrint('🚀 BULLETPROOF: Order saved successfully');
       
       // Step 5: Update UI state
       if (mounted) {
@@ -398,7 +401,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       _tryPrintingInBackground(updatedOrder);
 
     } catch (e) {
-      debugPrint('🚀 BULLETPROOF: Error in send to kitchen: $e');
+      debugPrint('❌ Error sending to kitchen: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -416,7 +419,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
           _isLoading = false;
         });
       }
-      debugPrint('🚀 BULLETPROOF: Send to kitchen completed - spinner GUARANTEED cleared');
+
     }
   }
   
@@ -425,7 +428,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
     // Fire and forget - don't block the main UI flow
     () async {
       try {
-        debugPrint('🚀 BULLETPROOF: Attempting background printing...');
+
         
         final printingService = Provider.of<PrintingService?>(context, listen: false);
         if (printingService != null) {
@@ -433,14 +436,12 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
           await printingService.printKitchenTicket(order).timeout(
             const Duration(seconds: 5),
             onTimeout: () {
-              debugPrint('🚀 BULLETPROOF: Printing timeout - continuing without print');
               return false;
             },
           );
-          debugPrint('🚀 BULLETPROOF: Background printing completed');
         }
       } catch (e) {
-        debugPrint('🚀 BULLETPROOF: Background printing failed (order still saved): $e');
+        debugPrint('⚠️ Background printing failed: $e');
         // Silently fail - the order was already saved successfully
       }
     }();
@@ -448,17 +449,13 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
 
   /// Saves order directly to database without triggering OrderService listeners
   Future<void> _saveOrderDirectly(Order order, DatabaseService databaseService) async {
-    print('DEBUG: Starting direct database save for order: ${order.id}');
-    
     try {
       final orderData = _orderToMap(order);
-      print('DEBUG: Order data prepared, starting transaction');
       
       // Save order in a transaction
       final db = await databaseService.database;
       if (db != null) {
         await db.transaction((txn) async {
-          print('DEBUG: Transaction started');
         // Use INSERT OR REPLACE to handle potential ID conflicts
         await txn.rawInsert('''
           INSERT OR REPLACE INTO orders (
@@ -534,17 +531,12 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
           ]);
         }
         
-        print('DEBUG: All order items saved successfully');
       });
-      
-      print('DEBUG: Transaction completed successfully');
     } else {
       throw Exception('Database is not available');
     }
-    
-    print('DEBUG: Direct database save completed for order: ${order.orderNumber}');
     } catch (e) {
-      print('DEBUG: Error in direct database save: $e');
+      debugPrint('❌ Database save error: $e');
       rethrow;
     }
   }
@@ -1482,13 +1474,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
     );
   }
 
-  List<MenuItem> get _filteredMenuItems {
-    if (_searchQuery.isEmpty) return _menuItems;
-    return _menuItems.where((item) =>
-        item.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        item.tags.any((tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()))).toList();
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1584,10 +1570,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
     required Color color,
     required VoidCallback onPressed,
   }) {
-    // Add debug logging for Send button rendering
-    if (label == 'Send') {
-      print('DEBUG: Rendering Send button - _isLoading: $_isLoading');
-    }
+
     
     return ElevatedButton.icon(
       onPressed: _isLoading ? null : onPressed,
@@ -2416,10 +2399,13 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       child: Column(
         children: [
           _buildMenuHeader(),
-          _buildSearchBar(),
-          _buildCategoriesTabs(),
+          const Divider(height: 1),
           Expanded(
-            child: _buildMenuItems(),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _isViewingCategory
+                    ? _buildItemsView()
+                    : _buildCategoriesView(),
           ),
         ],
       ),
@@ -2428,154 +2414,134 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
 
   Widget _buildMenuHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Reduced padding
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(8),
           topRight: Radius.circular(8),
         ),
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
+          // Back button (only show when viewing items)
+          if (_isViewingCategory) ...[
+            InkWell(
+              onTap: _navigateBackToCategories,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.arrow_back,
+                  size: 20,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          
+          // Icon
           Icon(
             Icons.restaurant_menu,
             color: Theme.of(context).primaryColor,
             size: 20,
           ),
           const SizedBox(width: 8),
-          const Text(
-            'Menu',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          
+          // Title
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isViewingCategory 
+                      ? _selectedCategory?.name ?? 'Menu Items'
+                      : 'Menu Categories',
+                  style: const TextStyle(
+                    fontSize: 15, // Slightly reduced
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (_isViewingCategory && _selectedCategory != null)
+                  Text(
+                    'Select items to add to your order',
+                    style: TextStyle(
+                      fontSize: 11, // Reduced from 12
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                if (!_isViewingCategory)
+                  Text(
+                    'Choose a category to view menu items',
+                    style: TextStyle(
+                      fontSize: 11, // Reduced from 12
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+              ],
             ),
           ),
-          const Spacer(),
-          Text(
-            '${_filteredMenuItems.length} items',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 12,
+          
+          // Item count indicator
+          if (_isViewingCategory && _menuItems.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                '${_menuItems.length} items',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-        },
-        decoration: InputDecoration(
-          hintText: 'Search menu items...',
-          prefixIcon: const Icon(Icons.search, size: 20),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, size: 20),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                      _searchQuery = '';
-                    });
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Theme.of(context).primaryColor),
-          ),
-          filled: true,
-          fillColor: Colors.grey.shade50,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoriesTabs() {
-    return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final category = _categories[index];
-          final isSelected = _selectedCategory?.id == category.id;
-          
-          return Container(
-            margin: const EdgeInsets.only(right: 4),
-            child: FilterChip(
-              label: Text(
-                category.name,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  fontSize: 11,
-                ),
-              ),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  _onCategorySelected(category);
-                }
-              },
-              backgroundColor: Colors.grey.shade100,
-              selectedColor: Theme.of(context).primaryColor,
-              checkmarkColor: Colors.white,
-              side: BorderSide(
-                color: isSelected 
-                    ? Theme.of(context).primaryColor 
-                    : Colors.grey.shade300,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildMenuItems() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (_filteredMenuItems.isEmpty) {
+  Widget _buildCategoriesView() {
+    if (_categories.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _searchQuery.isNotEmpty ? Icons.search_off : Icons.restaurant_outlined,
-              size: 48,
-              color: Colors.grey.shade400,
+              Icons.restaurant_menu,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Categories Available',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              _searchQuery.isNotEmpty 
-                  ? 'No items found for "$_searchQuery"'
-                  : 'No items in this category',
+              'Please check back later or contact support',
               style: TextStyle(
+                color: Colors.grey.shade400,
                 fontSize: 14,
-                color: Colors.grey.shade600,
               ),
             ),
           ],
@@ -2583,127 +2549,341 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.0,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+    return Container(
+      padding: const EdgeInsets.all(12), // Reduced padding
+      child: GridView.builder(
+        physics: const BouncingScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4, // Changed to 4 columns as requested
+          childAspectRatio: 0.8, // Adjusted for 4 columns
+          crossAxisSpacing: 8, // Reduced spacing for 4 columns
+          mainAxisSpacing: 8, // Reduced spacing for 4 columns
+        ),
+        itemCount: _categories.length,
+        itemBuilder: (context, index) {
+          final category = _categories[index];
+          return _buildElegantCategoryCard(category);
+        },
       ),
-      itemCount: _filteredMenuItems.length,
-      itemBuilder: (context, index) {
-        final item = _filteredMenuItems[index];
-        return _buildMenuItemCard(item);
-      },
     );
   }
 
-  Widget _buildMenuItemCard(MenuItem item) {
-    final isOutOfStock = item.isOutOfStock;
-    
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: InkWell(
-        onTap: isOutOfStock ? null : () => _addItemToOrder(item),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: isOutOfStock ? Colors.grey.shade100 : Colors.white,
+  Widget _buildElegantCategoryCard(pos_category.Category category) {
+    return InkWell(
+      onTap: () => _onCategorySelected(category),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              Colors.grey.shade50,
+            ],
           ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12), // Reduced padding
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Category Icon with elegant background
+              Container(
+                width: 40, // Reduced size
+                height: 40, // Reduced size
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      Theme.of(context).primaryColor.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                                child: Icon(
+                  _getCategoryIcon(category.name),
+                  size: 24, // Reduced from 32
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              const SizedBox(height: 8), // Reduced spacing
+              
+              // Category Name
+              Text(
+                category.name,
+                style: const TextStyle(
+                  fontSize: 21, // Increased by 50% (14 * 1.5)
+                  fontWeight: FontWeight.bold, // Made bold
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4), // Reduced spacing
+              
+              // Category Description or item count
+              Text(
+                (category.description?.isNotEmpty == true) 
+                    ? category.description!
+                    : 'Tap to explore items',
+                style: TextStyle(
+                  fontSize: 15, // Increased by 50% (10 * 1.5)
+                  fontWeight: FontWeight.bold, // Made bold
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1, // Reduced from 2 to save space
+                overflow: TextOverflow.ellipsis,
+              ),
+              
+              const Spacer(),
+              
+              // Explore indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Reduced padding
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8), // Reduced radius
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Explore',
+                      style: TextStyle(
+                        fontSize: 15, // Increased by 50% (10 * 1.5)
+                        fontWeight: FontWeight.bold, // Made bold
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 2), // Reduced spacing
+                    Icon(
+                      Icons.arrow_forward,
+                      size: 12, // Reduced from 14
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper method to get appropriate icons for different categories
+  IconData _getCategoryIcon(String categoryName) {
+    final name = categoryName.toLowerCase();
+    if (name.contains('appetizer') || name.contains('starter')) return Icons.restaurant;
+    if (name.contains('main') || name.contains('entree')) return Icons.dinner_dining;
+    if (name.contains('dessert') || name.contains('sweet')) return Icons.cake;
+    if (name.contains('drink') || name.contains('beverage')) return Icons.local_drink;
+    if (name.contains('salad')) return Icons.grass;
+    if (name.contains('soup')) return Icons.soup_kitchen;
+    if (name.contains('seafood') || name.contains('fish')) return Icons.set_meal;
+    if (name.contains('meat') || name.contains('grill')) return Icons.outdoor_grill;
+    if (name.contains('vegetarian') || name.contains('vegan')) return Icons.eco;
+    if (name.contains('pasta') || name.contains('noodle')) return Icons.ramen_dining;
+    return Icons.restaurant_menu;
+  }
+
+  Widget _buildItemsView() {
+    if (_menuItems.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.restaurant,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Items Available',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This category appears to be empty',
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _navigateBackToCategories,
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Back to Categories'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(8), // Further reduced padding
+      child: GridView.builder(
+        physics: const BouncingScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4, // Changed to 4 columns as requested
+          childAspectRatio: 0.9, // Adjusted for 4 columns
+          crossAxisSpacing: 6, // Further reduced spacing for 4 columns
+          mainAxisSpacing: 6, // Further reduced spacing for 4 columns
+        ),
+        itemCount: _menuItems.length,
+        itemBuilder: (context, index) {
+          final item = _menuItems[index];
+          return _buildElegantMenuItemCard(item);
+        },
+      ),
+    );
+  }
+
+  Widget _buildElegantMenuItemCard(MenuItem item) {
+    return InkWell(
+      onTap: () => _addItemToOrder(item),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              Colors.grey.shade50,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8), // Further reduced padding
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Item image placeholder
+              // Item image placeholder with elegant styling
               Container(
-                height: 60,
+                height: 45, // Further reduced height
+                width: double.infinity,
                 decoration: BoxDecoration(
-                  color: isOutOfStock 
-                      ? Colors.grey.shade300 
-                      : Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.restaurant,
-                    size: 24,
-                    color: isOutOfStock 
-                        ? Colors.grey.shade500 
-                        : Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                          color: isOutOfStock ? Colors.grey.shade500 : Colors.black,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.description,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 10,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '\$${item.price.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: isOutOfStock 
-                                  ? Colors.grey.shade500 
-                                  : Colors.green,
-                            ),
-                          ),
-                          if (isOutOfStock)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade100,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Out of Stock',
-                                style: TextStyle(
-                                  color: Colors.red.shade700,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      Theme.of(context).primaryColor.withValues(alpha: 0.05),
                     ],
                   ),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(
+                  Icons.restaurant,
+                  size: 22, // Further reduced
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 6), // Further reduced spacing
+              
+              // Item name
+              Text(
+                item.name,
+                style: const TextStyle(
+                  fontSize: 18, // Increased by 50% (12 * 1.5)
+                  fontWeight: FontWeight.bold, // Made bold
+                  color: Colors.black87,
+                ),
+                maxLines: 1, // Reduced to 1 line to save space
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2), // Further reduced spacing
+              
+              // Item description
+              if (item.description.isNotEmpty)
+                Text(
+                  item.description,
+                  style: TextStyle(
+                    fontSize: 15, // Increased by 50% (10 * 1.5)
+                    fontWeight: FontWeight.bold, // Made bold
+                    color: Colors.grey.shade600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              
+              const Spacer(),
+              
+              // Price and add button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '\$${item.price.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 21, // Increased by 50% (14 * 1.5)
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(4), // Further reduced padding
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).primaryColor,
+                          Theme.of(context).primaryColor.withValues(alpha: 0.8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(6), // Further reduced radius
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+                          blurRadius: 2, // Further reduced blur
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.add,
+                      color: Colors.white,
+                      size: 16, // Further reduced
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

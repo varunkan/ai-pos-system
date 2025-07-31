@@ -177,8 +177,24 @@ class CrossPlatformDatabaseService extends ChangeNotifier {
       onCreate: _createSQLiteTables,
       onOpen: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
-        await db.execute('PRAGMA journal_mode = WAL');
-        await db.execute('PRAGMA synchronous = NORMAL');
+        
+        // Try to enable WAL mode with fallback
+        try {
+          await db.execute('PRAGMA journal_mode = WAL');
+          debugPrint('✅ Cross-platform SQLite: WAL mode enabled');
+        } catch (e) {
+          debugPrint('⚠️ Cross-platform SQLite: WAL mode not supported, using default: $e');
+          // Continue without WAL mode - this is fine for Android emulator
+        }
+        
+        // Try to set synchronous mode
+        try {
+          await db.execute('PRAGMA synchronous = NORMAL');
+          debugPrint('✅ Cross-platform SQLite: Synchronous mode set');
+        } catch (e) {
+          debugPrint('⚠️ Cross-platform SQLite: Could not set synchronous mode: $e');
+          // Continue anyway
+        }
       },
     );
   }
