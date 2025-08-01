@@ -239,7 +239,6 @@ class LoyaltyService extends ChangeNotifier {
   /// Calculate tier information
   Map<String, dynamic> _calculateTierInfo(Map<String, dynamic> customer) {
     final totalSpent = (customer['total_spent'] ?? 0.0).toDouble();
-    final visitCount = (customer['visit_count'] ?? 0) as int;
     
     String currentTier;
     String nextTier;

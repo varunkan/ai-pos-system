@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/printer_configuration.dart';
 import '../services/printer_configuration_service.dart';
-import '../services/auto_printer_discovery_service.dart';
+// import '../services/auto_printer_discovery_service.dart'; // Temporarily disabled
 
 /// Service for setting up remote printer access from home to restaurant
 class RemotePrinterSetupService {
@@ -567,7 +567,7 @@ class _RemotePrinterSetupScreenState extends State<RemotePrinterSetupScreen> {
   }
 
   Future<void> _scanForLocalPrinters() async {
-    final discoveryService = Provider.of<AutoPrinterDiscoveryService?>(context, listen: false);
+            // final discoveryService = Provider.of<AutoPrinterDiscoveryService?>(context, listen: false); // Temporarily disabled
     
     if (discoveryService == null) {
       _showError('Printer discovery service not available');

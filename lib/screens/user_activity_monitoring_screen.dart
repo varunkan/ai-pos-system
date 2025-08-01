@@ -797,7 +797,7 @@ class _UserActivityMonitoringScreenState extends State<UserActivityMonitoringScr
     final activityLogService = Provider.of<ActivityLogService>(context, listen: false);
     
     try {
-      final exportData = await activityLogService.exportLogs(
+      await activityLogService.exportLogs(
         startDate: _startDate,
         endDate: _endDate,
         userId: _selectedUserId,

@@ -138,12 +138,12 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
                 width: logoSize,
                 height: logoSize,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(isTablet ? 24 : 18),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -172,7 +172,7 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
               Text(
                 'Multi-Tenant Point of Sale System',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: isTablet ? 16 : 14,
                     ),
                 textAlign: TextAlign.center,
@@ -188,11 +188,11 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+                        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -423,7 +423,7 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF667eea).withOpacity(0.3),
+                                color: const Color(0xFF667eea).withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -582,7 +582,7 @@ class _RestaurantAuthScreenState extends State<RestaurantAuthScreen>
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF667eea).withOpacity(0.3),
+                                color: const Color(0xFF667eea).withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),

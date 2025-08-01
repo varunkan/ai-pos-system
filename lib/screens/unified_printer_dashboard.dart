@@ -325,26 +325,26 @@ class _UnifiedPrinterDashboardState extends State<UnifiedPrinterDashboard>
   }
 
   Widget _buildPrinterCard(PrinterConfiguration printer) {
-    final isConnected = printer.connectionStatus == 'connected';
+    final isConnected = printer.connectionStatus == PrinterConnectionStatus.connected;
     final isHovered = _hoveredPrinterId == printer.id;
     
     return Card(
       elevation: isHovered ? 8 : 2,
       margin: const EdgeInsets.only(bottom: 12),
       child: DragTarget<Map<String, String>>(
-        onWillAccept: (data) {
+        onWillAcceptWithDetails: (details) {
           setState(() {
             _hoveredPrinterId = printer.id;
           });
-          return data != null;
+          return details.data != null;
         },
         onLeave: (data) {
           setState(() {
             _hoveredPrinterId = null;
           });
         },
-        onAccept: (data) {
-          _handleDropOnPrinter(printer.id, data);
+        onAcceptWithDetails: (details) {
+          _handleDropOnPrinter(printer.id, details.data);
           setState(() {
             _hoveredPrinterId = null;
           });
@@ -622,7 +622,7 @@ class _UnifiedPrinterDashboardState extends State<UnifiedPrinterDashboard>
       margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: printer.connectionStatus == 'connected' ? Colors.green : Colors.red,
+                          backgroundColor: printer.connectionStatus == PrinterConnectionStatus.connected ? Colors.green : Colors.red,
           child: const Icon(Icons.print, color: Colors.white),
         ),
         title: Text(printer.name),
@@ -687,52 +687,7 @@ class _UnifiedPrinterDashboardState extends State<UnifiedPrinterDashboard>
     );
   }
 
-  Widget _buildConfigSection(String title, List<Widget> children) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildAnalyticsCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _handleDropOnPrinter(String printerId, Map<String, String> data) {
     final targetId = data['id']!;
@@ -833,25 +788,7 @@ class _UnifiedPrinterDashboardState extends State<UnifiedPrinterDashboard>
     );
   }
 
-  Future<void> _testAllPrinters() async {
-    if (_printerService == null) return;
-    
-    final printers = _printerService!.activePrinters;
-    int successCount = 0;
-    
-    for (final printer in printers) {
-      final success = await _printerService!.testPrinter(printer.id);
-      if (success) successCount++;
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Test complete: $successCount/${printers.length} printers working'),
-        backgroundColor: successCount == printers.length ? Colors.green : Colors.orange,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
+
 
     void _configurePrinter(PrinterConfiguration printer) {
     showDialog(

@@ -196,7 +196,6 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
   }
 
   String _getDateRangeText() {
-    final now = DateTime.now();
     switch (_selectedPeriod) {
       case 'today':
         return 'Today';

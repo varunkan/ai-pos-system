@@ -259,9 +259,6 @@ class PublicOrderSubmissionService extends ChangeNotifier {
         return;
       }
       
-      // Generate receipt content
-      final receiptContent = _generateReceiptContent(order);
-      
       // Send to printer via printing service (use printKitchenTicket instead)
       // Create a temporary order for printing
       final tempOrder = Order(

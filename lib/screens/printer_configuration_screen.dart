@@ -1348,6 +1348,68 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
     }
   }
 
+  void _testConnection() async {
+    setState(() {
+      _isTestingConnection = true;
+      _connectionStatus = 'Testing connection...';
+      _connectionStatusColor = Colors.orange;
+    });
+
+    try {
+      final printerConfigService = Provider.of<PrinterConfigurationService>(context, listen: false);
+      
+      // Create a temporary configuration for testing
+      final testConfig = PrinterConfiguration(
+        name: _nameController.text,
+        type: _selectedType,
+        model: _selectedModel,
+        ipAddress: _ipController.text,
+        port: int.tryParse(_portController.text) ?? 9100,
+      );
+      
+      // Test connection using the configuration service
+      final success = await printerConfigService.testConnection(testConfig);
+      
+      if (success) {
+        setState(() {
+          _connectionStatus = '✅ Connection successful!';
+          _connectionStatusColor = Colors.green;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connection test successful!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception('Connection test failed');
+      }
+    } catch (e) {
+      setState(() {
+        _connectionStatus = '❌ Connection failed: ${e.toString()}';
+        _connectionStatusColor = Colors.red;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Connection failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: _testConnection,
+          ),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isTestingConnection = false;
+      });
+    }
+  }
+
   void _testPrint() async {
     final printerConfigService = Provider.of<PrinterConfigurationService>(context, listen: false);
     
@@ -1407,8 +1469,8 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
       _nameController.text = printer.name;
       _ipController.text = printer.address; // Bluetooth address
       _portController.text = ''; // Not used for Bluetooth
-              // _selectedType = PrinterType.bluetooth; // Bluetooth temporarily disabled
-        _selectedType = PrinterType.wifi; // Default to wifi
+      // _selectedType = PrinterType.bluetooth; // Bluetooth temporarily disabled
+      _selectedType = PrinterType.wifi; // Default to wifi
       _selectedModel = PrinterModel.epsonTMGeneric; // Default for Bluetooth
     });
     
@@ -1420,6 +1482,77 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
         backgroundColor: Colors.green,
       ),
     );
+  }
+
+  void _startNetworkScan() async {
+    setState(() {
+      _isScanning = true;
+      _scanningStatus = 'Scanning network for printers...';
+      _discoveredPrinters.clear();
+    });
+
+    try {
+      final printerConfigService = Provider.of<PrinterConfigurationService>(context, listen: false);
+      final printers = await printerConfigService.scanNetwork();
+      
+      setState(() {
+        _discoveredPrinters = printers;
+        _scanningStatus = 'Found ${printers.length} printers';
+      });
+    } catch (e) {
+      setState(() {
+        _scanningStatus = 'Scan failed: ${e.toString()}';
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Network scan failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isScanning = false;
+      });
+    }
+  }
+
+  void _startBluetoothScan() async {
+    setState(() {
+      _isScanning = true;
+      _scanningStatus = 'Scanning for Bluetooth printers...';
+      _bluetoothPrinters.clear();
+    });
+
+    try {
+      // Bluetooth scanning is temporarily disabled
+      setState(() {
+        _scanningStatus = 'Bluetooth scanning is not available';
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bluetooth scanning is temporarily disabled'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _scanningStatus = 'Bluetooth scan failed: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isScanning = false;
+      });
+    }
+  }
+
+  void _stopScan() {
+    setState(() {
+      _isScanning = false;
+      _scanningStatus = 'Scan stopped';
+    });
+    _scanTimer?.cancel();
   }
 
   void _showCustomModelDialog() {
@@ -1476,18 +1609,18 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
         );
         return;
       }
-          } 
-      // else if (_selectedType == PrinterType.bluetooth) { // Bluetooth temporarily disabled
-      if (_validateBluetoothAddress(_ipController.text) != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enter valid Bluetooth address'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-    }
+    } 
+    // else if (_selectedType == PrinterType.bluetooth) { // Bluetooth temporarily disabled
+    //   if (_validateBluetoothAddress(_ipController.text) != null) {
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       const SnackBar(
+    //         content: Text('Please enter valid Bluetooth address'),
+    //         backgroundColor: Colors.red,
+    //       ),
+    //     );
+    //     return;
+    //   }
+    // }
 
     final printerConfigService = Provider.of<PrinterConfigurationService>(context, listen: false);
     
@@ -1537,6 +1670,30 @@ class _PrinterConfigurationScreenState extends State<PrinterConfigurationScreen>
         ),
       );
     }
+  }
+
+  String? _validateIP(String ip) {
+    if (ip.isEmpty) return 'IP address is required';
+    final ipRegex = RegExp(r'^(\d{1,3}\.){3}\d{1,3}$');
+    if (!ipRegex.hasMatch(ip)) return 'Invalid IP address format';
+    return null;
+  }
+
+  String? _validatePort(String port) {
+    if (port.isEmpty) return 'Port is required';
+    final portNum = int.tryParse(port);
+    if (portNum == null || portNum < 1 || portNum > 65535) {
+      return 'Port must be between 1 and 65535';
+    }
+    return null;
+  }
+
+  String? _validateBluetoothAddress(String address) {
+    if (address.isEmpty) return 'Bluetooth address is required';
+    // Basic Bluetooth address validation (XX:XX:XX:XX:XX:XX format)
+    final bluetoothRegex = RegExp(r'^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$');
+    if (!bluetoothRegex.hasMatch(address)) return 'Invalid Bluetooth address format';
+    return null;
   }
 }
 

@@ -776,7 +776,6 @@ class _CreateReservationDialogState extends State<CreateReservationDialog> {
 
     setState(() => _isLoading = true);
 
-    final userService = Provider.of<UserService>(context, listen: false);
     final reservationService = Provider.of<ReservationService>(context, listen: false);
 
     final reservation = Reservation(

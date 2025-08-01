@@ -352,23 +352,7 @@ class UserActionScreen extends StatelessWidget {
     );
   }
 
-  void _navigateToAddCategory(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const AddCategoryScreen(),
-      ),
-    );
-  }
 
-  void _navigateToAddMenuItem(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const AddMenuItemScreen(),
-      ),
-    );
-  }
 
   void _navigateToManageMenuItems(BuildContext context) {
     Navigator.push(
@@ -388,14 +372,7 @@ class UserActionScreen extends StatelessWidget {
     );
   }
 
-  void _navigateToManageUsers(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AdminPanelScreen(user: user, initialTabIndex: 2), // 2 = Manage Users tab
-      ),
-    );
-  }
+
 
   void _navigateToAdminOrders(BuildContext context) {
     Navigator.push(
@@ -442,36 +419,5 @@ class UserActionScreen extends StatelessWidget {
     );
   }
 
-  /// Logout function to return to the main landing screen
-  void _logout(BuildContext context) {
-    // Show confirmation dialog
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to return to the main screen?'),
-          actions: [
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            ElevatedButton(
-              child: const Text('Logout'),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                // Navigate back to restaurant auth screen and clear navigation stack
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => const RestaurantAuthScreen(),
-                  ),
-                  (route) => false, // Remove all previous routes
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+
 } 

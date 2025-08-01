@@ -403,25 +403,7 @@ class UniversalNavigation extends StatelessWidget implements PreferredSizeWidget
     );
   }
 
-  void _handlePrinterAction(BuildContext context, String action) {
-    switch (action) {
-      case 'connection':
-        _navigateToPrinterConnection(context);
-        break;
-      case 'assignments':
-        _navigateToPrinterAssignments(context);
-        break;
-      case 'ip_config':
-        _navigateToPrinterIPConfig(context);
-        break;
-      case 'view_assignments':
-        _showPrinterAssignmentsSummary(context);
-        break;
-      case 'test_print':
-        _performTestPrint(context);
-        break;
-    }
-  }
+
 
   void _handleMenuSelection(BuildContext context, String value) {
     switch (value) {
@@ -832,14 +814,6 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final navigation = UniversalNavigation(
-      currentUser: currentUser,
-      currentScreenTitle: title,
-      additionalActions: additionalActions,
-      showQuickActions: showQuickActions,
-      onBack: onBack,
-    );
-    
     // Return the AppBar from UniversalNavigation build method
     return AppBar(
       title: Row(
@@ -1026,26 +1000,7 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
   }
 
-  void _handlePrinterAction(BuildContext context, String action) {
-    switch (action) {
-      case 'connection':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const UnifiedPrinterDashboard(),
-          ),
-        );
-        break;
-      case 'assignments':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const UnifiedPrinterDashboard(),
-          ),
-        );
-        break;
-    }
-  }
+
 
   @override
   Size get preferredSize => Size.fromHeight(

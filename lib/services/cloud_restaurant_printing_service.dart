@@ -539,7 +539,7 @@ class CloudRestaurantPrintingService extends ChangeNotifier {
         'restaurantId': _restaurantId,
         'name': 'Your Restaurant Name', // Replace with actual name
         'location': 'Your Restaurant Location', // Replace with actual location
-        'printerCount': _assignmentService.getAllAssignments().length,
+        'printerCount': _assignmentService.assignments.length,
         'capabilities': ['thermal_printing', 'order_routing', 'real_time_status'],
         'timestamp': DateTime.now().toIso8601String(),
       };

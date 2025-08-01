@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/printer_configuration_service.dart';
-import '../screens/smart_printer_hub_screen.dart';
+import '../models/printer_configuration.dart';
+// import '../screens/smart_printer_hub_screen.dart'; // Temporarily disabled
 
 /// 🖨️ SMART PRINTER FAB
 /// 
@@ -94,7 +95,7 @@ class _PrinterFabWidgetState extends State<PrinterFabWidget>
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.2),
+                        color: Colors.green.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -164,7 +165,7 @@ class _PrinterFabWidgetState extends State<PrinterFabWidget>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.green.withOpacity(0.3),
+                          color: Colors.green.withValues(alpha: 0.3),
                           width: 2,
                         ),
                       ),
@@ -200,7 +201,10 @@ class _PrinterFabWidgetState extends State<PrinterFabWidget>
   void _navigateToSmartPrinterHub() {
     Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const SmartPrinterHubScreen(),
+                        pageBuilder: (context, animation, secondaryAnimation) => const Scaffold(
+                  appBar: AppBar(title: Text('Printer Hub')),
+                  body: Center(child: Text('Printer Hub - Coming Soon')),
+                ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
@@ -248,7 +252,7 @@ class MiniPrinterStatusWidget extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: _getStatusColor(connectedPrinters, activePrinters).withOpacity(0.2),
+                                      color: _getStatusColor(connectedPrinters, activePrinters).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: _getStatusColor(connectedPrinters, activePrinters),
@@ -292,7 +296,10 @@ class MiniPrinterStatusWidget extends StatelessWidget {
   void _navigateToSmartPrinterHub(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const SmartPrinterHubScreen(),
+                    builder: (context) => const Scaffold(
+              appBar: AppBar(title: Text('Printer Hub')),
+              body: Center(child: Text('Printer Hub - Coming Soon')),
+            ),
       ),
     );
   }
@@ -351,7 +358,6 @@ class _PrinterStatusIndicatorState extends State<PrinterStatusIndicator>
         final connectedPrinters = printerService.activeConfigurations
             .where((p) => p.connectionStatus == PrinterConnectionStatus.connected)
             .length;
-        final activePrinters = printerService.activeConfigurations.length;
 
         final color = connectedPrinters > 0 ? Colors.green : Colors.red;
 
@@ -363,11 +369,11 @@ class _PrinterStatusIndicatorState extends State<PrinterStatusIndicator>
                 width: widget.size,
                 height: widget.size,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(_pulseAnimation.value),
+                                          color: color.withValues(alpha: _pulseAnimation.value),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: color.withOpacity(0.3),
+                                              color: color.withValues(alpha: 0.3),
                       blurRadius: 4,
                       spreadRadius: 1,
                     ),

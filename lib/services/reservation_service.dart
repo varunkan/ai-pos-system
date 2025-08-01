@@ -219,6 +219,7 @@ class ReservationService extends ChangeNotifier {
         
         return null;
       }
+      return null; // Add explicit return for when db is null
     } catch (e) {
       debugPrint('Error finding admin user: $e');
       return null;
