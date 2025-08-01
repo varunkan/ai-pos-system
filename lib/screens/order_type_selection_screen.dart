@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/order.dart';
 import '../models/user.dart';
+import '../config/security_config.dart';
 import '../services/order_service.dart';
 import '../services/user_service.dart';
 import '../services/table_service.dart';
@@ -398,8 +399,8 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                   prefixIcon: Icon(Icons.lock),
                   counterText: '',
                 ),
-                onSubmitted: (value) {
-                  if (value == '7165') {
+                onSubmitted: (value) async {
+                  if (await SecurityConfig.validateAdminCredentials(value)) {
                     Navigator.of(context).pop(true);
                   } else {
                     pinController.clear();
@@ -420,9 +421,9 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final pin = pinController.text.trim();
-                if (pin == '7165') {
+                if (await SecurityConfig.validateAdminCredentials(pin)) {
                   Navigator.of(context).pop(true);
                 } else {
                   pinController.clear();

@@ -44,14 +44,6 @@ class AdminPanelScreen extends StatefulWidget {
 }
 
 class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProviderStateMixin {
-  /// Enhanced text styles for better prominence and visual appeal
-  static const _headerTextStyle = TextStyle(
-    fontSize: 28,
-    fontWeight: FontWeight.w900,
-    color: Color(0xFF1F2937),
-    letterSpacing: 0.8,
-  );
-
   static const _titleTextStyle = TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.w800,
@@ -64,33 +56,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
     fontWeight: FontWeight.w700,
     color: Color(0xFF3B82F6),
     letterSpacing: 0.3,
-  );
-
-  static const _bodyTextStyle = TextStyle(
-    fontSize: 15,
-    fontWeight: FontWeight.w600,
-    color: Color(0xFF374151),
-    height: 1.4,
-  );
-
-  static const _labelTextStyle = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w700,
-    color: Color(0xFF6B7280),
-    letterSpacing: 0.2,
-  );
-
-  static const _valueTextStyle = TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.w800,
-    color: Color(0xFF059669),
-    letterSpacing: 0.3,
-  );
-
-  static const _badgeTextStyle = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w800,
-    letterSpacing: 0.8,
   );
 
   /// Enhanced card text styling
@@ -109,7 +74,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
   );
 
   int _selectedIndex = 0;
-  UserManagementView _userManagementView = UserManagementView.addUser;
   List<pos_category.Category> _categories = [];
   List<MenuItem> _menuItems = [];
   bool _isLoading = true;
@@ -368,7 +332,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                     'sortOrder': int.tryParse(sortOrderController.text) ?? _categories.length,
                     'isActive': isActive,
                     'icon': selectedIcon.codePoint,
-                    'color': selectedColor.value,
+                    'color': selectedColor.toARGB32(),
                   });
                 }
               },

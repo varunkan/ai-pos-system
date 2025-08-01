@@ -19,7 +19,10 @@ import 'services/order_service.dart';
 import 'services/user_service.dart';
 import 'services/printing_service.dart';
 import 'services/table_service.dart';
+import 'services/order_log_service.dart';
+import 'services/payment_service.dart';
 import 'services/inventory_service.dart';
+import 'services/activity_log_service.dart';
 import 'services/printer_configuration_service.dart';
 import 'services/enhanced_printer_assignment_service.dart';
 import 'services/cross_platform_printer_sync_service.dart';
@@ -28,9 +31,6 @@ import 'services/robust_kitchen_service.dart';
 import 'services/free_cloud_printing_service.dart';
 import 'services/cross_platform_database_service.dart';
 // Removed redundant printer services for streamlined architecture
-import 'services/payment_service.dart';
-import 'services/order_log_service.dart';
-import 'services/activity_log_service.dart';
 import 'services/enhanced_printer_manager.dart';
 
 Future<void> main() async {
@@ -95,17 +95,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   // Service instances
   late MenuService _menuService;
   late OrderService _orderService;
-  late InventoryService _inventoryService;
   late OrderLogService _orderLogService;
   late ActivityLogService _activityLogService;
+  late InventoryService _inventoryService;
   
   // Services that depend on authentication - nullable until properly initialized
   UserService? _userService;
   TableService? _tableService;
   PaymentService? _paymentService;
   PrintingService? _printingService;
-  EnhancedPrinterAssignmentService? _enhancedPrinterAssignmentService;
   PrinterConfigurationService? _printerConfigurationService;
+  EnhancedPrinterAssignmentService? _enhancedPrinterAssignmentService;
   CrossPlatformPrinterSyncService? _crossPlatformPrinterSyncService;
   // Removed: AutoPrinterDiscoveryService (redundant)
   EnhancedPrinterManager? _enhancedPrinterManager;
@@ -211,8 +211,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _menuService = MenuService(dummyDb);
     _orderLogService = OrderLogService(dummyDb);
     _activityLogService = ActivityLogService(dummyDb);
-    _orderService = OrderService(dummyDb, _orderLogService);
     _inventoryService = InventoryService();
+    _orderService = OrderService(dummyDb, _orderLogService);
     debugPrint('✅ Core services initialized with dummy instances');
   }
 
@@ -597,9 +597,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ChangeNotifierProvider<InitializationProgressService>.value(value: widget.progressService),
       ChangeNotifierProvider<MenuService>.value(value: _menuService),
       ChangeNotifierProvider<OrderService>.value(value: _orderService),
-      ChangeNotifierProvider<InventoryService>.value(value: _inventoryService),
       ChangeNotifierProvider<OrderLogService>.value(value: _orderLogService),
       ChangeNotifierProvider<ActivityLogService>.value(value: _activityLogService),
+      ChangeNotifierProvider<InventoryService>.value(value: _inventoryService),
     ];
     
     // Add authenticated services (with null support for safe access)
@@ -607,8 +607,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     providers.add(ChangeNotifierProvider<TableService?>.value(value: _tableService));
     providers.add(ChangeNotifierProvider<PaymentService?>.value(value: _paymentService));
     providers.add(ChangeNotifierProvider<PrintingService?>.value(value: _printingService));
-    providers.add(ChangeNotifierProvider<EnhancedPrinterAssignmentService?>.value(value: _enhancedPrinterAssignmentService));
     providers.add(ChangeNotifierProvider<PrinterConfigurationService?>.value(value: _printerConfigurationService));
+    providers.add(ChangeNotifierProvider<EnhancedPrinterAssignmentService?>.value(value: _enhancedPrinterAssignmentService));
     providers.add(ChangeNotifierProvider<CrossPlatformPrinterSyncService?>.value(value: _crossPlatformPrinterSyncService));
     // Removed: AutoPrinterDiscoveryService provider (redundant)
     providers.add(ChangeNotifierProvider<EnhancedPrinterManager?>.value(value: _enhancedPrinterManager));

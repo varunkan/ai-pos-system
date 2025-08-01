@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/user.dart';
+import '../config/security_config.dart';
 import 'database_service.dart';
 
 class UserService with ChangeNotifier {
@@ -47,13 +48,13 @@ class UserService with ChangeNotifier {
       final adminUser = _users.where((user) => user.id == 'admin').firstOrNull;
       
       if (adminUser == null) {
-        // Create admin user
-        debugPrint('🔧 Creating admin user with PIN 7165 and full admin access');
+        // Create admin user with secure configuration
+        SecurityConfig.logSecurityEvent('Creating admin user with secure configuration');
         final newAdminUser = User(
           id: 'admin',
           name: 'Admin',
           role: UserRole.admin,
-          pin: '7165',
+          pin: SecurityConfig.getDefaultAdminPin(),
           adminPanelAccess: true,
           isActive: true,
         );
@@ -61,18 +62,19 @@ class UserService with ChangeNotifier {
         await _saveUserToDatabase(newAdminUser);
         _users.add(newAdminUser);
         
-        debugPrint('✅ Admin user created with PIN 7165 and full admin access');
+        SecurityConfig.logSecurityEvent('Admin user created successfully');
       } else {
         // Check if admin user needs to be updated (role, access, or PIN)
+        final expectedPin = SecurityConfig.getDefaultAdminPin();
         if (adminUser.role != UserRole.admin || 
             !adminUser.adminPanelAccess || 
-            adminUser.pin != '7165') {
-          debugPrint('🔧 Updating admin user to have full admin access and correct PIN');
+            adminUser.pin != expectedPin) {
+          SecurityConfig.logSecurityEvent('Updating admin user configuration');
           
           final updatedAdmin = adminUser.copyWith(
             role: UserRole.admin,
             adminPanelAccess: true,
-            pin: '7165',
+            pin: expectedPin,
             isActive: true,
           );
           
@@ -89,7 +91,7 @@ class UserService with ChangeNotifier {
             _currentUser = updatedAdmin;
           }
           
-          debugPrint('✅ Admin user updated with PIN 7165 and full admin access');
+          SecurityConfig.logSecurityEvent('Admin user updated successfully');
         } else {
           debugPrint('✅ Admin user already has full admin access and correct PIN');
         }
@@ -108,7 +110,7 @@ class UserService with ChangeNotifier {
         id: 'admin',
         name: 'Admin',
         role: UserRole.admin,
-        pin: '7165',
+        pin: SecurityConfig.getDefaultAdminPin(),
         adminPanelAccess: true,
         isActive: true,
       );
@@ -207,7 +209,7 @@ class UserService with ChangeNotifier {
     try {
       debugPrint('Creating default users');
       final defaultUsers = [
-        User(id: 'admin', name: 'Admin', role: UserRole.admin, pin: '7165', adminPanelAccess: true),
+        User(id: 'admin', name: 'Admin', role: UserRole.admin, pin: SecurityConfig.getDefaultAdminPin(), adminPanelAccess: true),
         User(id: 'server1', name: 'Server 1', role: UserRole.server, pin: '1111'),
         User(id: 'server2', name: 'Server 2', role: UserRole.server, pin: '2222'),
         // Add 2 more dummy servers
@@ -236,12 +238,12 @@ class UserService with ChangeNotifier {
       
       if (adminUser == null) {
         // Create admin user if it doesn't exist
-        debugPrint('🔧 Creating admin user with full access');
+        SecurityConfig.logSecurityEvent('Creating admin user with full access');
         final newAdmin = User(
           id: 'admin',
           name: 'Admin',
           role: UserRole.admin,
-          pin: '7165',
+          pin: SecurityConfig.getDefaultAdminPin(),
           adminPanelAccess: true,
           isActive: true,
         );
@@ -249,18 +251,19 @@ class UserService with ChangeNotifier {
         await _saveUserToDatabase(newAdmin);
         _users.add(newAdmin);
         
-        debugPrint('✅ Admin user created with PIN 7165 and full access');
+        SecurityConfig.logSecurityEvent('Admin user created with full access');
       } else {
         // Check if admin user needs to be updated (role, access, or PIN)
+        final expectedPin = SecurityConfig.getDefaultAdminPin();
         if (adminUser.role != UserRole.admin || 
             !adminUser.adminPanelAccess || 
-            adminUser.pin != '7165') {
-          debugPrint('🔧 Updating admin user to have full admin access and correct PIN');
+            adminUser.pin != expectedPin) {
+          SecurityConfig.logSecurityEvent('Updating admin user to have full admin access');
           
           final updatedAdmin = adminUser.copyWith(
             role: UserRole.admin,
             adminPanelAccess: true,
-            pin: '7165',
+            pin: expectedPin,
             isActive: true,
           );
           
@@ -277,7 +280,7 @@ class UserService with ChangeNotifier {
             _currentUser = updatedAdmin;
           }
           
-          debugPrint('✅ Admin user updated with PIN 7165 and full access');
+          SecurityConfig.logSecurityEvent('Admin user updated with full access');
         } else {
           debugPrint('✅ Admin user already has full admin access and correct PIN');
         }
@@ -300,7 +303,7 @@ class UserService with ChangeNotifier {
         id: 'admin',
         name: 'Admin',
         role: UserRole.admin,
-        pin: '7165',
+        pin: SecurityConfig.getDefaultAdminPin(),
         adminPanelAccess: true,
         isActive: true,
       );

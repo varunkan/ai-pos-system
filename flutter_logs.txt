@@ -14360,3 +14360,827 @@
 08-01 11:59:47.390 29634 29634 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
 08-01 11:59:47.404 29634 29634 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
 08-01 11:59:47.404 29634 29634 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:10:01.273 30918 30918 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(94)] Using the Impeller rendering backend (OpenGLES).
+08-01 14:10:01.305 30918 30950 I flutter : The Dart VM service is listening on http://127.0.0.1:34365/vESx9X_x-3w=/
+08-01 14:10:01.472 30918 30918 I flutter : 🚀 Starting Multi-Tenant AI POS System...
+08-01 14:10:01.473 30918 30918 I flutter : 🌍 Environment: DEVELOPMENT
+08-01 14:10:01.474 30918 30918 I flutter : 🗄️ Database: ai_pos_dev.db
+08-01 14:10:01.481 30918 30918 I flutter : 🔐 Initializing Multi-Tenant Auth Service...
+08-01 14:10:01.481 30918 30918 I flutter : 📱 Initializing global database service for restaurant management...
+08-01 14:10:01.482 30918 30918 I flutter : 📱 Initializing database service for mobile/desktop platform with custom name: global_restaurant_management
+08-01 14:10:01.754 30918 30918 I flutter : Database opened successfully with foreign keys enabled: global_restaurant_management
+08-01 14:10:01.754 30918 30918 I flutter : 🔧 Starting database schema migrations...
+08-01 14:10:01.755 30918 30918 I flutter : 🔧 FORCE FIXING critical schema issues...
+08-01 14:10:01.755 30918 30918 I flutter : 🔧 Force recreating problematic tables...
+08-01 14:10:01.765 30918 30918 I flutter : ✅ Order logs table created with indexes
+08-01 14:10:01.767 30918 30918 I flutter : ✅ Printer configurations table created with indexes
+08-01 14:10:01.769 30918 30918 I flutter : ✅ Printer assignments table created with indexes
+08-01 14:10:01.773 30918 30918 I flutter : ✅ Problematic tables recreated
+08-01 14:10:01.773 30918 30918 I flutter : ✅ Critical schema issues fixed by force recreation
+08-01 14:10:01.773 30918 30918 I flutter : 🧹 Starting orphaned data cleanup...
+08-01 14:10:01.774 30918 30918 I flutter : ⚠️ No menu items found - skipping order cleanup to prevent data loss
+08-01 14:10:01.775 30918 30918 I flutter : ✅ Limited orphaned data cleanup completed (preserved orders)
+08-01 14:10:01.781 30918 30918 I flutter : 🔧 Migrating existing table schemas...
+08-01 14:10:01.782 30918 30918 I flutter : 🔧 Fixing boolean column naming issues...
+08-01 14:10:01.784 30918 30918 I flutter : ✅ Boolean column naming fixed
+08-01 14:10:01.786 30918 30918 I flutter : ✅ Users table schema is correct
+08-01 14:10:01.788 30918 30918 I flutter : ✅ Order logs table schema is correct
+08-01 14:10:01.790 30918 30918 I flutter : ✅ Printer configurations table schema is correct
+08-01 14:10:01.792 30918 30918 I flutter : ✅ Printer assignments table schema is correct
+08-01 14:10:01.792 30918 30918 I flutter : ✅ Table schema migrations completed
+08-01 14:10:01.792 30918 30918 I flutter : 🔧 Starting post-migration data integrity check...
+08-01 14:10:01.795 30918 30918 I flutter : ✅ Post-migration integrity check passed
+08-01 14:10:01.795 30918 30918 I flutter : ✅ Database schema migrations completed
+08-01 14:10:01.795 30918 30918 I flutter : ✅ Database service initialized with custom name: global_restaurant_management
+08-01 14:10:01.795 30918 30918 I flutter : 🧹 Running additional database cleanup...
+08-01 14:10:01.797 30918 30918 I flutter : ✅ No orphaned order items found
+08-01 14:10:01.797 30918 30918 I flutter : ✅ Database cleanup completed
+08-01 14:10:01.797 30918 30918 I flutter : ✅ Global database service initialized - database available
+08-01 14:10:01.797 30918 30918 I flutter : 🔍 Global database path: /data/user/0/com.restaurantpos.ai_pos_system.debug/databases/global_restaurant_management.db
+08-01 14:10:01.797 30918 30918 I flutter : 🔍 Creating restaurants table in database: /data/user/0/com.restaurantpos.ai_pos_system.debug/databases/global_restaurant_management.db
+08-01 14:10:01.799 30918 30918 I flutter : ✅ Global restaurant table created successfully
+08-01 14:10:01.806 30918 30918 I flutter : 📂 Loaded 1 restaurants
+08-01 14:10:01.806 30918 30918 I flutter : 🧹 Clearing any existing session data...
+08-01 14:10:01.811 30918 30918 I flutter : 🚪 Fresh start - login required
+08-01 14:10:01.811 30918 30918 I flutter : ✅ Multi-Tenant Auth Service initialized
+08-01 14:10:01.811 30918 30918 I flutter : 🚪 Starting with normal session behavior
+08-01 14:10:01.829 30918 30918 I flutter : 🔧 OrderService initialized
+08-01 14:10:01.829 30918 30918 I flutter : ✅ Core services initialized with dummy instances
+08-01 14:10:01.830 30918 30918 I flutter : ✅ Sync service instances ready
+08-01 14:10:01.830 30918 30918 I flutter : ✅ Async service instances ready
+08-01 14:10:01.927 30918 30918 I flutter : 🔍 BUILD: isAuthenticated=false, servicesInitialized=false, userService=false
+08-01 14:10:01.927 30918 30918 I flutter : 🔍 BUILD: Showing RestaurantAuthScreen
+08-01 14:10:02.155 30918 30918 I flutter : ✅ Order logs table created with indexes
+08-01 14:10:02.182 30918 30918 I flutter : ✅ Loaded 0 order logs from database
+08-01 14:10:02.182 30918 30918 I flutter : ✅ OrderLogService initialized successfully
+08-01 14:10:02.185 30918 30918 I flutter : ✅ Activity logs table created with indexes
+08-01 14:10:02.187 30918 30918 I flutter : ✅ Loaded 0 activity logs from database
+08-01 14:10:02.187 30918 30918 I flutter : ✅ ActivityLogService initialized successfully
+08-01 14:10:42.233 30918 30918 I flutter : 🔒 Authentication state changed - cleaning up services...
+08-01 14:10:42.233 30918 30918 I flutter : 🧹 Starting service cleanup after logout...
+08-01 14:10:42.233 30918 30918 I flutter : 📋 Preserving service instances and order data for next login...
+08-01 14:10:42.233 30918 30918 I flutter : ✅ Service cleanup completed - all services preserved
+08-01 14:10:42.234 30918 30918 I flutter : 🔒 Authentication state changed - cleaning up services...
+08-01 14:10:42.234 30918 30918 I flutter : 🧹 Starting service cleanup after logout...
+08-01 14:10:42.234 30918 30918 I flutter : 📋 Preserving service instances and order data for next login...
+08-01 14:10:42.234 30918 30918 I flutter : ✅ Service cleanup completed - all services preserved
+08-01 14:10:42.234 30918 30918 I flutter : 🔐 Authenticating user...
+08-01 14:10:42.235 30918 30918 I flutter : 🏪 Found restaurant: Oh Bombay Milton
+08-01 14:10:42.240 30918 30918 I flutter : 📱 Initializing database service for mobile/desktop platform with custom name: restaurant_5dd669a1_b9e7_4a18_be4a_db13c721b43e
+08-01 14:10:42.294 30918 30918 I flutter : Database opened successfully with foreign keys enabled: restaurant_5dd669a1_b9e7_4a18_be4a_db13c721b43e
+08-01 14:10:42.294 30918 30918 I flutter : 🔧 Starting database schema migrations...
+08-01 14:10:42.294 30918 30918 I flutter : 🔧 FORCE FIXING critical schema issues...
+08-01 14:10:42.294 30918 30918 I flutter : 🔧 Force recreating problematic tables...
+08-01 14:10:42.302 30918 30918 I flutter : ✅ Order logs table created with indexes
+08-01 14:10:42.304 30918 30918 I flutter : ✅ Printer configurations table created with indexes
+08-01 14:10:42.306 30918 30918 I flutter : ✅ Printer assignments table created with indexes
+08-01 14:10:42.315 30918 30918 I flutter : ✅ Problematic tables recreated
+08-01 14:10:42.315 30918 30918 I flutter : ✅ Critical schema issues fixed by force recreation
+08-01 14:10:42.315 30918 30918 I flutter : 🧹 Starting orphaned data cleanup...
+08-01 14:10:42.321 30918 30918 I flutter : ✅ Orphaned data cleanup completed
+08-01 14:10:42.336 30918 30918 I flutter : 🔧 Migrating existing table schemas...
+08-01 14:10:42.336 30918 30918 I flutter : 🔧 Fixing boolean column naming issues...
+08-01 14:10:42.338 30918 30918 I flutter : ✅ Boolean column naming fixed
+08-01 14:10:42.339 30918 30918 I flutter : ✅ Users table schema is correct
+08-01 14:10:42.344 30918 30918 I flutter : ✅ Order logs table schema is correct
+08-01 14:10:42.346 30918 30918 I flutter : ✅ Printer configurations table schema is correct
+08-01 14:10:42.347 30918 30918 I flutter : ✅ Printer assignments table schema is correct
+08-01 14:10:42.347 30918 30918 I flutter : ✅ Table schema migrations completed
+08-01 14:10:42.347 30918 30918 I flutter : 🔧 Starting post-migration data integrity check...
+08-01 14:10:42.349 30918 30918 I flutter : ✅ Post-migration integrity check passed
+08-01 14:10:42.349 30918 30918 I flutter : ✅ Database schema migrations completed
+08-01 14:10:42.349 30918 30918 I flutter : ✅ Database service initialized with custom name: restaurant_5dd669a1_b9e7_4a18_be4a_db13c721b43e
+08-01 14:10:42.349 30918 30918 I flutter : 🧹 Running additional database cleanup...
+08-01 14:10:42.350 30918 30918 I flutter : ✅ No orphaned order items found
+08-01 14:10:42.350 30918 30918 I flutter : ✅ Database cleanup completed
+08-01 14:10:42.350 30918 30918 I flutter : ✅ Connected to tenant database: restaurant_5dd669a1_b9e7_4a18_be4a_db13c721b43e
+08-01 14:10:42.355 30918 30918 I flutter : ✅ Cleared app_explicitly_closed flag - session restoration enabled
+08-01 14:10:42.355 30918 30918 I flutter : ✅ Session created for Admin at Oh Bombay Milton
+08-01 14:10:42.355 30918 30918 I flutter : 🔓 Authentication state changed - initializing services...
+08-01 14:10:42.356 30918 30918 I flutter : 🔧 Starting POS service initialization after authentication...
+08-01 14:10:42.356 30918 30918 I flutter : ✅ Using tenant database: DatabaseService
+08-01 14:10:42.356 30918 30918 I flutter : 🔓 Authentication state changed - initializing services...
+08-01 14:10:42.356 30918 30918 I flutter : ⚠️ Service initialization already in progress
+08-01 14:10:42.360 30918 30918 I flutter : ✅ SharedPreferences initialized
+08-01 14:10:42.360 30918 30918 I flutter : 🔄 OrderService disposal state reset
+08-01 14:10:42.370 30918 30918 I flutter : 🔍 POS DASHBOARD: initState() called
+08-01 14:10:42.413 30918 30918 I flutter : ⚠️ UserService or currentUser not available yet
+08-01 14:10:42.414 30918 30918 I flutter : 📊 ALL SERVERS VIEW: Showing server summary with order counts
+08-01 14:10:42.417 30918 30918 I flutter : Loaded 2 users from database
+08-01 14:10:42.417 30918 30918 I flutter : ✅ Admin user already has full admin access and correct PIN
+08-01 14:10:42.417 30918 30918 I flutter : Loaded 2 users from database
+08-01 14:10:42.479 30918 30918 I flutter : ✅ UserService initialized
+08-01 14:10:42.480 30918 30918 I flutter : ✅ TableService initialized
+08-01 14:10:42.480 30918 30918 I flutter : ✅ PaymentService initialized
+08-01 14:10:42.481 30918 30918 I flutter : ✅ PrintingService initialized
+08-01 14:10:42.482 30918 30918 I flutter : 🔧 OrderService initialized
+08-01 14:10:42.483 30918 30918 I flutter : 📥 Loading orders from database
+08-01 14:10:42.545 30918 30918 I flutter : ✅ Order logs table created with indexes
+08-01 14:10:42.551 30918 30918 I flutter : ✅ Loaded 0 order logs from database
+08-01 14:10:42.551 30918 30918 I flutter : ✅ OrderLogService initialized successfully
+08-01 14:10:42.699 30918 30918 I flutter : ✅ Loaded 24 orders (12 active, 12 completed)
+08-01 14:10:42.700 30918 30918 I flutter : ✅ OrderService reinitialized with existing orders
+08-01 14:10:42.700 30918 30918 I flutter : 🍽️ Initializing MenuService...
+08-01 14:10:42.729 30918 30918 I flutter : ✅ MenuService initialized with 15 categories and 107 items
+08-01 14:10:42.729 30918 30918 I flutter : ✅ MenuService reinitialized
+08-01 14:10:42.735 30918 30918 I flutter : ✅ Activity logs table created with indexes
+08-01 14:10:42.736 30918 30918 I flutter : ✅ Activity logs table created with indexes
+08-01 14:10:42.750 30918 30918 I flutter : ✅ Loaded 78 activity logs from database
+08-01 14:10:42.750 30918 30918 I flutter : ✅ ActivityLogService initialized successfully
+08-01 14:10:42.753 30918 30918 I flutter : ✅ Loaded 78 activity logs from database
+08-01 14:10:42.753 30918 30918 I flutter : ✅ ActivityLogService initialized successfully
+08-01 14:10:42.753 30918 30918 I flutter : 📝 ActivityLogService: Current user set to Admin (UserRole.admin)
+08-01 14:10:42.753 30918 30918 I flutter : ✅ ActivityLogService reinitialized
+08-01 14:10:42.762 30918 30918 I flutter : ✅ Activity logged: Logged in by Admin (UserRole.admin)
+08-01 14:10:42.762 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🚀 Initializing REAL printer configuration service...
+08-01 14:10:42.763 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Printer configurations table created
+08-01 14:10:42.764 30918 30918 I flutter : 🖨️ PrinterConfigurationService 📂 Loaded 0 saved printer configurations
+08-01 14:10:42.765 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Starting automatic printer discovery...
+08-01 14:10:42.765 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ REAL printer service initialized successfully
+08-01 14:10:42.765 30918 30918 I flutter : ✅ PrinterConfigurationService initialized
+08-01 14:10:42.765 30918 30918 I flutter : 🎯 EnhancedPrinterAssignmentService 🚀 Initializing enhanced printer assignment service...
+08-01 14:10:42.767 30918 30918 I flutter : 🎯 EnhancedPrinterAssignmentService ✅ Enhanced assignment tables created
+08-01 14:10:42.769 30918 30918 I flutter : 🎯 EnhancedPrinterAssignmentService 📋 Loaded 0 assignments from database
+08-01 14:10:42.769 30918 30918 I flutter : 🎯 EnhancedPrinterAssignmentService 🗺️ Rebuilt assignment maps: 0 categories, 0 menu items
+08-01 14:10:42.769 30918 30918 I flutter : 🎯 EnhancedPrinterAssignmentService ✅ Enhanced printer assignment service initialized successfully
+08-01 14:10:42.769 30918 30918 I flutter : ✅ EnhancedPrinterAssignmentService initialized with multi-printer support
+08-01 14:10:42.770 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🚀 Initializing cross-platform sync service...
+08-01 14:10:42.771 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Started periodic sync (every 30s)
+08-01 14:10:42.771 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 📥 Performing initial sync...
+08-01 14:10:42.771 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 📥 Restoring 0 assignments from storage...
+08-01 14:10:42.772 30918 30918 I flutter : 🎯 EnhancedPrinterAssignmentService 🧹 Cleared all assignments from database and memory
+08-01 14:10:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Successfully restored 0 assignments
+08-01 14:10:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Restored assignments from cross-platform storage
+08-01 14:10:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Cross-platform sync service initialized
+08-01 14:10:42.772 30918 30918 I flutter : ✅ CrossPlatformPrinterSyncService initialized with automatic persistence
+08-01 14:10:42.774 30918 30918 I flutter : 🚀 EnhancedPrinterManager 🚀 Initializing Enhanced Printer Manager...
+08-01 14:10:42.775 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🚀 Initializing REAL printer configuration service...
+08-01 14:10:42.780 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Printer configurations table created
+08-01 14:10:42.782 30918 30918 I flutter : 🖨️ PrinterConfigurationService 📂 Loaded 0 saved printer configurations
+08-01 14:10:42.782 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Starting automatic printer discovery...
+08-01 14:10:42.782 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ REAL printer service initialized successfully
+08-01 14:10:42.782 30918 30918 I flutter : 🚀 EnhancedPrinterManager 🔍 Force discovering network printers...
+08-01 14:10:42.782 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Manual printer discovery triggered by user
+08-01 14:10:42.783 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:10:42.786 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:10:43.115 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:10:43.118 30918 30918 I flutter : 🚀 EnhancedPrinterManager 🌐 Manual scan of 192.168.0.x network...
+08-01 14:10:43.134 30918 30918 I flutter : 🚀 EnhancedPrinterManager 📊 Manual scan found 0 printers
+08-01 14:10:43.135 30918 30918 I flutter : 🖨️ PrinterConfigurationService 📂 Loaded 0 saved printer configurations
+08-01 14:10:43.135 30918 30918 I flutter : 🚀 EnhancedPrinterManager ✅ Force discovery completed
+08-01 14:10:43.139 30918 30918 I flutter : 🚀 EnhancedPrinterManager 🧹 Cleaned up dummy test printers and their assignments
+08-01 14:10:43.140 30918 30918 I flutter : 🖨️ PrinterConfigurationService 📂 Loaded 0 saved printer configurations
+08-01 14:10:43.141 30918 30918 I flutter : 🚀 EnhancedPrinterManager 📂 Loaded 0 printer configurations
+08-01 14:10:43.141 30918 30918 I flutter : 🚀 EnhancedPrinterManager ⚠️ No printers found - running emergency discovery...
+08-01 14:10:43.141 30918 30918 I flutter : 🚀 EnhancedPrinterManager 🚨 Emergency printer discovery activated
+08-01 14:10:43.141 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Manual printer discovery triggered by user
+08-01 14:10:43.141 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:10:43.143 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:10:43.459 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:10:43.463 30918 30918 I flutter : 🚀 EnhancedPrinterManager 🌐 Manual scan of 192.168.0.x network...
+08-01 14:10:43.470 30918 30918 I flutter : 🚀 EnhancedPrinterManager 📊 Manual scan found 0 printers
+08-01 14:10:43.472 30918 30918 I flutter : 🖨️ PrinterConfigurationService 📂 Loaded 0 saved printer configurations
+08-01 14:10:43.472 30918 30918 I flutter : 🚀 EnhancedPrinterManager 🚨 Emergency discovery complete: 0 printers
+08-01 14:10:43.473 30918 30918 I flutter : 🚀 EnhancedPrinterManager ⚠️ menu_printer_assignments table does not exist, skipping load
+08-01 14:10:43.473 30918 30918 I flutter : 🚀 EnhancedPrinterManager ✅ Enhanced Printer Manager initialized
+08-01 14:10:43.473 30918 30918 I flutter : 🚀 EnhancedPrinterManager 📊 Status: 0 printers, 0 assignments
+08-01 14:10:43.473 30918 30918 I flutter : ✅ EnhancedPrinterManager initialized - comprehensive printer system ready
+08-01 14:10:43.473 30918 30918 I flutter : ✅ PrinterValidationService initialized - kitchen validation system ready
+08-01 14:10:43.474 30918 30918 I flutter : ✅ RobustKitchenService initialized - comprehensive send to kitchen system ready
+08-01 14:10:43.474 30918 30918 I flutter : ✅ FreeCloudPrintingService initialized - free cloud printing ready
+08-01 14:10:43.474 30918 30918 I flutter : 🚀 Initializing Cross-Platform Database Service...
+08-01 14:10:43.488 30918 30918 I flutter : ⚠️ Cross-platform SQLite: WAL mode not supported, using default: DatabaseException(unknown error (code 0 SQLITE_OK): Queries can be performed using SQLiteDatabase query or rawQuery methods only.) sql 'PRAGMA journal_mode = WAL' args []
+08-01 14:10:43.489 30918 30918 I flutter : ✅ Cross-platform SQLite: Synchronous mode set
+08-01 14:10:43.489 30918 30918 I flutter : 🔄 Attempting Hive initialization (attempt 1/3)
+08-01 14:10:43.498 30918 30918 I flutter : ✅ Hive initialized successfully on attempt 1
+08-01 14:10:43.498 30918 30918 I flutter : 📱 Mobile storage initialized with SQLite + Hive
+08-01 14:10:43.500 30918 30918 I flutter : ☁️ Cloud services initialized
+08-01 14:10:43.501 30918 30918 I flutter : 🧹 Cleaning up corrupted data from storage...
+08-01 14:10:43.503 30918 30918 I flutter : ✅ Data cleanup completed
+08-01 14:10:43.504 30918 30918 I flutter : ✅ Cross-Platform Database Service initialized successfully
+08-01 14:10:43.504 30918 30918 I flutter : ✅ CrossPlatformDatabaseService initialized - data sync across devices enabled
+08-01 14:10:43.504 30918 30918 I flutter : ℹ️ Printer discovery will be handled by unified printer service
+08-01 14:10:43.504 30918 30918 I flutter : 🎉 All POS services initialized successfully
+08-01 14:10:43.504 30918 30918 I flutter : 📋 Found 24 existing orders - skipping dummy data creation
+08-01 14:10:43.504 30918 30918 I flutter : 🎉 All POS services initialized successfully
+08-01 14:10:44.767 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Starting immediate initial printer scan...
+08-01 14:10:44.767 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:10:44.770 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:10:45.105 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:10:45.106 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Starting immediate initial printer scan...
+08-01 14:10:45.106 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:10:45.106 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:10:45.420 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:10:45.483 30918 30918 I flutter : 🔍 Starting automatic WiFi printer discovery...
+08-01 14:10:45.484 30918 30918 I flutter : Starting comprehensive WiFi printer scan...
+08-01 14:10:45.485 30918 30918 I flutter : No WiFi connection detected
+08-01 14:10:45.486 30918 30918 I flutter : ✅ Automatic printer discovery completed
+08-01 14:10:45.894 30918 30918 I flutter : 📋 Loaded 8 ACTIVE orders for server: admin
+08-01 14:10:45.894 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:10:45.894 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:10:45.894 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:10:45.895 30918 30918 I flutter : 🎯 Selected server: admin
+08-01 14:10:46.858 30918 30918 I flutter : 📋 Loaded 3 ACTIVE orders for server: 1753948203387
+08-01 14:10:46.859 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:10:46.859 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:10:46.859 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:10:46.859 30918 30918 I flutter : 🎯 Selected server: 1753948203387
+08-01 14:10:47.649 30918 30918 I flutter : 📋 Loaded 8 ACTIVE orders for server: admin
+08-01 14:10:47.649 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:10:47.649 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:10:47.649 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:10:47.649 30918 30918 I flutter : 🎯 Selected server: admin
+08-01 14:10:57.992 30918 30918 I flutter : 📋 Loaded 3 ACTIVE orders for server: 1753948203387
+08-01 14:10:57.992 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:10:57.992 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:10:57.992 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:10:57.992 30918 30918 I flutter : 🎯 Selected server: 1753948203387
+08-01 14:11:07.216 30918 30918 I flutter : Loaded 16 tables for dine-in setup
+08-01 14:11:12.771 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:11:12.778 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:11:12.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:11:12.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:11:13.494 30918 30918 I flutter : 🆕 Created new order: DI-73493 for user: varun
+08-01 14:11:24.689 30918 30918 I flutter : 💾 Auto-saving order: DI-73493 with 1 items
+08-01 14:11:24.690 30918 30918 I flutter : 💾 Saving order to database: DI-73493
+08-01 14:11:24.693 30918 30918 I flutter : 🔧 Order SQLite Map keys: id, order_number, status, type, table_id, user_id, customer_name, customer_phone, customer_email, customer_address, special_instructions, subtotal, tax_amount, tip_amount, hst_amount, discount_amount, gratuity_amount, total_amount, payment_method, payment_status, payment_transaction_id, order_time, estimated_ready_time, actual_ready_time, served_time, completed_time, is_urgent, priority, assigned_to, created_at, updated_at
+08-01 14:11:24.719 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:11:24.739 30918 30918 I flutter : ✅ Logged operation: Order Updated for order DI-73493 by System
+08-01 14:11:24.740 30918 30918 I flutter : ✅ Order saved successfully: DI-73493
+08-01 14:11:24.740 30918 30918 I flutter : ✅ Order auto-saved successfully
+08-01 14:11:28.914 30918 30918 I flutter : 💾 Auto-saving order: DI-73493 with 2 items
+08-01 14:11:28.914 30918 30918 I flutter : 💾 Saving order to database: DI-73493
+08-01 14:11:28.916 30918 30918 I flutter : 🔧 Order SQLite Map keys: id, order_number, status, type, table_id, user_id, customer_name, customer_phone, customer_email, customer_address, special_instructions, subtotal, tax_amount, tip_amount, hst_amount, discount_amount, gratuity_amount, total_amount, payment_method, payment_status, payment_transaction_id, order_time, estimated_ready_time, actual_ready_time, served_time, completed_time, is_urgent, priority, assigned_to, created_at, updated_at
+08-01 14:11:28.918 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:11:28.920 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:11:28.946 30918 30918 I flutter : ✅ Logged operation: Order Updated for order DI-73493 by System
+08-01 14:11:28.946 30918 30918 I flutter : ✅ Order saved successfully: DI-73493
+08-01 14:11:28.946 30918 30918 I flutter : ✅ Order auto-saved successfully
+08-01 14:11:42.775 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:11:42.785 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:11:42.791 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:11:42.792 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:11:53.472 30918 30918 I flutter : 💾 Saving order to database: DI-73493
+08-01 14:11:53.474 30918 30918 I flutter : 🔧 Order SQLite Map keys: id, order_number, status, type, table_id, user_id, customer_name, customer_phone, customer_email, customer_address, special_instructions, subtotal, tax_amount, tip_amount, hst_amount, discount_amount, gratuity_amount, total_amount, payment_method, payment_status, payment_transaction_id, order_time, estimated_ready_time, actual_ready_time, served_time, completed_time, is_urgent, priority, assigned_to, created_at, updated_at
+08-01 14:11:53.491 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:11:53.493 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:11:53.501 30918 30918 I flutter : ✅ Logged operation: Order Created for order DI-73493 by System
+08-01 14:11:53.501 30918 30918 I flutter : ✅ Order saved successfully: DI-73493
+08-01 14:11:53.501 30918 30918 I flutter : 🖨️ Attempting to print kitchen ticket for order: DI-73493
+08-01 14:11:53.501 30918 30918 I flutter : ⚠️ No printer connected - cannot print kitchen ticket for order: DI-73493
+08-01 14:11:53.501 30918 30918 I flutter : Kitchen ticket printing failed - no printer connected
+08-01 14:12:10.395 30918 30918 I flutter : 💾 Auto-saving order: DI-73493 with 3 items
+08-01 14:12:10.395 30918 30918 I flutter : 💾 Saving order to database: DI-73493
+08-01 14:12:10.397 30918 30918 I flutter : 🔧 Order SQLite Map keys: id, order_number, status, type, table_id, user_id, customer_name, customer_phone, customer_email, customer_address, special_instructions, subtotal, tax_amount, tip_amount, hst_amount, discount_amount, gratuity_amount, total_amount, payment_method, payment_status, payment_transaction_id, order_time, estimated_ready_time, actual_ready_time, served_time, completed_time, is_urgent, priority, assigned_to, created_at, updated_at
+08-01 14:12:10.399 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:10.400 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:10.401 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:10.422 30918 30918 I flutter : ✅ Logged operation: Order Updated for order DI-73493 by System
+08-01 14:12:10.422 30918 30918 I flutter : ✅ Order saved successfully: DI-73493
+08-01 14:12:10.422 30918 30918 I flutter : ✅ Order auto-saved successfully
+08-01 14:12:12.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:12:12.779 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:12:12.784 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:12:12.785 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:12:15.795 30918 30918 I flutter : 💾 Auto-saving order: DI-73493 with 4 items
+08-01 14:12:15.795 30918 30918 I flutter : 💾 Saving order to database: DI-73493
+08-01 14:12:15.811 30918 30918 I flutter : 🔧 Order SQLite Map keys: id, order_number, status, type, table_id, user_id, customer_name, customer_phone, customer_email, customer_address, special_instructions, subtotal, tax_amount, tip_amount, hst_amount, discount_amount, gratuity_amount, total_amount, payment_method, payment_status, payment_transaction_id, order_time, estimated_ready_time, actual_ready_time, served_time, completed_time, is_urgent, priority, assigned_to, created_at, updated_at
+08-01 14:12:15.820 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:15.821 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:15.823 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:15.826 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:15.833 30918 30918 I flutter : ✅ Logged operation: Order Updated for order DI-73493 by System
+08-01 14:12:15.834 30918 30918 I flutter : ✅ Order saved successfully: DI-73493
+08-01 14:12:15.834 30918 30918 I flutter : ✅ Order auto-saved successfully
+08-01 14:12:18.931 30918 30918 I flutter : 💾 Saving order to database: DI-73493
+08-01 14:12:18.932 30918 30918 I flutter : 🔧 Order SQLite Map keys: id, order_number, status, type, table_id, user_id, customer_name, customer_phone, customer_email, customer_address, special_instructions, subtotal, tax_amount, tip_amount, hst_amount, discount_amount, gratuity_amount, total_amount, payment_method, payment_status, payment_transaction_id, order_time, estimated_ready_time, actual_ready_time, served_time, completed_time, is_urgent, priority, assigned_to, created_at, updated_at
+08-01 14:12:18.934 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:18.935 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:18.936 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:18.938 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:12:18.964 30918 30918 I flutter : ✅ Logged operation: Order Created for order DI-73493 by System
+08-01 14:12:18.964 30918 30918 I flutter : ✅ Order saved successfully: DI-73493
+08-01 14:12:18.964 30918 30918 I flutter : 🖨️ Attempting to print kitchen ticket for order: DI-73493
+08-01 14:12:18.964 30918 30918 I flutter : ⚠️ No printer connected - cannot print kitchen ticket for order: DI-73493
+08-01 14:12:18.964 30918 30918 I flutter : Kitchen ticket printing failed - no printer connected
+08-01 14:12:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:12:42.781 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:12:42.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:12:42.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:13:12.771 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:13:12.777 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:13:12.781 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:13:12.781 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:13:32.399 30918 30918 I flutter : 💳 Processing payment for order: DI-73493
+08-01 14:13:32.399 30918 30918 I flutter : 💳 Payment method: Debit Card
+08-01 14:13:32.399 30918 30918 I flutter : 💳 Amount: $53.67
+08-01 14:13:32.399 30918 30918 I flutter : 💳 Tip: $4.88
+08-01 14:13:32.399 30918 30918 I flutter : 💳 Amount tendered: $53.67
+08-01 14:13:32.400 30918 30918 I flutter : 📝 Updating order status: 29bd43bf-e7b0-4707-acb3-0cfe59937c5a -> completed
+08-01 14:13:32.429 30918 30918 I flutter : ✅ Logged operation: Status Changed for order DI-73493 by System
+08-01 14:13:32.429 30918 30918 I flutter : ✅ Order status updated successfully
+08-01 14:13:32.429 30918 30918 I flutter : Payment processed for order: DI-73493
+08-01 14:13:32.429 30918 30918 I flutter : 💾 Saving order to database: DI-73493
+08-01 14:13:32.430 30918 30918 I flutter : 🔧 Order SQLite Map keys: id, order_number, status, type, table_id, user_id, customer_name, customer_phone, customer_email, customer_address, special_instructions, subtotal, tax_amount, tip_amount, hst_amount, discount_amount, gratuity_amount, total_amount, payment_method, payment_status, payment_transaction_id, order_time, estimated_ready_time, actual_ready_time, served_time, completed_time, is_urgent, priority, assigned_to, created_at, updated_at
+08-01 14:13:32.432 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:13:32.433 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:13:32.434 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:13:32.435 30918 30918 I flutter : 🔧 Order Item SQLite Map keys: id, order_id, menu_item_id, quantity, unit_price, total_price, selected_variant, special_instructions, notes, is_available, sent_to_kitchen, created_at, updated_at
+08-01 14:13:32.443 30918 30918 I flutter : ✅ Logged operation: Order Completed for order DI-73493 by System
+08-01 14:13:32.443 30918 30918 I flutter : ✅ Order saved successfully: DI-73493
+08-01 14:13:32.443 30918 30918 I flutter : ✅ Order DI-73493 successfully saved as completed
+08-01 14:13:32.446 30918 30918 I flutter : No printer connected - cannot print receipt for order: DI-73493
+08-01 14:13:32.446 30918 30918 I flutter : ✅ Receipt printed successfully
+08-01 14:13:36.082 30918 30918 I flutter : 📋 Loaded 3 ACTIVE orders for server: 1753948203387
+08-01 14:13:36.082 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:13:36.082 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:13:36.082 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:13:36.093 30918 30918 I flutter : 🔍 POS DASHBOARD: initState() called
+08-01 14:13:36.115 30918 30918 I flutter : ⚠️ UserService or currentUser not available yet
+08-01 14:13:36.115 30918 30918 I flutter : 📊 ALL SERVERS VIEW: Showing server summary with order counts
+08-01 14:13:36.115 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:13:36.115 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:13:36.115 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:13:42.775 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:13:42.784 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:13:42.789 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:13:42.789 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:13:47.251 30918 30918 I flutter : 🔧 Found admin user: Admin (admin)
+08-01 14:13:54.070 30918 30918 I flutter : ✅ Set admin user as current user for admin panel access
+08-01 14:13:54.082 30918 30918 I flutter : ADMIN FLOW: AdminPanelScreen initState, initialTabIndex: 0
+08-01 14:13:54.084 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 0
+08-01 14:13:54.141 30918 30918 I flutter : 📋 Loaded 8 ACTIVE orders for server: admin
+08-01 14:13:54.141 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:13:54.141 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:13:54.141 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:13:54.147 30918 30918 I flutter : ✅ Activity logged: Accessed admin panel by Admin (UserRole.admin)
+08-01 14:13:54.169 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 0
+08-01 14:14:12.774 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:14:12.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:14:12.793 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:14:12.793 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:14:42.774 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:14:42.787 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:14:42.794 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:14:42.794 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:14:51.557 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 5
+08-01 14:14:52.625 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 6
+08-01 14:14:52.651 30918 30918 I flutter : 📥 Loading orders from database
+08-01 14:14:52.734 30918 30918 I flutter : ✅ Loaded 25 orders (12 active, 13 completed)
+08-01 14:15:01.832 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:15:04.678 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 6
+08-01 14:15:05.608 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 5
+08-01 14:15:06.591 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 6
+08-01 14:15:06.603 30918 30918 I flutter : 📥 Loading orders from database
+08-01 14:15:06.678 30918 30918 I flutter : ✅ Loaded 25 orders (12 active, 13 completed)
+08-01 14:15:07.208 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 7
+08-01 14:15:07.236 30918 30918 I flutter : InventoryService initialized with 0 items and 0 transactions
+08-01 14:15:08.674 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 5
+08-01 14:15:09.524 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 4
+08-01 14:15:09.564 30918 30918 I flutter : 📥 Loading orders from database
+08-01 14:15:09.635 30918 30918 I flutter : ✅ Loaded 25 orders (12 active, 13 completed)
+08-01 14:15:12.141 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 6
+08-01 14:15:12.156 30918 30918 I flutter : 📥 Loading orders from database
+08-01 14:15:12.218 30918 30918 I flutter : ✅ Loaded 25 orders (12 active, 13 completed)
+08-01 14:15:12.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:15:12.778 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:15:12.781 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:15:12.781 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:15:12.874 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 7
+08-01 14:15:14.109 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 8
+08-01 14:15:15.274 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 5
+08-01 14:15:15.991 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 4
+08-01 14:15:16.023 30918 30918 I flutter : 📥 Loading orders from database
+08-01 14:15:16.068 30918 30918 I flutter : ✅ Loaded 25 orders (12 active, 13 completed)
+08-01 14:15:20.442 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 8
+08-01 14:15:22.375 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 0
+08-01 14:15:23.874 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 2
+08-01 14:15:23.874 30918 30918 I flutter : ADMIN FLOW: _buildManageUsersTab called
+08-01 14:15:24.458 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 1
+08-01 14:15:30.124 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 3
+08-01 14:15:30.958 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 4
+08-01 14:15:30.990 30918 30918 I flutter : 📥 Loading orders from database
+08-01 14:15:31.036 30918 30918 I flutter : ✅ Loaded 25 orders (12 active, 13 completed)
+08-01 14:15:31.924 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 5
+08-01 14:15:32.774 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 6
+08-01 14:15:32.786 30918 30918 I flutter : 📥 Loading orders from database
+08-01 14:15:32.851 30918 30918 I flutter : ✅ Loaded 25 orders (12 active, 13 completed)
+08-01 14:15:34.941 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 7
+08-01 14:15:36.941 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 8
+08-01 14:15:40.093 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 10
+08-01 14:15:42.484 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:15:42.768 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:15:42.772 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:15:43.108 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:15:43.108 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:15:43.109 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:15:43.110 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:15:43.417 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:15:43.418 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:15:43.424 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:15:43.424 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:15:50.425 30918 30918 I flutter : ADMIN FLOW: Building tab content for index: 4
+08-01 14:15:50.466 30918 30918 I flutter : 📥 Loading orders from database
+08-01 14:15:50.533 30918 30918 I flutter : ✅ Loaded 25 orders (12 active, 13 completed)
+08-01 14:16:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:16:12.778 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:16:12.783 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:16:12.783 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:16:42.771 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:16:42.778 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:16:42.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:16:42.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:16:55.046 30918 30918 I flutter : 📋 Loaded 3 ACTIVE orders for server: 1753948203387
+08-01 14:16:55.046 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:16:55.046 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:16:55.046 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:16:55.046 30918 30918 I flutter : 🎯 Selected server: 1753948203387
+08-01 14:16:57.296 30918 30918 I flutter : 📊 ALL SERVERS VIEW: Showing server summary with order counts
+08-01 14:16:57.296 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:16:57.296 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:16:57.296 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:16:57.296 30918 30918 I flutter : 🎯 Selected server: null
+08-01 14:16:57.320 30918 30918 I flutter : 📋 Loaded 8 ACTIVE orders for server: admin
+08-01 14:16:57.320 30918 30918 I flutter : 🔍 ORDER COUNTS: 12 active orders found
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-85784: server=1753948203387
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-44633: server=1753948203387
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-09676: server=1753948203387
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order TO-582837: server=admin
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-08615: server=admin
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-14530: server=admin
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-64981: server=admin
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-18514: server=admin
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-33687: server=admin
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-45610: server=admin
+08-01 14:16:57.320 30918 30918 I flutter :   ✅ Order DI-46946: server=admin
+08-01 14:16:57.320 30918 30918 I flutter :   ⚠️ Order DI-40561 has empty userId - needs assignment
+08-01 14:17:12.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:17:12.781 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:17:12.788 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:17:12.788 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:17:42.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:17:42.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:17:42.817 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:17:42.817 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:18:12.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:18:12.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:18:12.787 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:18:12.787 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:18:42.771 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:18:42.777 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:18:42.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:18:42.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:19:12.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:19:12.793 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:19:12.808 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:19:12.809 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:19:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:19:42.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:19:42.797 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:19:42.798 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:20:01.835 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:20:12.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:20:12.778 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:20:12.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:20:12.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:20:42.483 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:20:42.766 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:20:42.769 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:20:43.078 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:20:43.078 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:20:43.079 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:20:43.080 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:20:43.411 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:20:43.412 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:20:43.417 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:20:43.417 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:21:12.775 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:21:12.784 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:21:12.790 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:21:12.790 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:21:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:21:42.784 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:21:42.797 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:21:42.797 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:22:12.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:22:12.781 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:22:12.788 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:22:12.788 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:22:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:22:42.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:22:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:22:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:23:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:23:12.789 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:23:12.801 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:23:12.801 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:23:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:23:42.788 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:23:42.798 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:23:42.798 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:24:12.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:24:12.790 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:24:12.806 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:24:12.806 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:24:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:24:42.788 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:24:42.805 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:24:42.805 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:25:01.831 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:25:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:25:12.788 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:25:12.804 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:25:12.804 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:25:42.484 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:25:42.768 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:25:42.772 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:25:43.929 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:25:43.930 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:25:43.931 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:25:43.940 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:25:45.140 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:25:45.141 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:25:45.156 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:25:45.157 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:26:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:26:12.787 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:26:12.799 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:26:12.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:26:42.776 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:26:42.789 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:26:42.805 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:26:42.805 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:27:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:27:12.789 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:27:12.799 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:27:12.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:27:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:27:42.791 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:27:42.806 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:27:42.806 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:28:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:28:12.787 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:28:12.801 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:28:12.802 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:28:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:28:42.789 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:28:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:28:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:29:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:29:12.790 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:29:12.809 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:29:12.809 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:29:42.771 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:29:42.780 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:29:42.794 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:29:42.794 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:30:01.832 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:30:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:30:12.789 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:30:12.805 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:30:12.805 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:30:42.483 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:30:42.768 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:30:42.772 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:30:44.232 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:30:44.233 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:30:44.235 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:30:44.239 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:30:45.579 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:30:45.596 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:30:45.622 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:30:45.622 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:31:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:31:12.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:31:12.806 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:31:12.806 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:31:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:31:42.788 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:31:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:31:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:32:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:32:12.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:32:12.799 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:32:12.799 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:32:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:32:42.787 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:32:42.801 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:32:42.801 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:33:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:33:12.788 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:33:12.807 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:33:12.808 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:33:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:33:42.784 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:33:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:33:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:34:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:34:12.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:34:12.799 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:34:12.799 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:34:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:34:42.784 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:34:42.795 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:34:42.795 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:35:01.832 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:35:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:35:12.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:35:12.801 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:35:12.801 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:35:42.484 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:35:42.768 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:35:42.772 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:35:43.879 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:35:43.880 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:35:43.880 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:35:43.886 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:35:44.960 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:35:44.961 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:35:44.978 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:35:44.979 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:36:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:36:12.784 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:36:12.797 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:36:12.797 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:36:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:36:42.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:36:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:36:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:37:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:37:12.787 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:37:12.806 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:37:12.806 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:37:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:37:42.785 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:37:42.798 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:37:42.798 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:38:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:38:12.787 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:38:12.802 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:38:12.802 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:38:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:38:42.784 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:38:42.798 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:38:42.798 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:39:12.773 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:39:12.789 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:39:12.810 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:39:12.810 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:39:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:39:42.784 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:39:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:39:42.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:40:01.832 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:40:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:40:12.793 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:40:12.810 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:40:12.810 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:40:42.484 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:40:42.767 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:40:42.770 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:40:43.981 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:40:43.983 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:40:43.988 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:40:43.993 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:40:45.263 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:40:45.264 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:40:45.295 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:40:45.295 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:41:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:41:12.785 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:41:12.798 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:41:12.798 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:41:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:41:42.785 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:41:42.797 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:41:42.797 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:42:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:42:12.782 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:42:12.793 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:42:12.794 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:42:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:42:42.783 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:42:42.794 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:42:42.794 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:43:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:43:12.787 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:43:12.801 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:43:12.801 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:43:42.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:43:42.789 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:43:42.804 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:43:42.804 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:44:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:44:12.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:44:12.799 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:44:12.800 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:44:42.771 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:44:42.783 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:44:42.799 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:44:42.799 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:45:01.832 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:45:12.772 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:45:12.786 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:45:12.802 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:45:12.802 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully
+08-01 14:45:42.484 30918 30918 I flutter : 💾 Saving orders to cache
+08-01 14:45:42.767 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:45:42.771 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:45:43.910 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:45:43.911 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 🔄 Starting synchronization...
+08-01 14:45:43.912 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🔍 Scanning network for Epson thermal printers...
+08-01 14:45:43.918 30918 30918 I flutter : 🖨️ PrinterConfigurationService 🌐 Scanning network range: 192.168.1
+08-01 14:45:45.110 30918 30918 I flutter : 🖨️ PrinterConfigurationService ✅ Discovery complete. Found 0 printers
+08-01 14:45:45.124 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved 0 assignments to cross-platform storage
+08-01 14:45:45.145 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync 💾 Saved sync metadata to persistent database
+08-01 14:45:45.145 30918 30918 I flutter : 🌐 CrossPlatformPrinterSync ✅ Synchronization completed successfully

@@ -32,25 +32,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
 
 
 
-  static const _statusBadgeStyle = TextStyle(
-    fontSize: 11,
-    fontWeight: FontWeight.w800,
-    letterSpacing: 1.0,
-  );
 
-  static const _instructionsStyle = TextStyle(
-    fontSize: 13,
-    fontWeight: FontWeight.w600,
-    fontStyle: FontStyle.italic,
-    letterSpacing: 0.2,
-  );
-
-  static const _quantityStyle = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w800,
-    color: Color(0xFF3B82F6),
-    letterSpacing: 0.3,
-  );
 
   @override
   void initState() {
@@ -1387,17 +1369,17 @@ class _OrderDetailsDialog extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            color.withOpacity(0.15),
-            color.withOpacity(0.08),
+            color.withValues(alpha: 0.15),
+            color.withValues(alpha: 0.08),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.6), width: 1.5),
+        border: Border.all(color: color.withValues(alpha: 0.6), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
