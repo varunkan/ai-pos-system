@@ -124,7 +124,7 @@ class Order {
   double get subtotal => _calculateSubtotal(items);
   
   /// Returns the subtotal after applying discount
-  double get subtotalAfterDiscount => subtotal - (discountAmount ?? 0.0);
+  double get subtotalAfterDiscount => subtotal - discountAmount;
   
   /// Returns the HST amount calculated on the discounted subtotal
   double get calculatedHstAmount => subtotalAfterDiscount * 0.13;
@@ -137,7 +137,7 @@ class Order {
     // 3. Add gratuity/tip (prioritize gratuityAmount over tipAmount)
     final baseAfterDiscount = subtotalAfterDiscount;
     final hstAmount = calculatedHstAmount;
-    final gratuityTip = (gratuityAmount ?? 0.0) + (tipAmount ?? 0.0);
+    final gratuityTip = gratuityAmount + tipAmount;
     
     final calculatedTotal = baseAfterDiscount + hstAmount + gratuityTip;
     
@@ -403,8 +403,6 @@ class Order {
         return Colors.red;
       case OrderStatus.refunded:
         return Colors.red.shade300;
-      default:
-        return Colors.grey;
     }
   }
 
@@ -427,8 +425,6 @@ class Order {
         return Icons.cancel;
       case OrderStatus.refunded:
         return Icons.money_off;
-      default:
-        return Icons.help_outline;
     }
   }
 

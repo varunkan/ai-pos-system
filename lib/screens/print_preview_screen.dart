@@ -274,14 +274,42 @@ class PrintPreviewScreen extends StatelessWidget {
             Text('\$${order.subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11)),
           ],
         ),
+        if (order.discountAmount > 0) ...[
+          SizedBox(height: 2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Discount:', style: TextStyle(fontSize: 11, color: Colors.red)),
+              Text('-\$${order.discountAmount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, color: Colors.red)),
+            ],
+          ),
+          SizedBox(height: 2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Subtotal after Discount:', style: TextStyle(fontSize: 11)),
+              Text('\$${order.subtotalAfterDiscount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11)),
+            ],
+          ),
+        ],
         SizedBox(height: 2),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Tax:', style: TextStyle(fontSize: 11)),
-            Text('\$${order.taxAmount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11)),
+            const Text('HST (13%):', style: TextStyle(fontSize: 11)),
+            Text('\$${order.calculatedHstAmount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11)),
           ],
         ),
+        if (order.gratuityAmount > 0) ...[
+          SizedBox(height: 2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Gratuity:', style: TextStyle(fontSize: 11)),
+              Text('\$${order.gratuityAmount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11)),
+            ],
+          ),
+        ],
         if (order.tipAmount > 0) ...[
           SizedBox(height: 2),
           Row(

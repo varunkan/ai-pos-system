@@ -20,6 +20,7 @@ import 'package:ai_pos_system/models/category.dart' as pos_category;
 import 'package:ai_pos_system/models/user.dart';
 import 'package:ai_pos_system/widgets/back_button.dart';
 import 'package:ai_pos_system/screens/checkout_screen.dart';
+import 'package:ai_pos_system/screens/order_type_selection_screen.dart';
 
 class EditActiveOrderScreen extends StatefulWidget {
   final Order order;
@@ -794,7 +795,15 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        Navigator.pop(context, completedOrder);
+        
+        // Navigate back to POS Dashboard (OrderTypeSelectionScreen)
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const OrderTypeSelectionScreen(),
+          ),
+          (route) => false, // Remove all previous routes
+        );
       }
     } catch (e) {
       setState(() {
@@ -2202,23 +2211,26 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
                     ],
                   ),
                 ],
-                IconButton(
-                  onPressed: () => _removeItemFromOrder(item),
-                  icon: Icon(
-                    item.sentToKitchen && !widget.user.isAdmin 
-                        ? Icons.lock_outline 
-                        : Icons.delete_outline, 
-                    size: 16
+                // Only show delete button if user is admin OR item is not sent to kitchen
+                if (widget.user.isAdmin || !item.sentToKitchen) ...[
+                  IconButton(
+                    onPressed: () => _removeItemFromOrder(item),
+                    icon: Icon(
+                      item.sentToKitchen && !widget.user.isAdmin 
+                          ? Icons.lock_outline 
+                          : Icons.delete_outline, 
+                      size: 16
+                    ),
+                    color: item.sentToKitchen && !widget.user.isAdmin 
+                        ? Colors.grey.shade400 
+                        : Colors.red.shade400,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: item.sentToKitchen && !widget.user.isAdmin 
+                        ? 'Only admin can remove sent items' 
+                        : 'Remove item',
                   ),
-                  color: item.sentToKitchen && !widget.user.isAdmin 
-                      ? Colors.grey.shade400 
-                      : Colors.red.shade400,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: item.sentToKitchen && !widget.user.isAdmin 
-                      ? 'Only admin can remove sent items' 
-                      : 'Remove item',
-                ),
+                ],
               ],
             ),
           ],

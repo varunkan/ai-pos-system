@@ -297,7 +297,7 @@ class OrderService extends ChangeNotifier {
             if (item.selectedModifiers.isNotEmpty) {
               final List<String> cleanModifiers = [];
               for (var modifier in item.selectedModifiers) {
-                if (modifier is String && modifier.isNotEmpty) {
+                if (modifier.isNotEmpty) {
                   cleanModifiers.add(modifier);
                 }
               }
@@ -488,7 +488,7 @@ class OrderService extends ChangeNotifier {
       if (item.selectedModifiers.isNotEmpty) {
         final List<String> cleanModifiers = [];
         for (var modifier in item.selectedModifiers) {
-          if (modifier is String && modifier.isNotEmpty) {
+          if (modifier.isNotEmpty) {
             cleanModifiers.add(modifier);
           }
         }

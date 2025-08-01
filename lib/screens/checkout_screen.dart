@@ -11,6 +11,7 @@ import '../widgets/loading_overlay.dart';
 import '../widgets/back_button.dart';
 import '../widgets/error_dialog.dart';
 import 'print_preview_screen.dart';
+import 'order_type_selection_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final Order order;
@@ -255,7 +256,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (mounted) {
         // Show success dialog with change amount
         await _showPaymentSuccessDialog();
-        Navigator.pop(context, updatedOrder);
+        
+        // Navigate back to POS Dashboard (OrderTypeSelectionScreen)
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const OrderTypeSelectionScreen(),
+          ),
+          (route) => false, // Remove all previous routes
+        );
       }
     } catch (e) {
       setState(() {

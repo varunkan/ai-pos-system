@@ -828,8 +828,46 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     }
   }
 
-  void _removeItemFromOrder(int index) {
+  void _removeItemFromOrder(int index) async {
     if (_currentOrder != null && index >= 0 && index < _currentOrder!.items.length) {
+      final item = _currentOrder!.items[index];
+      
+      // Check if item has been sent to kitchen and user is not admin
+      if (item.sentToKitchen && !widget.user.isAdmin) {
+        // Show error message for non-admin users trying to remove sent items
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This item has been sent to kitchen. Only admin users can remove it.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      
+      // Show confirmation dialog for admin users removing sent items
+      if (item.sentToKitchen && widget.user.isAdmin) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Remove Sent Item'),
+            content: Text('This item has been sent to kitchen. Are you sure you want to remove "${item.menuItem.name}"?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Remove'),
+              ),
+            ],
+          ),
+        );
+        
+        if (confirmed != true) return;
+      }
+      
       setState(() {
         _currentOrder!.items.removeAt(index);
       });
@@ -1167,16 +1205,6 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
           tooltip: 'POS Dashboard',
         ),
         actions: [
-          // Compact chef notes button
-          IconButton(
-            icon: Icon(
-              Icons.restaurant, 
-              color: Colors.orange,
-              size: 20, // Smaller icon
-            ),
-            onPressed: _showChefNotesDialog,
-            tooltip: 'Chef Notes',
-          ),
           // Compact server info
           Container(
             margin: const EdgeInsets.only(right: 8),
@@ -1509,18 +1537,24 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
             
             const SizedBox(width: 8),
             
-            // Delete button
-            GestureDetector(
-              onTap: () => _removeItemFromOrder(index),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                child: const Icon(
-                  Icons.delete_outline,
-                  size: 16,
-                  color: Colors.red,
+            // Delete button - only show if user is admin OR item is not sent to kitchen
+            if (widget.user.isAdmin || !isSentToKitchen) ...[
+              GestureDetector(
+                onTap: () => _removeItemFromOrder(index),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    isSentToKitchen && !widget.user.isAdmin 
+                        ? Icons.lock_outline 
+                        : Icons.delete_outline,
+                    size: 16,
+                    color: isSentToKitchen && !widget.user.isAdmin 
+                        ? Colors.grey.shade400 
+                        : Colors.red,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

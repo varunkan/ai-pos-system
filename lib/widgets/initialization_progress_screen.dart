@@ -120,9 +120,9 @@ class _InitializationProgressScreenState extends State<InitializationProgressScr
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
             ),
             child: const Icon(
               Icons.restaurant,
@@ -150,7 +150,7 @@ class _InitializationProgressScreenState extends State<InitializationProgressScr
           Text(
             'Setting up your POS system...',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 16,
             ),
             textAlign: TextAlign.center,
@@ -175,7 +175,7 @@ class _InitializationProgressScreenState extends State<InitializationProgressScr
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     width: 3,
                   ),
                 ),
@@ -195,7 +195,7 @@ class _InitializationProgressScreenState extends State<InitializationProgressScr
           width: double.infinity,
           height: 8,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(4),
           ),
           child: ClipRRect(
@@ -228,9 +228,9 @@ class _InitializationProgressScreenState extends State<InitializationProgressScr
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,9 +264,9 @@ class _InitializationProgressScreenState extends State<InitializationProgressScr
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,11 +303,11 @@ class _InitializationProgressScreenState extends State<InitializationProgressScr
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: index == 0 
-                              ? Colors.white.withOpacity(0.2)  // Highlight current message
-                              : Colors.white.withOpacity(0.05),
+                              ? Colors.white.withValues(alpha: 0.2)  // Highlight current message
+                              : Colors.white.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
                           border: index == 0 
-                              ? Border.all(color: Colors.white.withOpacity(0.3))
+                              ? Border.all(color: Colors.white.withValues(alpha: 0.3))
                               : null,
                         ),
                         child: Row(
