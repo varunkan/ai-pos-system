@@ -599,6 +599,28 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                       ),
                     ),
                     actions: [
+                      // Quick Access Icons
+                      IconButton(
+                        icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                        onPressed: _openAdminPanel,
+                        tooltip: 'Admin Panel',
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.kitchen, color: Colors.white),
+                        onPressed: () {
+                          final userService = Provider.of<UserService?>(context, listen: false);
+                          final currentUser = userService?.currentUser;
+                          if (currentUser != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => KitchenScreen(user: currentUser),
+                              ),
+                            );
+                          }
+                        },
+                        tooltip: 'Kitchen',
+                      ),
                       IconButton(
                         icon: const Icon(Icons.logout, color: Colors.white),
                         onPressed: _logout,
@@ -626,11 +648,6 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                           
                           // Active Orders Section
                           _buildActiveOrdersSection(orderService),
-                          
-                          const SizedBox(height: 16),
-                          
-                          // Quick Access Section
-                          _buildQuickAccessSection(),
                         ],
                       ),
                     ),
