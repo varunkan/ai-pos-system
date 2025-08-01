@@ -420,19 +420,21 @@ class CustomerOrderApiService {
     
     final double dLat = _degreesToRadians(lat2 - lat1);
     final double dLon = _degreesToRadians(lon2 - lon1);
+    final double lat1Rad = _degreesToRadians(lat1);
+    final double lat2Rad = _degreesToRadians(lat2);
     
     final double a = 
-        (dLat / 2).sin() * (dLat / 2).sin() +
-        lat1.cos() * lat2.cos() * 
-        (dLon / 2).sin() * (dLon / 2).sin();
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1Rad) * cos(lat2Rad) * 
+        sin(dLon / 2) * sin(dLon / 2);
     
-    final double c = 2 * (a.sqrt()).asin();
+    final double c = 2 * asin(sqrt(a));
     
     return earthRadius * c;
   }
 
   double _degreesToRadians(double degrees) {
-    return degrees * (3.14159265359 / 180.0);
+    return degrees * (pi / 180.0);
   }
 
   /// Utility methods

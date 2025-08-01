@@ -190,9 +190,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: (template['color'] as Color).withOpacity(0.1),
+                            color: (template['color'] as Color).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: (template['color'] as Color).withOpacity(0.3)),
+                            border: Border.all(color: (template['color'] as Color).withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,

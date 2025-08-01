@@ -40,7 +40,7 @@ class Category {
   }
   
   /// Gets the color for this category.
-  Color get color => Color(colorValue ?? Colors.blue.value);
+  Color get color => Color(colorValue ?? Colors.blue.toARGB32());
 
   /// Creates a [Category] from JSON, with null safety and defaults.
   factory Category.fromJson(Map<String, dynamic> json) {

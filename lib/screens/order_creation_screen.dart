@@ -15,7 +15,7 @@ import '../services/enhanced_printer_assignment_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_dialog.dart';
 
-import '../widgets/universal_navigation.dart';
+
 import '../screens/checkout_screen.dart';
 import 'package:uuid/uuid.dart';
 import '../screens/order_type_selection_screen.dart'; // Added import for OrderTypeSelectionScreen

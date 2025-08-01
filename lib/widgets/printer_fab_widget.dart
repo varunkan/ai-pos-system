@@ -201,9 +201,9 @@ class _PrinterFabWidgetState extends State<PrinterFabWidget>
   void _navigateToSmartPrinterHub() {
     Navigator.of(context).push(
       PageRouteBuilder(
-                        pageBuilder: (context, animation, secondaryAnimation) => const Scaffold(
-                  appBar: AppBar(title: Text('Printer Hub')),
-                  body: Center(child: Text('Printer Hub - Coming Soon')),
+                        pageBuilder: (context, animation, secondaryAnimation) => Scaffold(
+                  appBar: AppBar(title: const Text('Printer Hub')),
+                  body: const Center(child: Text('Printer Hub - Coming Soon')),
                 ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
@@ -296,9 +296,9 @@ class MiniPrinterStatusWidget extends StatelessWidget {
   void _navigateToSmartPrinterHub(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-                    builder: (context) => const Scaffold(
-              appBar: AppBar(title: Text('Printer Hub')),
-              body: Center(child: Text('Printer Hub - Coming Soon')),
+                    builder: (context) => Scaffold(
+              appBar: AppBar(title: const Text('Printer Hub')),
+              body: const Center(child: Text('Printer Hub - Coming Soon')),
             ),
       ),
     );

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/cloud_restaurant_printing_service.dart';
 import '../services/printing_service.dart';
 import '../services/enhanced_printer_assignment_service.dart';
-import '../widgets/universal_app_bar.dart';
+import '../widgets/universal_navigation.dart';
 
 /// 🌐 Cloud Printing Setup Screen
 /// Allows users to configure internet-based printing to restaurant printers
@@ -125,9 +125,8 @@ class _CloudPrintingSetupScreenState extends State<CloudPrintingSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const UniversalAppBar(
-        title: '🌐 Cloud Printing Setup',
-        showBackButton: true,
+      appBar: const UniversalNavigation(
+        currentScreenTitle: '🌐 Cloud Printing Setup',
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -225,7 +224,8 @@ class _CloudPrintingSetupScreenState extends State<CloudPrintingSetupScreen> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter the service URL';
                             }
-                            if (!Uri.tryParse(value)?.hasScheme ?? false) {
+                            final uri = Uri.tryParse(value);
+                            if (uri == null || !uri.hasScheme) {
                               return 'Please enter a valid URL';
                             }
                             return null;

@@ -116,7 +116,7 @@ class _RemotePrintingDashboardState extends State<RemotePrintingDashboard> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             colors: [Colors.white, Colors.grey.shade50],
           ),
         ),

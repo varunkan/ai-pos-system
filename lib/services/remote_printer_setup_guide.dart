@@ -569,10 +569,9 @@ class _RemotePrinterSetupScreenState extends State<RemotePrinterSetupScreen> {
   Future<void> _scanForLocalPrinters() async {
             // final discoveryService = Provider.of<AutoPrinterDiscoveryService?>(context, listen: false); // Temporarily disabled
     
-    if (discoveryService == null) {
-      _showError('Printer discovery service not available');
-      return;
-    }
+    // Temporarily disabled auto discovery
+    _showError('Auto discovery service temporarily disabled');
+    return;
 
     // Show scanning dialog
     showDialog(
@@ -596,8 +595,8 @@ class _RemotePrinterSetupScreenState extends State<RemotePrinterSetupScreen> {
     );
 
     try {
-      // Trigger manual discovery
-      await discoveryService.manualDiscovery();
+      // Temporarily disabled
+      // await discoveryService.manualDiscovery();
       
       if (mounted) {
         Navigator.pop(context); // Close scanning dialog
