@@ -11,6 +11,7 @@ import '../services/order_service.dart';
 import '../services/menu_service.dart';
 import '../services/printing_service.dart';
 import '../services/enhanced_printer_assignment_service.dart';
+import '../services/order_log_service.dart';
 
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_dialog.dart';
@@ -821,6 +822,9 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
             sentToKitchen: false, // Explicitly mark as new
           );
           _currentOrder!.items.add(orderItem);
+          
+          // Log item addition
+          _logItemAdded(orderItem);
         }
       });
       _updateOrderWithHST();
@@ -873,6 +877,9 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       });
       _updateOrderWithHST();
       _autoSaveOrder(); // Auto-save order when items are removed
+      
+      // Log item removal
+      _logItemRemoved(item);
     }
   }
 
@@ -883,7 +890,11 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       } else {
         setState(() {
           final item = _currentOrder!.items[index];
+          final oldQuantity = item.quantity;
           _currentOrder!.items[index] = item.copyWith(quantity: newQuantity);
+          
+          // Log quantity update
+          _logItemModified(_currentOrder!.items[index], 'Quantity updated from $oldQuantity to $newQuantity');
         });
         _updateOrderWithHST();
         _autoSaveOrder(); // Auto-save order when quantities are updated
@@ -1035,15 +1046,20 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       final printingService = Provider.of<PrintingService>(context, listen: false);
       
       // Mark all items as sent to kitchen
+      final itemsToSend = <OrderItem>[];
       for (var item in _currentOrder!.items) {
         if (!item.sentToKitchen) {
           final index = _currentOrder!.items.indexOf(item);
           _currentOrder!.items[index] = item.copyWith(sentToKitchen: true);
+          itemsToSend.add(_currentOrder!.items[index]);
         }
       }
 
       // Save the updated order
       await orderService.saveOrder(_currentOrder!);
+      
+      // Log items sent to kitchen
+      _logItemsSentToKitchen(itemsToSend);
 
       // Print kitchen ticket after saving
       try {
@@ -2874,5 +2890,70 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     return widget.table?.customerName ?? widget.user.name;
   }
 
+  // Logging helper methods for comprehensive audit trail
+  void _logItemAdded(OrderItem item) {
+    if (_currentOrder == null) return;
+    
+    try {
+      final orderLogService = Provider.of<OrderLogService>(context, listen: false);
+      orderLogService.logItemAdded(
+        _currentOrder!,
+        item,
+        widget.user.id,
+        widget.user.name,
+      );
+    } catch (e) {
+      debugPrint('Failed to log item addition: $e');
+    }
+  }
+
+  void _logItemRemoved(OrderItem item) {
+    if (_currentOrder == null) return;
+    
+    try {
+      final orderLogService = Provider.of<OrderLogService>(context, listen: false);
+      orderLogService.logItemRemoved(
+        _currentOrder!,
+        item,
+        widget.user.id,
+        widget.user.name,
+      );
+    } catch (e) {
+      debugPrint('Failed to log item removal: $e');
+    }
+  }
+
+  void _logItemModified(OrderItem item, String changeDescription) {
+    if (_currentOrder == null) return;
+    
+    try {
+      final orderLogService = Provider.of<OrderLogService>(context, listen: false);
+      orderLogService.logItemVoided(
+        _currentOrder!,
+        item,
+        widget.user.id,
+        widget.user.name,
+        reason: changeDescription,
+      );
+    } catch (e) {
+      debugPrint('Failed to log item modification: $e');
+    }
+  }
+
+  void _logItemsSentToKitchen(List<OrderItem> items) {
+    if (_currentOrder == null || items.isEmpty) return;
+    
+    try {
+      final orderLogService = Provider.of<OrderLogService>(context, listen: false);
+      orderLogService.logSentToKitchen(
+        _currentOrder!,
+        widget.user.id,
+        widget.user.name,
+        items: items,
+      );
+    } catch (e) {
+      debugPrint('Failed to log items sent to kitchen: $e');
+    }
+  }
 
 } 

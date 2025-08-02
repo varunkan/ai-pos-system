@@ -7,6 +7,7 @@ import '../services/payment_service.dart';
 import '../services/printing_service.dart';
 import '../services/order_service.dart';
 import '../services/table_service.dart';
+import '../services/order_log_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/back_button.dart';
 import '../widgets/error_dialog.dart';
@@ -220,11 +221,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         amount: _finalTotal,
       );
 
+      // Log payment processing
+      _logPaymentProcessed(updatedOrder, _finalTotal, _selectedPaymentMethod);
+
       // Save updated order with payment completion log
       final orderSaved = await orderService.saveOrder(updatedOrder, logAction: 'completed');
       if (!orderSaved) {
         throw Exception('Failed to save order to database');
       }
+
+      // Log order completion
+      _logOrderCompleted(updatedOrder);
 
       debugPrint('✅ Order ${updatedOrder.orderNumber} successfully saved as completed');
 
@@ -1065,5 +1072,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ],
       ),
     );
+  }
+
+  // Logging helper methods for comprehensive audit trail
+  void _logPaymentProcessed(Order order, double amount, String paymentMethod) {
+    try {
+      final orderLogService = Provider.of<OrderLogService>(context, listen: false);
+      orderLogService.logPaymentProcessed(
+        order,
+        amount,
+        paymentMethod,
+        widget.user.id,
+        widget.user.name,
+      );
+    } catch (e) {
+      debugPrint('Failed to log payment processing: $e');
+    }
+  }
+
+  void _logOrderCompleted(Order order) {
+    try {
+      final orderLogService = Provider.of<OrderLogService>(context, listen: false);
+      orderLogService.logOrderCompleted(
+        order,
+        widget.user.id,
+        widget.user.name,
+      );
+    } catch (e) {
+      debugPrint('Failed to log order completion: $e');
+    }
   }
 } 
