@@ -8,6 +8,7 @@ import '../services/printing_service.dart';
 import '../services/order_service.dart';
 import '../services/table_service.dart';
 import '../services/order_log_service.dart';
+import '../services/inventory_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/back_button.dart';
 import '../widgets/error_dialog.dart';
@@ -196,6 +197,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final paymentService = Provider.of<PaymentService>(context, listen: false);
       final orderService = Provider.of<OrderService>(context, listen: false);
       final printingService = Provider.of<PrintingService>(context, listen: false);
+      final inventoryService = Provider.of<InventoryService>(context, listen: false);
 
       // Update order with tip and payment info
       final updatedOrder = widget.order.copyWith(
@@ -228,6 +230,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final orderSaved = await orderService.saveOrder(updatedOrder, logAction: 'completed');
       if (!orderSaved) {
         throw Exception('Failed to save order to database');
+      }
+
+      // 📦 CRITICAL: Update inventory after successful payment (additional safety check)
+      debugPrint('💳 Checkout process - ensuring inventory is updated for order: ${updatedOrder.orderNumber}');
+      try {
+        final inventoryUpdated = await inventoryService.updateInventoryOnOrderCompletion(updatedOrder);
+        if (inventoryUpdated) {
+          debugPrint('✅ Checkout: Inventory updated successfully for order: ${updatedOrder.orderNumber}');
+        } else {
+          debugPrint('⚠️ Checkout: No inventory items were updated for order: ${updatedOrder.orderNumber}');
+        }
+      } catch (e) {
+        debugPrint('❌ Checkout: Error updating inventory for order ${updatedOrder.orderNumber}: $e');
+        // Show warning to user but don't fail the checkout
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('⚠️ Payment successful but inventory update failed. Please check inventory manually.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
       }
 
       // Log order completion

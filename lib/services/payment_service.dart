@@ -29,15 +29,30 @@ class PaymentService with ChangeNotifier {
     try {
       // Here you would integrate with a real payment gateway if needed
       // For now, we simulate a successful payment
-      order.copyWith(
+      final updatedOrder = order.copyWith(
         paymentMethod: method,
         paymentStatus: PaymentStatus.paid,
         paymentTransactionId: transactionId ?? 'TXN${DateTime.now().millisecondsSinceEpoch}',
+        status: OrderStatus.completed,
+        completedTime: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
+      
       await orderService.updateOrderStatus(order.id, 'completed');
       
-      // TODO: Update inventory after successful payment
-      // await inventoryService.updateInventoryOnOrderCompletion(updatedOrder);
+      // 📦 CRITICAL: Update inventory after successful payment
+      debugPrint('💳 Payment successful - updating inventory for order: ${updatedOrder.orderNumber}');
+      try {
+        final inventoryUpdated = await inventoryService.updateInventoryOnOrderCompletion(updatedOrder);
+        if (inventoryUpdated) {
+          debugPrint('✅ Inventory updated successfully for order: ${updatedOrder.orderNumber}');
+        } else {
+          debugPrint('⚠️ No inventory items were updated for order: ${updatedOrder.orderNumber}');
+        }
+      } catch (e) {
+        debugPrint('❌ Error updating inventory for order ${updatedOrder.orderNumber}: $e');
+        // Don't fail the payment if inventory update fails - log it for manual review
+      }
       
       // Safely notify listeners
       try {

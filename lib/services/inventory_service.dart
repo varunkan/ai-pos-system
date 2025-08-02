@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import '../models/inventory_item.dart';
+import '../models/order.dart';
+import '../models/menu_item.dart';
 
 /// Service for managing inventory items and transactions.
 class InventoryService with ChangeNotifier {
@@ -557,6 +559,183 @@ class InventoryService with ChangeNotifier {
     _transactions.clear();
     await _saveData();
     debugPrint('All inventory data cleared');
+  }
+
+  /// Update inventory after order completion - Critical Feature Implementation
+  Future<bool> updateInventoryOnOrderCompletion(Order order) async {
+    try {
+      debugPrint('📦 Starting inventory update for completed order: ${order.orderNumber}');
+      
+      if (order.status != OrderStatus.completed) {
+        debugPrint('⚠️ Cannot update inventory - order is not completed: ${order.status}');
+        return false;
+      }
+
+      bool anyUpdates = false;
+      List<String> stockUpdates = [];
+
+      // Process each order item
+      for (final orderItem in order.items) {
+        // Skip voided or comped items
+        if (orderItem.voided == true || orderItem.comped == true) {
+          debugPrint('⏭️ Skipping voided/comped item: ${orderItem.menuItem.name}');
+          continue;
+        }
+
+        // Find corresponding inventory item by menu item name or ID
+        final inventoryItem = _findInventoryItemForMenuItem(orderItem.menuItem);
+        
+        if (inventoryItem != null) {
+          final quantityToDeduct = orderItem.quantity.toDouble();
+          
+          // Check if we have sufficient stock
+          if (inventoryItem.currentStock >= quantityToDeduct) {
+            // Update stock
+            final success = await _deductStock(
+              inventoryItem.id,
+              quantityToDeduct,
+              orderItem.menuItem.name,
+              order.orderNumber,
+              order.userId ?? 'system',
+            );
+            
+            if (success) {
+              anyUpdates = true;
+              stockUpdates.add(
+                '${orderItem.menuItem.name}: -${quantityToDeduct} ${inventoryItem.unitDisplay}'
+              );
+              debugPrint('✅ Deducted ${quantityToDeduct} ${inventoryItem.unitDisplay} from ${inventoryItem.name}');
+            } else {
+              debugPrint('❌ Failed to deduct stock for ${inventoryItem.name}');
+            }
+          } else {
+            // Log insufficient stock but continue with other items
+            debugPrint('⚠️ Insufficient stock for ${inventoryItem.name}: Available ${inventoryItem.currentStock}, Required ${quantityToDeduct}');
+            
+            // Still deduct what we can and log the shortage
+            if (inventoryItem.currentStock > 0) {
+              await _deductStock(
+                inventoryItem.id,
+                inventoryItem.currentStock,
+                orderItem.menuItem.name,
+                order.orderNumber,
+                order.userId ?? 'system',
+              );
+              stockUpdates.add(
+                '${orderItem.menuItem.name}: -${inventoryItem.currentStock} ${inventoryItem.unitDisplay} (PARTIAL - Stock shortage)'
+              );
+            }
+          }
+        } else {
+          debugPrint('⚠️ No inventory item found for menu item: ${orderItem.menuItem.name}');
+        }
+      }
+
+      if (anyUpdates) {
+        // Save updated data
+        await _saveData();
+        
+        // Notify listeners of inventory changes
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          try {
+            notifyListeners();
+          } catch (e) {
+            debugPrint('Error notifying inventory listeners: $e');
+          }
+        });
+
+        debugPrint('📦 Inventory updated successfully for order ${order.orderNumber}:');
+        for (final update in stockUpdates) {
+          debugPrint('  • $update');
+        }
+
+        return true;
+      } else {
+        debugPrint('📦 No inventory updates were made for order ${order.orderNumber}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating inventory for order ${order.orderNumber}: $e');
+      return false;
+    }
+  }
+
+  /// Find inventory item that corresponds to a menu item
+  InventoryItem? _findInventoryItemForMenuItem(MenuItem menuItem) {
+    // First try to find by exact name match
+    InventoryItem? item = _items.where((item) => 
+      item.name.toLowerCase() == menuItem.name.toLowerCase()
+    ).firstOrNull;
+    
+    if (item != null) return item;
+    
+    // Try to find by partial name match (in case of different naming conventions)
+    item = _items.where((item) => 
+      item.name.toLowerCase().contains(menuItem.name.toLowerCase()) ||
+      menuItem.name.toLowerCase().contains(item.name.toLowerCase())
+    ).firstOrNull;
+    
+    if (item != null) return item;
+    
+    // Try to find by menu item ID if the inventory item has a reference
+    item = _items.where((item) => 
+      item.id == menuItem.id ||
+      item.name.toLowerCase().replaceAll(' ', '') == menuItem.name.toLowerCase().replaceAll(' ', '')
+    ).firstOrNull;
+    
+    return item;
+  }
+
+  /// Deduct stock from an inventory item for order completion
+  Future<bool> _deductStock(
+    String inventoryItemId,
+    double quantity,
+    String menuItemName,
+    String orderNumber,
+    String userId,
+  ) async {
+    try {
+      final itemIndex = _items.indexWhere((item) => item.id == inventoryItemId);
+      if (itemIndex == -1) {
+        debugPrint('Inventory item not found: $inventoryItemId');
+        return false;
+      }
+
+      final item = _items[itemIndex];
+      final newStock = item.currentStock - quantity;
+
+      // Update item stock (allow negative stock to track shortages)
+      final updatedItem = item.copyWith(
+        currentStock: newStock,
+        updatedAt: DateTime.now(),
+      );
+      _items[itemIndex] = updatedItem;
+
+      // Create transaction record for order deduction
+      final transaction = InventoryTransaction(
+        inventoryItemId: inventoryItemId,
+        type: 'usage',
+        quantity: quantity,
+        reason: 'Order completion',
+        notes: 'Deducted for order $orderNumber - Menu item: $menuItemName',
+        userId: userId,
+      );
+      _transactions.add(transaction);
+
+      debugPrint('📦 Stock deducted for ${item.name}: -$quantity ${item.unitDisplay} (New stock: $newStock)');
+      
+      // Check for low stock alerts
+      if (newStock <= item.minimumStock && newStock > 0) {
+        debugPrint('⚠️ LOW STOCK ALERT: ${item.name} - Current: $newStock ${item.unitDisplay}, Minimum: ${item.minimumStock}');
+      } else if (newStock <= 0) {
+        debugPrint('🚨 OUT OF STOCK: ${item.name} - Current: $newStock ${item.unitDisplay}');
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error deducting stock: $e');
+      return false;
+    }
   }
 
 } 

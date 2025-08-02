@@ -212,7 +212,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _orderLogService = OrderLogService(dummyDb);
     _activityLogService = ActivityLogService(dummyDb);
     _inventoryService = InventoryService();
-    _orderService = OrderService(dummyDb, _orderLogService);
+    _orderService = OrderService(dummyDb, _orderLogService, _inventoryService);
     debugPrint('✅ Core services initialized with dummy instances');
   }
 
@@ -330,7 +330,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       // Create new OrderService instance with updated database and reload orders
       widget.progressService.addMessage('📋 Reloading existing orders from database...');
       _orderLogService = OrderLogService(tenantDatabase);
-      _orderService = OrderService(tenantDatabase, _orderLogService);
+      _orderService = OrderService(tenantDatabase, _orderLogService, _inventoryService);
       await _orderService.loadOrders();
       debugPrint('✅ OrderService reinitialized with existing orders');
       

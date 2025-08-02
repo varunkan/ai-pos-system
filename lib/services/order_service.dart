@@ -8,6 +8,7 @@ import 'package:ai_pos_system/models/menu_item.dart';
 import 'package:ai_pos_system/models/order_log.dart';
 import 'package:ai_pos_system/services/database_service.dart';
 import 'package:ai_pos_system/services/order_log_service.dart';
+import 'package:ai_pos_system/services/inventory_service.dart';
 import 'package:ai_pos_system/utils/exceptions.dart';
 
 /// Custom exception for order operations
@@ -26,6 +27,7 @@ class OrderServiceException implements Exception {
 class OrderService extends ChangeNotifier {
   final DatabaseService _databaseService;
   final OrderLogService _orderLogService;
+  final InventoryService _inventoryService;
   
   List<Order> _activeOrders = [];
   List<Order> _completedOrders = [];
@@ -40,7 +42,7 @@ class OrderService extends ChangeNotifier {
   // Cache for frequently accessed data
   final Map<String, MenuItem> _menuItemCache = {};
   
-  OrderService(this._databaseService, this._orderLogService) {
+  OrderService(this._databaseService, this._orderLogService, this._inventoryService) {
     debugPrint('🔧 OrderService initialized');
     _initializeCache();
   }
@@ -870,6 +872,24 @@ class OrderService extends ChangeNotifier {
         action: OrderLogAction.statusChanged,
         description: 'Status changed to $newStatus',
       );
+
+      // Update inventory if the order was completed
+      if (newStatus.toLowerCase() == 'completed') {
+        try {
+          // Find the order and update inventory
+          final order = _allOrders.firstWhere((o) => o.id == orderId);
+          debugPrint('📦 Order marked as completed - updating inventory for: ${order.orderNumber}');
+          final inventoryUpdated = await _inventoryService.updateInventoryOnOrderCompletion(order);
+          if (inventoryUpdated) {
+            debugPrint('✅ Inventory updated successfully for completed order: ${order.orderNumber}');
+          } else {
+            debugPrint('⚠️ No inventory updates made for order: ${order.orderNumber}');
+          }
+        } catch (e) {
+          debugPrint('❌ Error updating inventory for completed order $orderId: $e');
+          // Log the error but don't fail the status update
+        }
+      }
 
       debugPrint('✅ Order status updated successfully');
       return true;
