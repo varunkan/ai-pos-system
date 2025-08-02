@@ -110,22 +110,30 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   }
 
   Future<void> _loadCategories() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    // Only show loading for categories if we don't have any cached
+    if (_categories.isEmpty) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
+    
     try {
       final menuService = Provider.of<MenuService>(context, listen: false);
       final categories = await menuService.getCategories();
-      setState(() {
-        _categories = categories;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _categories = categories;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _error = 'Error loading categories: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Error loading categories: $e';
+        });
+      }
     }
   }
 
@@ -135,19 +143,24 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       _isLoading = true;
       _error = null;
     });
+    
     try {
       final menuService = Provider.of<MenuService>(context, listen: false);
       final items = await menuService.getMenuItemsByCategoryId(category.id);
-      setState(() {
-        _menuItems.clear();
-        _menuItems.addAll(items);
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _menuItems.clear();
+          _menuItems.addAll(items);
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _error = 'Error loading menu items: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Error loading menu items: $e';
+        });
+      }
     }
   }
 
@@ -1186,8 +1199,15 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
       );
     }
 
+    // Detect device type for responsive loading behavior
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    
+    // For mobile, avoid full-screen loading overlay during category/menu loading
+    final showFullScreenLoading = !isPhone && _isLoading;
+
     return LoadingOverlay(
-      isLoading: _isLoading,
+      isLoading: showFullScreenLoading,
       child: Scaffold(
         backgroundColor: Colors.grey.shade50,
         appBar: _buildAppBar(),
@@ -1282,23 +1302,42 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     final isDesktop = screenSize.width >= 1200; // Desktop breakpoint
     
     if (isPhone) {
-      // Mobile layout: Stacked panels with scrollable order panel
-      return Column(
-        children: [
-          // Order Panel (Top) - Scrollable on mobile
-          Container(
-            height: screenSize.height * 0.4, // 40% of screen height
-            child: _buildOrderPanel(),
+      // Revolutionary Mobile Layout: Unified single-column design
+      return CustomScrollView(
+        slivers: [
+          // Current Order Section (Sticky/Collapsible Header)
+          SliverAppBar(
+            expandedHeight: 200,
+            floating: false,
+            pinned: true,
+            automaticallyImplyLeading: false,
+            backgroundColor: Colors.white,
+            elevation: 2,
+            shadowColor: Colors.black.withValues(alpha: 0.1),
+            flexibleSpace: FlexibleSpaceBar(
+              background: _buildMobileOrderSummary(),
+              collapseMode: CollapseMode.parallax,
+            ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(50),
+              child: _buildMobileOrderActions(),
+            ),
           ),
-          const Divider(height: 1),
-          // Menu Panel (Bottom) - Takes remaining space
-          Expanded(
-            child: _buildMenuPanel(),
+          
+          // Categories Section
+          SliverToBoxAdapter(
+            child: _buildMobileCategoriesSection(),
+          ),
+          
+          // Menu Items Grid
+          SliverPadding(
+            padding: const EdgeInsets.all(12),
+            sliver: _buildMobileMenuItemsGrid(),
           ),
         ],
       );
     } else {
-      // Tablet/Desktop layout: Side-by-side panels (original layout)
+      // Tablet/Desktop layout: Side-by-side panels (UNCHANGED)
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1316,6 +1355,846 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         ],
       );
     }
+  }
+
+  /// Mobile Order Summary (Top Section)
+  Widget _buildMobileOrderSummary() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue.shade50,
+            Colors.white,
+          ],
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 60, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Order Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.receipt_long,
+                  color: Colors.blue.shade700,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Order #${_currentOrder!.orderNumber}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      '${_currentOrder!.items.length} items • \$${_currentOrder!.total.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Quick actions
+              _buildQuickActionButton(
+                icon: Icons.note_add,
+                onTap: () => _showNotesDialog(),
+                color: Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              _buildQuickActionButton(
+                icon: Icons.kitchen,
+                onTap: () => _sendOrderToKitchen(),
+                color: Colors.green,
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Order Items Preview (Horizontal scroll)
+          if (_currentOrder!.items.isNotEmpty)
+            SizedBox(
+              height: 80,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _currentOrder!.items.length,
+                itemBuilder: (context, index) {
+                  final item = _currentOrder!.items[index];
+                  return _buildMobileOrderItemCard(item, index);
+                },
+              ),
+            )
+          else
+            Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.add_shopping_cart,
+                      color: Colors.grey.shade500,
+                      size: 24,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap items below to add to order',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Mobile Order Actions (Bottom of expanded header)
+  Widget _buildMobileOrderActions() {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade200),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: _currentOrder!.items.isNotEmpty ? () => _showOrderDetails() : null,
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: _currentOrder!.items.isNotEmpty 
+                      ? Colors.blue.shade50 
+                      : Colors.grey.shade100,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.list_alt,
+                      color: _currentOrder!.items.isNotEmpty 
+                          ? Colors.blue.shade700 
+                          : Colors.grey.shade500,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'View Details',
+                      style: TextStyle(
+                        color: _currentOrder!.items.isNotEmpty 
+                            ? Colors.blue.shade700 
+                            : Colors.grey.shade500,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 30,
+            color: Colors.grey.shade300,
+          ),
+          Expanded(
+            child: InkWell(
+              onTap: _currentOrder!.items.isNotEmpty ? () => _navigateToCheckout() : null,
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: _currentOrder!.items.isNotEmpty 
+                      ? Colors.green.shade50 
+                      : Colors.grey.shade100,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.payment,
+                      color: _currentOrder!.items.isNotEmpty 
+                          ? Colors.green.shade700 
+                          : Colors.grey.shade500,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Checkout',
+                      style: TextStyle(
+                        color: _currentOrder!.items.isNotEmpty 
+                            ? Colors.green.shade700 
+                            : Colors.grey.shade500,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mobile Categories Section
+  Widget _buildMobileCategoriesSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.restaurant_menu,
+                  color: Colors.orange.shade700,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Menu Categories',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 100,
+            child: _isLoading && _categories.isEmpty
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: _categories.length,
+                    itemBuilder: (context, index) {
+                      final category = _categories[index];
+                      final isSelected = _selectedCategory?.id == category.id;
+                      return _buildMobileCategoryCard(category, isSelected);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mobile Menu Items Grid
+  Widget _buildMobileMenuItemsGrid() {
+    // Show loading indicator for mobile when loading menu items
+    if (_isLoading && _selectedCategory != null) {
+      return SliverToBoxAdapter(
+        child: Container(
+          height: 200,
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  'Loading menu items...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    
+    if (_filteredMenuItems.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Container(
+          height: 200,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _selectedCategory == null ? Icons.category : Icons.restaurant,
+                  size: 48,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _selectedCategory == null 
+                      ? 'Select a category to view menu items'
+                      : 'No items found in this category',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.85,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final menuItem = _filteredMenuItems[index];
+          return _buildMobileMenuItemCard(menuItem);
+        },
+        childCount: _filteredMenuItems.length,
+      ),
+    );
+  }
+
+  /// Mobile Category Card
+  Widget _buildMobileCategoryCard(pos_category.Category category, bool isSelected) {
+    return Container(
+      width: 80,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      child: InkWell(
+        onTap: () => _onCategorySelected(category),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.orange.shade100 : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? Colors.orange.shade400 : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: isSelected ? [
+              BoxShadow(
+                color: Colors.orange.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ] : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.restaurant,
+                color: isSelected ? Colors.orange.shade700 : Colors.grey.shade600,
+                size: 24,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                category.name,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? Colors.orange.shade700 : Colors.grey.shade700,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Mobile Menu Item Card
+  Widget _buildMobileMenuItemCard(MenuItem menuItem) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () => _addItemToOrder(menuItem),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Item header
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      menuItem.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      Icons.add_circle_outline,
+                      color: Colors.green.shade700,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 8),
+              
+              // Description
+              if (menuItem.description.isNotEmpty)
+                Text(
+                  menuItem.description,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              
+              const Spacer(),
+              
+              // Price and availability
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '\$${menuItem.price.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                  if (!menuItem.isAvailable)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Unavailable',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Mobile Order Item Card (for horizontal scroll)
+  Widget _buildMobileOrderItemCard(OrderItem item, int index) {
+    return Container(
+      width: 120,
+      margin: const EdgeInsets.only(right: 8),
+      child: Card(
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: InkWell(
+          onTap: () => _editOrderItem(index),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.menuItem.name,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _removeItemFromOrder(index),
+                      child: Icon(
+                        Icons.close,
+                        size: 14,
+                        color: Colors.red.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      'Qty: ${item.quantity}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '\$${item.totalPrice.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Quick Action Button
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Icon(
+          icon,
+          color: color,
+          size: 18,
+        ),
+      ),
+    );
+  }
+
+  // Helper methods for mobile functionality
+  void _showOrderDetails() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (context, scrollController) => _buildOrderDetailsSheet(scrollController),
+      ),
+    );
+  }
+
+  Widget _buildOrderDetailsSheet(ScrollController scrollController) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Order details content
+          Expanded(
+            child: ListView(
+              controller: scrollController,
+              children: [
+                Text(
+                  'Order Details',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ..._currentOrder!.items.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+                  return _buildDetailedOrderItemCard(item, index);
+                }).toList(),
+                const SizedBox(height: 20),
+                _buildOrderSummaryCard(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailedOrderItemCard(OrderItem item, int index) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.menuItem.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _removeItemFromOrder(index),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Colors.red.shade600,
+                  ),
+                ),
+              ],
+            ),
+            if (item.specialInstructions?.isNotEmpty == true) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Special Instructions: ${item.specialInstructions}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                                             onPressed: () => _updateItemQuantityInOrder(index, item.quantity - 1),
+                      icon: Icon(
+                        Icons.remove_circle_outline,
+                        color: Colors.red.shade600,
+                      ),
+                    ),
+                    Text(
+                      item.quantity.toString(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                                             onPressed: () => _updateItemQuantityInOrder(index, item.quantity + 1),
+                      icon: Icon(
+                        Icons.add_circle_outline,
+                        color: Colors.green.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  '\$${item.totalPrice.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderSummaryCard() {
+    return Card(
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Subtotal:', style: TextStyle(fontSize: 14)),
+                Text('\$${_currentOrder!.subtotal.toStringAsFixed(2)}'),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Tax:', style: TextStyle(fontSize: 14)),
+                Text('\$${_currentOrder!.taxAmount.toStringAsFixed(2)}'),
+              ],
+            ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  '\$${_currentOrder!.total.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _updateItemQuantityInOrder(int index, int newQuantity) {
+    if (newQuantity <= 0) {
+      _removeItemFromOrder(index);
+    } else {
+      setState(() {
+        _currentOrder!.items[index] = _currentOrder!.items[index].copyWith(
+          quantity: newQuantity,
+        );
+        _currentOrder = _currentOrder!.copyWith(items: _currentOrder!.items);
+      });
+      _autoSaveOrder();
+    }
+  }
+
+  void _editOrderItem(int index) {
+    // Implementation for editing order item (can add special instructions, etc.)
+    _showOrderDetails();
+  }
+
+  void _showNotesDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Order Notes'),
+        content: TextField(
+          controller: _orderNotesController,
+          decoration: const InputDecoration(
+            hintText: 'Add special instructions...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _currentOrder = _currentOrder!.copyWith(
+                  specialInstructions: _orderNotesController.text,
+                );
+              });
+              Navigator.pop(context);
+              _autoSaveOrder();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildOrderPanel() {
@@ -1538,7 +2417,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   InkWell(
-                    onTap: () => _updateItemQuantity(index, item.quantity - 1),
+                    onTap: () => _updateItemQuantityInOrder(index, item.quantity - 1),
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       child: const Icon(Icons.remove, size: 14),
@@ -1552,7 +2431,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                     ),
                   ),
                   InkWell(
-                    onTap: () => _updateItemQuantity(index, item.quantity + 1),
+                    onTap: () => _updateItemQuantityInOrder(index, item.quantity + 1),
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       child: const Icon(Icons.add, size: 14),

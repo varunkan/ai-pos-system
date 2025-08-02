@@ -26,6 +26,7 @@ class OrderTypeSelectionScreen extends StatefulWidget {
 class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
   String? _selectedServerId;
   List<Order> _filteredOrders = [];
+  bool _isManualRefresh = false;
 
   @override
   void initState() {
@@ -37,7 +38,71 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
       // Use Consumer pattern to safely access UserService
       _setDefaultServer();
       _loadOrders();
+      
+      // Add listener to refresh orders when OrderService state changes
+      final orderService = Provider.of<OrderService?>(context, listen: false);
+      if (orderService != null) {
+        orderService.addListener(_onOrderServiceChanged);
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    // Remove listener to prevent memory leaks
+    final orderService = Provider.of<OrderService?>(context, listen: false);
+    if (orderService != null) {
+      orderService.removeListener(_onOrderServiceChanged);
+    }
+    super.dispose();
+  }
+
+  /// Handle order service changes (e.g., when orders are cancelled/updated)
+  void _onOrderServiceChanged() {
+    if (mounted) {
+      debugPrint('🔄 OrderService changed - refreshing POS dashboard');
+      // Use a delayed refresh to avoid excessive rebuilds
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _refreshOrdersFromService();
+        }
+      });
+    }
+  }
+
+  /// Refresh orders from existing service data (no database reload)
+  void _refreshOrdersFromService() {
+    try {
+      final orderService = Provider.of<OrderService?>(context, listen: false);
+      if (orderService == null) {
+        debugPrint('⚠️ OrderService not available yet');
+        return;
+      }
+      
+      // Use existing activeOrders data instead of reloading from database
+      final activeOrders = orderService.activeOrders;
+      
+      if (_selectedServerId == null) {
+        // "All Servers" view - don't load individual orders, only show counts
+        setState(() {
+          _filteredOrders = []; // Empty list - we'll show server summary instead
+        });
+        debugPrint('📊 ALL SERVERS VIEW: Showing server summary with order counts');
+      } else {
+        // Specific server selected - show only orders created by that server
+        final serverOrders = activeOrders.where((order) => order.userId == _selectedServerId).toList();
+        setState(() {
+          _filteredOrders = serverOrders;
+        });
+        debugPrint('📋 Loaded ${_filteredOrders.length} ACTIVE orders for server: $_selectedServerId');
+      }
+      
+    } catch (e) {
+      debugPrint('❌ Error refreshing orders from service: $e');
+      setState(() {
+        _filteredOrders = [];
+      });
+    }
   }
 
   void _setDefaultServer() {
@@ -64,35 +129,21 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
         return;
       }
       
-      // Use the proper activeOrders getter instead of filtering allOrders
-      final activeOrders = orderService.activeOrders;
-      
-      if (_selectedServerId == null) {
-        // "All Servers" view - don't load individual orders, only show counts
-        setState(() {
-          _filteredOrders = []; // Empty list - we'll show server summary instead
+      // Only force reload on initial load or manual refresh, not on every change
+      if (_filteredOrders.isEmpty || _isManualRefresh) {
+        _isManualRefresh = false;
+        // Force reload orders from database to ensure fresh data
+        orderService.loadOrders().then((_) {
+          if (!mounted) return;
+          _refreshOrdersFromService();
+        }).catchError((e) {
+          debugPrint('❌ Error reloading orders from database: $e');
         });
-        debugPrint('📊 ALL SERVERS VIEW: Showing server summary with order counts');
       } else {
-        // Specific server selected - show only orders created by that server
-        final serverOrders = activeOrders.where((order) => order.userId == _selectedServerId).toList();
-        setState(() {
-          _filteredOrders = serverOrders;
-        });
-        debugPrint('📋 Loaded ${_filteredOrders.length} ACTIVE orders for server: $_selectedServerId');
+        // Use existing data for faster refresh
+        _refreshOrdersFromService();
       }
       
-      // Debug server order counts (reduced frequency)
-      if (orderService.activeOrders.isNotEmpty) {
-        debugPrint('🔍 ORDER COUNTS: ${orderService.activeOrders.length} active orders found');
-        for (final order in orderService.activeOrders) {
-          if (order.userId == null || order.userId!.isEmpty) {
-            debugPrint('  ⚠️ Order ${order.orderNumber} has empty userId - needs assignment');
-          } else {
-            debugPrint('  ✅ Order ${order.orderNumber}: server=${order.userId}');
-          }
-        }
-      }
     } catch (e) {
       debugPrint('❌ Error loading orders: $e');
       setState(() {
@@ -206,32 +257,43 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
 
   void _editOrder(Order order) {
     try {
+      debugPrint('🔍 EDIT_ORDER: Starting edit order process for ${order.orderNumber}');
+      
       final userService = Provider.of<UserService?>(context, listen: false);
       
       if (userService == null) {
+        debugPrint('❌ EDIT_ORDER: UserService is null');
         _showServiceNotAvailableError();
         return;
       }
+      
+      debugPrint('✅ EDIT_ORDER: UserService found with ${userService.users.length} users');
       
       // Find the user who created the order or use admin as fallback
       User? orderUser;
       try {
         orderUser = userService.users.firstWhere((user) => user.id == order.userId);
+        debugPrint('✅ EDIT_ORDER: Found original user: ${orderUser.name} (${orderUser.id})');
       } catch (e) {
+        debugPrint('⚠️ EDIT_ORDER: Original user not found, looking for admin...');
         // If original user not found, use admin or first available user
         try {
           orderUser = userService.users.firstWhere(
             (user) => user.role == UserRole.admin,
           );
+          debugPrint('✅ EDIT_ORDER: Found admin user: ${orderUser.name} (${orderUser.id})');
         } catch (e) {
+          debugPrint('⚠️ EDIT_ORDER: No admin found, using first available user...');
           // If no admin found, use first available user
           if (userService.users.isNotEmpty) {
             orderUser = userService.users.first;
+            debugPrint('✅ EDIT_ORDER: Using first user: ${orderUser.name} (${orderUser.id})');
           }
         }
       }
       
       if (orderUser == null) {
+        debugPrint('❌ EDIT_ORDER: No valid user found');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('❌ Unable to edit order: No valid user found'),
@@ -241,30 +303,66 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
         return;
       }
       
-      debugPrint('🔍 DASHBOARD: Editing order ${order.orderNumber} with user ${orderUser.name} (${orderUser.id})');
+      debugPrint('🔍 EDIT_ORDER: Navigating to OrderCreationScreen with:');
+      debugPrint('  - Order: ${order.orderNumber} (${order.id})');
+      debugPrint('  - User: ${orderUser.name} (${orderUser.id})');
+      debugPrint('  - Order Type: ${order.type}');
+      debugPrint('  - Table ID: ${order.tableId}');
+      debugPrint('  - Items count: ${order.items.length}');
+      
+      // Convert OrderType enum to string
+      String orderTypeString;
+      switch (order.type) {
+        case OrderType.dineIn:
+          orderTypeString = 'dine-in';
+          break;
+        case OrderType.takeaway:
+        case OrderType.delivery:
+          orderTypeString = 'takeout';
+          break;
+        default:
+          orderTypeString = 'takeout';
+      }
+      
+      debugPrint('  - Order Type String: $orderTypeString');
       
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => OrderCreationScreen(
-            user: orderUser!,
-            orderType: order.type == OrderType.dineIn ? 'dine-in' : 'takeout',
-            existingOrder: order, // Pass the existing order for editing
-            table: order.tableId != null ? 
-              Provider.of<TableService?>(context, listen: false)?.getTableById(order.tableId!) : null,
-            numberOfPeople: order.type == OrderType.dineIn ? order.items.length : null,
-            orderNumber: order.orderNumber,
-          ),
+          builder: (context) {
+            debugPrint('🏗️ EDIT_ORDER: Building OrderCreationScreen...');
+            return OrderCreationScreen(
+              user: orderUser!,
+              orderType: orderTypeString,
+              existingOrder: order, // Pass the existing order for editing
+              table: order.tableId != null ? 
+                Provider.of<TableService?>(context, listen: false)?.getTableById(order.tableId!) : null,
+              numberOfPeople: order.type == OrderType.dineIn ? order.items.length : null,
+              orderNumber: order.orderNumber,
+            );
+          },
         ),
       ).then((_) {
-        debugPrint('🔄 DASHBOARD: Returned from edit order, reloading orders...');
+        debugPrint('🔄 EDIT_ORDER: Returned from OrderCreationScreen, reloading orders...');
         _loadOrders();
+      }).catchError((error) {
+        debugPrint('❌ EDIT_ORDER: Navigation error: $error');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Navigation failed: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
       });
-    } catch (e) {
-      debugPrint('❌ Error editing order: $e');
+      
+      debugPrint('✅ EDIT_ORDER: Navigation initiated successfully');
+      
+    } catch (e, stackTrace) {
+      debugPrint('❌ EDIT_ORDER: Error in _editOrder: $e');
+      debugPrint('❌ EDIT_ORDER: Stack trace: $stackTrace');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('❌ Unable to edit order. Please try again.'),
+        SnackBar(
+          content: Text('❌ Unable to edit order: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -988,151 +1086,13 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
           )
         else
           Column(
-            children: _filteredOrders.map((order) => _buildMobileOrderTile(order)).toList(),
+            children: _filteredOrders.map((order) => _buildMobileOrderCard(order)).toList(),
           ),
       ],
     );
   }
 
-  // NEW: Mobile order tile
-  Widget _buildMobileOrderTile(Order order) {
-    debugPrint('📱 Building mobile order tile for order: ${order.orderNumber} with ${order.items.length} items');
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  'Order #${order.orderNumber}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(order.status).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  order.status.name.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: _getStatusColor(order.status),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                order.type == OrderType.dineIn ? Icons.restaurant : Icons.takeout_dining,
-                size: 16,
-                color: Colors.grey.shade600,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                order.type.name,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Show order items if available
-          if (order.items.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Items:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  ...order.items.take(3).map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text(
-                      '• ${item.quantity}x ${item.menuItem?.name ?? 'Unknown Item'}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  )),
-                  if (order.items.length > 3)
-                    Text(
-                      '... and ${order.items.length - 3} more',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${order.items.length} items',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade500,
-                ),
-              ),
-              Text(
-                '\$${order.total.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // NEW: Mobile server summary
   Widget _buildMobileServerSummary(OrderService orderService) {
@@ -1269,6 +1229,24 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
               onPressed: _logout,
               tooltip: 'Logout',
             ),
+                      // Manual refresh button
+          IconButton(
+            onPressed: () {
+              debugPrint('🔄 Manual refresh triggered');
+              _isManualRefresh = true;
+              _loadOrders();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🔄 Refreshing orders...'),
+                  duration: Duration(seconds: 1),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            },
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Orders',
+          ),
+            const SizedBox(width: 8),
           ],
         ),
 
@@ -1795,6 +1773,9 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
   }
 
   Widget _buildServerSummarySection(OrderService orderService) {
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1807,33 +1788,43 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
             end: Alignment.bottomRight,
           ),
         ),
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isPhone ? 12 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.analytics, color: Colors.orange.shade600),
-                const SizedBox(width: 8),
-                Text(
-                  'Order Summary by Server',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade800,
+                Icon(
+                  Icons.analytics, 
+                  color: Colors.orange.shade600,
+                  size: isPhone ? 18 : 24,
+                ),
+                SizedBox(width: isPhone ? 6 : 8),
+                Expanded(
+                  child: Text(
+                    'Order Summary by Server',
+                    style: TextStyle(
+                      fontSize: isPhone ? 14 : 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange.shade800,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: isPhone ? 2 : 4),
             Text(
               'Select a specific server to view and create orders',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: isPhone ? 11 : 14,
                 color: Colors.orange.shade700,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isPhone ? 12 : 16),
             Consumer<UserService?>(
               builder: (context, userService, _) {
                 if (userService == null) return const SizedBox.shrink();
@@ -1850,7 +1841,7 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                       'No servers available',
                       style: TextStyle(
                         color: Colors.orange.shade600,
-                        fontSize: 16,
+                        fontSize: isPhone ? 12 : 16,
                       ),
                     ),
                   );
@@ -1876,13 +1867,16 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
   }
 
   Widget _buildServerSummaryTile(User server, int orderCount) {
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: () => _selectServer(server.id),
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(isPhone ? 10 : 12),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(8),
@@ -1894,17 +1888,18 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
           child: Row(
             children: [
               CircleAvatar(
-                radius: 20,
+                radius: isPhone ? 16 : 20,
                 backgroundColor: orderCount > 0 ? Colors.orange.shade600 : Colors.grey.shade400,
                 child: Text(
                   server.name.substring(0, 1).toUpperCase(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
+                    fontSize: isPhone ? 12 : 14,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isPhone ? 8 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1912,23 +1907,30 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                     Text(
                       server.name,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: isPhone ? 14 : 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.grey.shade800,
                       ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                     Text(
                       server.role.toString().split('.').last.toUpperCase(),
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: isPhone ? 10 : 12,
                         color: Colors.grey.shade600,
                       ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isPhone ? 8 : 12, 
+                  vertical: isPhone ? 4 : 6
+                ),
                 decoration: BoxDecoration(
                   color: orderCount > 0 ? Colors.orange.shade600 : Colors.grey.shade400,
                   borderRadius: BorderRadius.circular(16),
@@ -1938,14 +1940,14 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                   children: [
                     Icon(
                       Icons.receipt_long,
-                      size: 16,
+                      size: isPhone ? 12 : 16,
                       color: Colors.white,
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: isPhone ? 2 : 4),
                     Text(
                       '$orderCount',
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: TextStyle(
+                        fontSize: isPhone ? 11 : 14,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -1953,10 +1955,10 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: isPhone ? 6 : 8),
               Icon(
                 Icons.arrow_forward_ios,
-                size: 16,
+                size: isPhone ? 12 : 16,
                 color: Colors.grey.shade500,
               ),
             ],
@@ -2050,279 +2052,272 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
   Widget _buildMobileOrderCard(Order order) {
     final statusColor = _getStatusColor(order.status);
     
-    return GestureDetector(
-      onTap: () => _editOrder(order),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header section with order number and status
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.05),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  // Order number with icon
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.receipt_long,
-                            color: statusColor,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Order #${order.orderNumber}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _getOrderTypeText(order.type),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Status badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      order.status.toString().split('.').last.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            debugPrint('📱 MOBILE: ============ CARD TAP DETECTED ============');
+            debugPrint('📱 MOBILE: Card tapped - Order ${order.orderNumber}');
+            debugPrint('📱 MOBILE: Order ID: ${order.id}');
+            debugPrint('📱 MOBILE: Order Type: ${order.type}');
+            debugPrint('📱 MOBILE: Order Status: ${order.status}');
+            debugPrint('📱 MOBILE: Items Count: ${order.items.length}');
+            debugPrint('📱 MOBILE: User ID: ${order.userId}');
+            debugPrint('📱 MOBILE: Table ID: ${order.tableId}');
+            debugPrint('📱 MOBILE: About to call _editOrder...');
             
-            // Content section
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Order details row
-                  Row(
-                    children: [
-                      // Items count
-                      Expanded(
-                        child: _buildDetailItem(
-                          icon: Icons.restaurant_menu,
-                          label: 'Items',
-                          value: '${order.items.length}',
-                          color: Colors.blue,
+            try {
+              _editOrder(order);
+              debugPrint('📱 MOBILE: ✅ _editOrder call completed successfully');
+            } catch (e, stackTrace) {
+              debugPrint('📱 MOBILE: ❌ Error calling _editOrder: $e');
+              debugPrint('📱 MOBILE: Stack trace: $stackTrace');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('❌ Mobile tap error: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(12),
+          splashColor: statusColor.withValues(alpha: 0.2),
+          highlightColor: statusColor.withValues(alpha: 0.1),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: statusColor.withValues(alpha: 0.2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Row - Order Number + Status
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Order Number Section
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              Icons.receipt_long,
+                              color: statusColor,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '#${order.orderNumber}',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                Text(
+                                  _getOrderTypeText(order.type),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Status Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        order.status.toString().split('.').last.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                      // Total amount
-                      Expanded(
-                        child: _buildDetailItem(
-                          icon: Icons.attach_money,
-                          label: 'Total',
-                          value: '\$${order.total.toStringAsFixed(2)}',
-                          color: Colors.green,
-                        ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Details Row
+                Row(
+                  children: [
+                    // Items Count
+                    Expanded(
+                      child: _buildMobileDetailChip(
+                        icon: Icons.restaurant_menu,
+                        label: '${order.items.length} Items',
+                        color: Colors.blue,
                       ),
-                      // Table info (if dine-in)
-                      if (order.type == OrderType.dineIn && order.tableId != null && order.tableId!.isNotEmpty)
-                        Expanded(
-                          child: Consumer<TableService>(
-                            builder: (context, tableService, child) {
-                              final table = tableService.getTableById(order.tableId!);
-                              String tableDisplay;
-                              if (table != null) {
-                                tableDisplay = table.number.toString();
+                    ),
+                    const SizedBox(width: 8),
+                    // Total Amount
+                    Expanded(
+                      child: _buildMobileDetailChip(
+                        icon: Icons.attach_money,
+                        label: '\$${order.total.toStringAsFixed(2)}',
+                        color: Colors.green,
+                      ),
+                    ),
+                    // Table (if dine-in)
+                    if (order.type == OrderType.dineIn && order.tableId != null && order.tableId!.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Consumer<TableService>(
+                          builder: (context, tableService, child) {
+                            final table = tableService.getTableById(order.tableId!);
+                            String tableDisplay;
+                            if (table != null) {
+                              tableDisplay = 'T${table.number}';
+                            } else {
+                              final match = RegExp(r'table_(\d+)').firstMatch(order.tableId!);
+                              if (match != null) {
+                                tableDisplay = 'T${match.group(1)!}';
                               } else {
-                                final match = RegExp(r'table_(\d+)').firstMatch(order.tableId!);
-                                if (match != null) {
-                                  tableDisplay = match.group(1)!;
+                                final numbers = RegExp(r'\d+').allMatches(order.tableId!);
+                                if (numbers.isNotEmpty) {
+                                  tableDisplay = 'T${numbers.first.group(0)!}';
                                 } else {
-                                  final numbers = RegExp(r'\d+').allMatches(order.tableId!);
-                                  if (numbers.isNotEmpty) {
-                                    tableDisplay = numbers.first.group(0)!;
-                                  } else {
-                                    tableDisplay = '?';
-                                  }
+                                  tableDisplay = 'T?';
                                 }
                               }
-                              return _buildDetailItem(
-                                icon: Icons.table_restaurant,
-                                label: 'Table',
-                                value: tableDisplay,
-                                color: Colors.orange,
-                              );
-                            },
-                          ),
+                            }
+                            return _buildMobileDetailChip(
+                              icon: Icons.table_restaurant,
+                              label: tableDisplay,
+                              color: Colors.orange,
+                            );
+                          },
                         ),
+                      ),
                     ],
+                  ],
+                ),
+                
+                const SizedBox(height: 10),
+                
+                // Enhanced Tap to Edit Hint with better visual cues
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
                   ),
-                  
-                  // Action buttons row
-                  const SizedBox(height: 16),
-                  Row(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: _buildActionButton(
-                          icon: Icons.edit,
-                          label: 'Edit',
-                          color: Colors.blue,
-                          onTap: () => _editOrder(order),
+                      Icon(
+                        Icons.edit,
+                        color: statusColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tap to Edit Order',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: statusColor,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildActionButton(
-                          icon: Icons.print,
-                          label: 'Print',
-                          color: Colors.green,
-                          onTap: () => _printOrder(order),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildActionButton(
-                          icon: Icons.check_circle,
-                          label: 'Complete',
-                          color: Colors.orange,
-                          onTap: () => _completeOrder(order),
-                        ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: statusColor,
+                        size: 12,
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  /// Helper widget for order detail items
-  Widget _buildDetailItem({
+  /// Mobile detail chip widget
+  Widget _buildMobileDetailChip({
     required IconData icon,
     required String label,
-    required String value,
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+        ),
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             icon,
             color: color,
-            size: 20,
+            size: 14,
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Helper widget for action buttons
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: color.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 18,
-            ),
-            const SizedBox(height: 4),
-            Text(
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: color,
               ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -2626,6 +2621,7 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
       ),
     );
   }
+
 
 
 }

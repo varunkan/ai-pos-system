@@ -11,6 +11,7 @@ import '../widgets/error_dialog.dart';
 import '../widgets/back_button.dart';
 import 'order_creation_screen.dart';
 import 'order_audit_screen.dart';
+import '../services/order_log_service.dart'; // Added import for OrderLogService
 
 class AdminOrdersScreen extends StatefulWidget {
   final User user;
@@ -634,186 +635,201 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       itemCount: _filteredOrders.length,
       itemBuilder: (context, index) {
         final order = _filteredOrders[index];
-        return _buildOrderCard(order);
+        return _buildOrderCard(order, order.status != OrderStatus.completed && order.status != OrderStatus.cancelled);
       },
     );
   }
 
-  Widget _buildOrderCard(Order order) {
-    final canEdit = order.status != OrderStatus.completed && 
-                   order.status != OrderStatus.cancelled;
-    final cancelledBy = _getCancelledByServerName(order);
-    
+  Widget _buildOrderCard(Order order, bool canEdit) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
       child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
+        leading: CircleAvatar(
+          backgroundColor: _getStatusColor(order.status).withOpacity(0.1),
+          child: Text(
+            order.orderNumber.split('-').last,
+            style: TextStyle(
+              color: _getStatusColor(order.status),
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
         title: Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Order #${order.orderNumber}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+              child: Text(
+                'Order #${order.orderNumber}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            // Enhanced audit indicator badge
+            Consumer<OrderLogService>(
+              builder: (context, orderLogService, child) {
+                final logs = orderLogService.getLogsForOrder(order.id);
+                return GestureDetector(
+                  onTap: () => _viewOrderAudit(order),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: logs.isEmpty ? Colors.grey.shade300 : Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: logs.isEmpty ? Colors.grey.shade400 : Colors.blue.shade300,
+                        width: 1,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    order.customerName ?? 'No customer name',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  // Show cancellation info for cancelled orders
-                  if (order.status == OrderStatus.cancelled && cancelledBy != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.person,
-                          size: 14,
-                          color: Colors.red.shade600,
+                          Icons.history,
+                          size: 12,
+                          color: logs.isEmpty ? Colors.grey.shade600 : Colors.blue.shade700,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Cancelled by: $cancelledBy',
+                          '${logs.length}',
                           style: TextStyle(
-                            color: Colors.red.shade600,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: logs.isEmpty ? Colors.grey.shade600 : Colors.blue.shade700,
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                );
+              },
             ),
-            _buildStatusChip(order.status),
           ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
+            Text(
+              '${_getOrderTypeText(order.type)} • ${order.items.length} items • \$${order.totalAmount.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
             Row(
               children: [
-                Icon(
-                  order.type == OrderType.dineIn ? Icons.table_restaurant : Icons.takeout_dining,
-                  size: 16,
-                  color: Colors.grey.shade600,
-                ),
-                const SizedBox(width: 4),
+                _buildStatusChip(order.status),
+                const SizedBox(width: 8),
                 Text(
-                  order.type.name.toUpperCase(),
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
+                  'Table: ${_getTableDisplay(order)}',
+                  style: const TextStyle(
                     fontSize: 12,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Icon(
-                  Icons.access_time,
-                  size: 16,
-                  color: Colors.grey.shade600,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  _formatDateTime(order.createdAt),
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
+                    color: Colors.grey,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${order.items.length} items • \$${order.subtotal.toStringAsFixed(2)}',
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontSize: 14,
-              ),
-            ),
           ],
         ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            switch (value) {
-              case 'view':
-                _viewOrderDetails(order);
-                break;
-              case 'edit':
-                _editOrder(order);
-                break;
-              case 'cancel':
-                _cancelOrder(order);
-                break;
-              case 'delete':
-                _deleteOrder(order);
-                break;
-              case 'audit':
-                _viewOrderAudit(order);
-                break;
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'view',
-              child: Row(
-                children: [
-                  Icon(Icons.visibility, size: 16),
-                  SizedBox(width: 8),
-                  Text('View Details'),
-                ],
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Quick audit access button
+            IconButton(
+              icon: const Icon(Icons.history, size: 18),
+              onPressed: () => _viewOrderAudit(order),
+              tooltip: 'View Order Activity Log',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.blue.shade50,
+                foregroundColor: Colors.blue.shade700,
+                padding: const EdgeInsets.all(8),
+                minimumSize: const Size(32, 32),
               ),
             ),
-            if (canEdit)
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 16),
-                    SizedBox(width: 8),
-                    Text('Edit Order'),
-                  ],
+            const SizedBox(width: 4),
+            // Main menu button
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                switch (value) {
+                  case 'view':
+                    _viewOrderDetails(order);
+                    break;
+                  case 'edit':
+                    _editOrder(order);
+                    break;
+                  case 'cancel':
+                    _cancelOrder(order);
+                    break;
+                  case 'delete':
+                    _deleteOrder(order);
+                    break;
+                  case 'audit':
+                    _viewOrderAudit(order);
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'view',
+                  child: Row(
+                    children: [
+                      Icon(Icons.visibility, size: 16),
+                      SizedBox(width: 8),
+                      Text('View Details'),
+                    ],
+                  ),
                 ),
-              ),
-            if (canEdit && order.status != OrderStatus.cancelled)
-              const PopupMenuItem(
-                value: 'cancel',
-                child: Row(
-                  children: [
-                    Icon(Icons.cancel, size: 16, color: Colors.orange),
-                    SizedBox(width: 8),
-                    Text('Cancel Order', style: TextStyle(color: Colors.orange)),
-                  ],
+                if (canEdit)
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 16),
+                        SizedBox(width: 8),
+                        Text('Edit Order'),
+                      ],
+                    ),
+                  ),
+                if (canEdit && order.status != OrderStatus.cancelled)
+                  const PopupMenuItem(
+                    value: 'cancel',
+                    child: Row(
+                      children: [
+                        Icon(Icons.cancel, size: 16, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text('Cancel Order', style: TextStyle(color: Colors.orange)),
+                      ],
+                    ),
+                  ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 16, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Delete Order', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
                 ),
-              ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, size: 16, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete Order', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'audit',
-              child: Row(
-                children: [
-                  Icon(Icons.receipt, size: 16),
-                  SizedBox(width: 8),
-                  Text('View Audit'),
-                ],
-              ),
+                // Enhanced audit menu item
+                PopupMenuItem(
+                  value: 'audit',
+                  child: Consumer<OrderLogService>(
+                    builder: (context, orderLogService, child) {
+                      final logs = orderLogService.getLogsForOrder(order.id);
+                      return Row(
+                        children: [
+                          Icon(Icons.receipt, size: 16, color: Colors.blue.shade700),
+                          const SizedBox(width: 8),
+                          Text('Activity Log (${logs.length})', style: TextStyle(color: Colors.blue.shade700)),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -880,6 +896,46 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  Color _getStatusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return Colors.orange;
+      case OrderStatus.confirmed:
+        return Colors.blue;
+      case OrderStatus.preparing:
+        return Colors.indigo;
+      case OrderStatus.ready:
+        return Colors.green;
+      case OrderStatus.served:
+        return Colors.teal;
+      case OrderStatus.completed:
+        return Colors.green;
+      case OrderStatus.cancelled:
+        return Colors.red;
+      case OrderStatus.refunded:
+        return Colors.purple;
+    }
+  }
+
+     String _getOrderTypeText(OrderType type) {
+     switch (type) {
+       case OrderType.dineIn:
+         return 'DINE-IN';
+       case OrderType.takeaway:
+         return 'TAKEOUT';
+       case OrderType.delivery:
+         return 'DELIVERY';
+       case OrderType.catering:
+         return 'CATERING';
+     }
+   }
+
+  String _getTableDisplay(Order order) {
+    if (order.tableId == null) return 'N/A';
+    final table = Provider.of<TableService>(context, listen: false).getTableById(order.tableId!);
+    return table?.number.toString() ?? order.tableId!;
   }
 }
 
