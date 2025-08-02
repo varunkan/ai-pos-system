@@ -110,26 +110,54 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   Widget _buildCategoryGrid() {
+    // Get responsive sizing based on device type
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    
+    // Responsive grid configuration - Mobile-friendly design
+    final crossAxisCount = isPhone ? 1 : isTablet ? 2 : 3; // 1 column on mobile for better readability
+    final crossAxisSpacing = isPhone ? 16.0 : isTablet ? 12.0 : 16.0; // Comfortable spacing on mobile
+    final mainAxisSpacing = isPhone ? 16.0 : isTablet ? 12.0 : 16.0; // Comfortable spacing on mobile
+    final childAspectRatio = isPhone ? 1.0 : isTablet ? 1.3 : 1.2; // Comfortable aspect ratio for mobile
+    final padding = isPhone ? 16.0 : isTablet ? 12.0 : 16.0; // Comfortable padding on mobile
+    
+    // Responsive font sizes and spacing - Mobile-friendly design
+    final iconSize = isPhone ? 32.0 : isTablet ? 42.0 : 48.0; // Comfortable icon for mobile readability
+    final titleFontSize = isPhone ? 16.0 : isTablet ? 16.0 : 18.0; // Comfortable font for mobile readability
+    final descriptionFontSize = isPhone ? 14.0 : isTablet ? 12.0 : 13.0; // Comfortable description for mobile
+    final cardPadding = isPhone ? 16.0 : isTablet ? 14.0 : 16.0; // Comfortable padding for mobile
+    final spacing = isPhone ? 12.0 : isTablet ? 10.0 : 12.0; // Comfortable spacing for mobile
+    
     if (_categories.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.restaurant_menu, size: 64, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
+            Icon(
+              Icons.restaurant_menu, 
+              size: isPhone ? 48.0 : 64.0, 
+              color: Colors.grey.shade400
+            ),
+            SizedBox(height: isPhone ? 12.0 : 16.0),
             Text(
               'No Categories Available',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.grey.shade600,
+                fontSize: isPhone ? 18.0 : 24.0,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Please contact your administrator to add menu categories',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade500,
+            SizedBox(height: isPhone ? 6.0 : 8.0),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: isPhone ? 16.0 : 32.0),
+              child: Text(
+                'Please contact your administrator to add menu categories',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade500,
+                  fontSize: isPhone ? 13.0 : 16.0,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -137,13 +165,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(padding),
       child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.2,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: crossAxisSpacing,
+          mainAxisSpacing: mainAxisSpacing,
+          childAspectRatio: childAspectRatio,
         ),
         itemCount: _categories.length,
         itemBuilder: (context, index) {
@@ -166,35 +194,37 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(cardPadding),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.restaurant_menu,
-                        size: 48,
+                        size: iconSize,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: spacing),
                       Text(
                         category.name,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          fontSize: titleFontSize,
                         ),
                         textAlign: TextAlign.center,
-                        maxLines: 2,
+                        maxLines: isPhone ? 1 : 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (category.description != null) ...[
-                        const SizedBox(height: 4),
+                        SizedBox(height: isPhone ? 2.0 : 4.0),
                         Text(
                           category.description!,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                            fontSize: descriptionFontSize,
                           ),
                           textAlign: TextAlign.center,
-                          maxLines: 2,
+                          maxLines: isPhone ? 1 : 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -210,6 +240,27 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   Widget _buildItemGrid(Category category) {
+    // Get responsive sizing based on device type
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    
+    // Responsive grid configuration - Mobile-friendly design
+    final crossAxisCount = isPhone ? 1 : isTablet ? 2 : 3; // 1 column on mobile for better readability
+    final crossAxisSpacing = isPhone ? 16.0 : isTablet ? 12.0 : 16.0; // Comfortable spacing on mobile
+    final mainAxisSpacing = isPhone ? 16.0 : isTablet ? 12.0 : 16.0; // Comfortable spacing on mobile
+    final childAspectRatio = isPhone ? 0.6 : isTablet ? 0.9 : 0.75; // Comfortable aspect ratio for mobile
+    final padding = isPhone ? 16.0 : isTablet ? 12.0 : 16.0; // Comfortable padding on mobile
+    
+    // Responsive font sizes and spacing - Mobile-friendly design
+    final headerPadding = isPhone ? 16.0 : isTablet ? 14.0 : 16.0; // Comfortable header padding for mobile
+    final titleFontSize = isPhone ? 18.0 : isTablet ? 18.0 : 20.0; // Comfortable title for mobile readability
+    final itemTitleFontSize = isPhone ? 16.0 : isTablet ? 14.0 : 15.0; // Comfortable item title for mobile
+    final itemDescriptionFontSize = isPhone ? 14.0 : isTablet ? 12.0 : 13.0; // Comfortable description for mobile
+    final priceFontSize = isPhone ? 16.0 : isTablet ? 16.0 : 18.0; // Comfortable price for mobile
+    final cardPadding = isPhone ? 16.0 : isTablet ? 10.0 : 12.0; // Comfortable card padding for mobile
+    final iconSize = isPhone ? 28.0 : isTablet ? 40.0 : 48.0; // Comfortable icon for mobile readability
+    
     final menuService = Provider.of<MenuService>(context, listen: false);
     final itemsFuture = menuService.getMenuItemsByCategoryId(category.id);
 
@@ -218,20 +269,22 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         Container(
           color: Theme.of(context).colorScheme.surface,
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(headerPadding),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back),
+                  icon: Icon(Icons.arrow_back, size: isPhone ? 20.0 : 24.0),
                   onPressed: () => setState(() => _selectedCategory = null),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: isPhone ? 6.0 : 8.0),
                 Expanded(
                   child: Text(
                     category.name,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
+                      fontSize: titleFontSize,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -251,21 +304,30 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
-                      const SizedBox(height: 16),
+                      Icon(
+                        Icons.error_outline, 
+                        size: isPhone ? 48.0 : 64.0, 
+                        color: Colors.red.shade300
+                      ),
+                      SizedBox(height: isPhone ? 12.0 : 16.0),
                       Text(
                         'Error loading items',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: Colors.red.shade700,
+                          fontSize: isPhone ? 18.0 : 24.0,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        snapshot.error.toString(),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade600,
+                      SizedBox(height: isPhone ? 6.0 : 8.0),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: isPhone ? 16.0 : 32.0),
+                        child: Text(
+                          snapshot.error.toString(),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey.shade600,
+                            fontSize: isPhone ? 13.0 : 16.0,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -279,21 +341,30 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.restaurant, size: 64, color: Colors.grey.shade400),
-                      const SizedBox(height: 16),
+                      Icon(
+                        Icons.restaurant, 
+                        size: isPhone ? 48.0 : 64.0, 
+                        color: Colors.grey.shade400
+                      ),
+                      SizedBox(height: isPhone ? 12.0 : 16.0),
                       Text(
                         'No Items in ${category.name}',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: Colors.grey.shade600,
+                          fontSize: isPhone ? 18.0 : 24.0,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'This category doesn\'t have any menu items yet',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade500,
+                      SizedBox(height: isPhone ? 6.0 : 8.0),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: isPhone ? 16.0 : 32.0),
+                        child: Text(
+                          'This category doesn\'t have any menu items yet',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey.shade500,
+                            fontSize: isPhone ? 13.0 : 16.0,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -301,13 +372,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               }
 
               return Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(padding),
                 child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.75,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: crossAxisSpacing,
+                    mainAxisSpacing: mainAxisSpacing,
+                    childAspectRatio: childAspectRatio,
                   ),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
@@ -342,7 +413,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                   ),
                                   child: Icon(
                                     Icons.restaurant,
-                                    size: 48,
+                                    size: iconSize,
                                     color: Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
@@ -350,7 +421,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                               Expanded(
                                 flex: 2,
                                 child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
+                                  padding: EdgeInsets.all(cardPadding),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -358,17 +429,19 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                         item.name,
                                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                           fontWeight: FontWeight.bold,
+                                          fontSize: itemTitleFontSize,
                                         ),
-                                        maxLines: 1,
+                                        maxLines: isPhone ? 1 : 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 4),
+                                      SizedBox(height: isPhone ? 2.0 : 4.0),
                                       Text(
                                         item.description,
                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: Colors.grey.shade600,
+                                          fontSize: itemDescriptionFontSize,
                                         ),
-                                        maxLines: 2,
+                                        maxLines: isPhone ? 1 : 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const Spacer(),
@@ -377,6 +450,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                           fontWeight: FontWeight.bold,
                                           color: Theme.of(context).colorScheme.primary,
+                                          fontSize: priceFontSize,
                                         ),
                                       ),
                                     ],

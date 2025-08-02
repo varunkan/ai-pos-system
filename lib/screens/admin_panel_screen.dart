@@ -28,6 +28,7 @@ import '../screens/user_management_screen.dart';
 import '../screens/user_activity_monitoring_screen.dart';
 import '../screens/free_cloud_setup_screen.dart';
 import '../services/activity_log_service.dart';
+import '../models/activity_log.dart';
 import '../services/cross_platform_database_service.dart';
 import '../widgets/printer_status_widget.dart';
 
@@ -1128,6 +1129,114 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
     }
   }
 
+  Future<void> _generateTestActivityLogs() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Generate Test Activity Logs'),
+        content: const Text('This will generate various test activity logs to demonstrate the audit functionality. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Generate Logs'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() { _isLoading = true; });
+      
+      try {
+        final activityLogService = Provider.of<ActivityLogService>(context, listen: false);
+        
+        // Generate various types of activity logs
+        await activityLogService.logActivity(
+          action: ActivityAction.login,
+          description: 'Test login activity',
+          screenName: 'Admin Panel',
+          metadata: {'test': true, 'source': 'admin_panel'},
+        );
+
+        await activityLogService.logActivity(
+          action: ActivityAction.userCreated,
+          description: 'Test user creation',
+          targetName: 'Test User',
+          screenName: 'Admin Panel',
+          metadata: {'test': true, 'source': 'admin_panel'},
+        );
+
+        await activityLogService.logActivity(
+          action: ActivityAction.orderCreated,
+          description: 'Test order creation',
+          targetName: 'Test Order #123',
+          screenName: 'Admin Panel',
+          metadata: {'test': true, 'source': 'admin_panel'},
+        );
+
+        await activityLogService.logActivity(
+          action: ActivityAction.paymentProcessed,
+          description: 'Test payment processing',
+          targetName: 'Payment #456',
+          financialAmount: 25.99,
+          screenName: 'Admin Panel',
+          metadata: {'test': true, 'source': 'admin_panel'},
+        );
+
+        await activityLogService.logActivity(
+          action: ActivityAction.menuItemUpdated,
+          description: 'Test menu item update',
+          targetName: 'Test Menu Item',
+          screenName: 'Admin Panel',
+          metadata: {'test': true, 'source': 'admin_panel'},
+        );
+
+        await activityLogService.logActivity(
+          action: ActivityAction.systemError,
+          level: ActivityLevel.error,
+          description: 'Test error log',
+          errorMessage: 'This is a test error message',
+          screenName: 'Admin Panel',
+          metadata: {'test': true, 'source': 'admin_panel'},
+        );
+
+        // Check if logs were created
+        final allLogs = activityLogService.allLogs;
+        final recentLogs = activityLogService.recentLogs;
+        
+        debugPrint('Total activity logs: ${allLogs.length}');
+        debugPrint('Recent activity logs: ${recentLogs.length}');
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Generated ${recentLogs.length} test activity logs! Check the Activity tab.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error generating test activity logs: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to generate test logs: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() { _isLoading = false; });
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return LoadingOverlay(
@@ -1348,6 +1457,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
   }
 
   Widget _buildCategoriesTab() {
+    // Get responsive sizing based on device type
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    
+    // Responsive padding and spacing
+    final padding = isPhone ? 12.0 : isTablet ? 14.0 : 16.0;
+    final buttonPadding = isPhone ? 8.0 : isTablet ? 10.0 : 12.0;
+    final buttonSpacing = isPhone ? 6.0 : isTablet ? 8.0 : 12.0;
+    
     return Column(
       children: [
         _buildTabHeader(
@@ -1355,71 +1474,160 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
           subtitle: 'Manage menu categories',
           onAddPressed: _addCategory,
         ),
-        // Add Oh Bombay Menu loading section
+        // Add Oh Bombay Menu loading section - Responsive layout
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(padding),
           child: Column(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.restaurant),
-                      label: const Text('Load Oh Bombay Menu'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: _loadOhBombayMenu,
+              // Responsive button layout for mobile
+              if (isPhone) ...[
+                // Mobile: Stacked buttons
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.restaurant),
+                    label: const Text('Load Oh Bombay Menu'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange.shade700,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: buttonPadding),
                     ),
+                    onPressed: _loadOhBombayMenu,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.dining),
-                      label: const Text('Load Sample Menu'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: _loadSampleMenu,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.bug_report),
-                      label: const Text('Test Menu Service'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.purple.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: _testMenuService,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.add_shopping_cart),
-                  label: const Text('Create Test Orders (with Audit Logs)'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: _createTestOrders,
                 ),
-              ),
+                SizedBox(height: buttonSpacing),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.dining),
+                    label: const Text('Load Sample Menu'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: buttonPadding),
+                    ),
+                    onPressed: _loadSampleMenu,
+                  ),
+                ),
+                SizedBox(height: buttonSpacing),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.bug_report),
+                    label: const Text('Test Menu Service'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple.shade700,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: buttonPadding),
+                    ),
+                    onPressed: _testMenuService,
+                  ),
+                ),
+                SizedBox(height: buttonSpacing),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.add_shopping_cart),
+                    label: const Text('Create Test Orders'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: buttonPadding),
+                    ),
+                    onPressed: _createTestOrders,
+                  ),
+                ),
+                SizedBox(height: buttonSpacing),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.analytics),
+                    label: const Text('Generate Test Activity Logs'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange.shade700,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: buttonPadding),
+                    ),
+                    onPressed: _generateTestActivityLogs,
+                  ),
+                ),
+              ] else ...[
+                // Tablet/Desktop: Row layout
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.restaurant),
+                        label: const Text('Load Oh Bombay Menu'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade700,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: buttonPadding),
+                        ),
+                        onPressed: _loadOhBombayMenu,
+                      ),
+                    ),
+                    SizedBox(width: buttonSpacing),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.dining),
+                        label: const Text('Load Sample Menu'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade700,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: buttonPadding),
+                        ),
+                        onPressed: _loadSampleMenu,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: buttonSpacing),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.bug_report),
+                        label: const Text('Test Menu Service'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple.shade700,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: buttonPadding),
+                        ),
+                        onPressed: _testMenuService,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: buttonSpacing),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.add_shopping_cart),
+                    label: const Text('Create Test Orders (with Audit Logs)'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: buttonPadding),
+                    ),
+                    onPressed: _createTestOrders,
+                  ),
+                ),
+                SizedBox(height: buttonSpacing),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.analytics),
+                    label: const Text('Generate Test Activity Logs'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange.shade700,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: buttonPadding),
+                    ),
+                    onPressed: _generateTestActivityLogs,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -1433,13 +1641,17 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                   onAction: _addCategory,
                 )
               : ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: isPhone ? 8.0 : 16.0),
                   itemCount: _categories.length,
                   itemBuilder: (context, index) {
                     final category = _categories[index];
                     final itemCount = _menuItems.where((item) => item.categoryId == category.id).length;
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      margin: EdgeInsets.symmetric(
+                        horizontal: isPhone ? 4.0 : 8.0, 
+                        vertical: isPhone ? 2.0 : 4.0
+                      ),
                       elevation: 2,
                       child: Container(
                         decoration: BoxDecoration(
@@ -1450,34 +1662,44 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                           ),
                         ),
                         child: ListTile(
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: isPhone ? 8.0 : 16.0,
+                            vertical: isPhone ? 4.0 : 8.0,
+                          ),
                           leading: Container(
-                            width: 50,
-                            height: 50,
+                            width: isPhone ? 40.0 : 50.0,
+                            height: isPhone ? 40.0 : 50.0,
                             decoration: BoxDecoration(
                               color: category.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(25),
+                              borderRadius: BorderRadius.circular(isPhone ? 20.0 : 25.0),
                               border: Border.all(color: category.color.withValues(alpha: 0.3)),
                             ),
                             child: Icon(
                               category.icon,
                               color: category.color,
-                              size: 24,
+                              size: isPhone ? 20.0 : 24.0,
                             ),
                           ),
                           title: Row(
                             children: [
-                              Text(
-                                category.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: category.color.withValues(alpha: 0.8),
+                              Expanded(
+                                child: Text(
+                                  category.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: isPhone ? 14.0 : 16.0,
+                                    color: category.color.withValues(alpha: 0.8),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: isPhone ? 4.0 : 8.0),
                               if (!category.isActive)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isPhone ? 4.0 : 6.0, 
+                                    vertical: isPhone ? 1.0 : 2.0
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.red.shade100,
                                     borderRadius: BorderRadius.circular(10),
@@ -1486,7 +1708,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                                     'INACTIVE',
                                     style: TextStyle(
                                       color: Colors.red.shade700,
-                                      fontSize: 10,
+                                      fontSize: isPhone ? 8.0 : 10.0,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -1498,20 +1720,25 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                             children: [
                               if (category.description?.isNotEmpty == true)
                                 Padding(
-                                  padding: const EdgeInsets.only(top: 4),
+                                  padding: EdgeInsets.only(top: isPhone ? 2.0 : 4.0),
                                   child: Text(
                                     category.description!,
-                                    style: const TextStyle(
-                                      fontSize: 13,
+                                    style: TextStyle(
+                                      fontSize: isPhone ? 11.0 : 13.0,
                                       color: Colors.grey,
                                     ),
+                                    maxLines: isPhone ? 1 : 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                              const SizedBox(height: 4),
+                              SizedBox(height: isPhone ? 2.0 : 4.0),
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isPhone ? 6.0 : 8.0, 
+                                      vertical: isPhone ? 1.0 : 2.0
+                                    ),
                                     decoration: BoxDecoration(
                                       color: category.color.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
@@ -1521,13 +1748,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                                       style: TextStyle(
                                         color: category.color,
                                         fontWeight: FontWeight.w600,
-                                        fontSize: 12,
+                                        fontSize: isPhone ? 10.0 : 12.0,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: isPhone ? 4.0 : 8.0),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isPhone ? 6.0 : 8.0, 
+                                      vertical: isPhone ? 1.0 : 2.0
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.grey.shade100,
                                       borderRadius: BorderRadius.circular(12),
@@ -1537,7 +1767,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                                       style: TextStyle(
                                         color: Colors.grey.shade600,
                                         fontWeight: FontWeight.w500,
-                                        fontSize: 11,
+                                        fontSize: isPhone ? 9.0 : 11.0,
                                       ),
                                     ),
                                   ),

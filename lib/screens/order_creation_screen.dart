@@ -1275,25 +1275,60 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   }
 
   Widget _buildMainContent() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Order Panel (Left)
-        Expanded(
-          flex: 2,
-          child: _buildOrderPanel(),
-        ),
-        const VerticalDivider(width: 1),
-        // Menu Panel (Right)
-        Expanded(
-          flex: 3,
-          child: _buildMenuPanel(),
-        ),
-      ],
-    );
+    // Detect device type for responsive design
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600; // Phone breakpoint
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200; // Tablet breakpoint
+    final isDesktop = screenSize.width >= 1200; // Desktop breakpoint
+    
+    if (isPhone) {
+      // Mobile layout: Stacked panels with scrollable order panel
+      return Column(
+        children: [
+          // Order Panel (Top) - Scrollable on mobile
+          Container(
+            height: screenSize.height * 0.4, // 40% of screen height
+            child: _buildOrderPanel(),
+          ),
+          const Divider(height: 1),
+          // Menu Panel (Bottom) - Takes remaining space
+          Expanded(
+            child: _buildMenuPanel(),
+          ),
+        ],
+      );
+    } else {
+      // Tablet/Desktop layout: Side-by-side panels (original layout)
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Order Panel (Left)
+          Expanded(
+            flex: 2,
+            child: _buildOrderPanel(),
+          ),
+          const VerticalDivider(width: 1),
+          // Menu Panel (Right)
+          Expanded(
+            flex: 3,
+            child: _buildMenuPanel(),
+          ),
+        ],
+      );
+    }
   }
 
   Widget _buildOrderPanel() {
+    // Get responsive sizing based on device type
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    
+    // Responsive padding and font sizes
+    final headerPadding = isPhone ? 12.0 : isTablet ? 14.0 : 16.0;
+    final headerFontSize = isPhone ? 16.0 : isTablet ? 17.0 : 18.0;
+    final itemCountFontSize = isPhone ? 10.0 : isTablet ? 11.0 : 12.0;
+    
     return Container(
       color: Colors.white,
       child: Column(
@@ -1301,7 +1336,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         children: [
           // Order Header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(headerPadding),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               border: Border(
@@ -1313,18 +1348,22 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                 Icon(
                   Icons.shopping_cart,
                   color: Theme.of(context).primaryColor,
+                  size: isPhone ? 20.0 : 24.0,
                 ),
-                const SizedBox(width: 12),
-                const Text(
+                SizedBox(width: isPhone ? 8.0 : 12.0),
+                Text(
                   'Current Order',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: headerFontSize,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isPhone ? 6.0 : 8.0, 
+                    vertical: isPhone ? 3.0 : 4.0
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -1334,14 +1373,14 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                     style: TextStyle(
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      fontSize: itemCountFontSize,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          // Order Items
+          // Order Items - Scrollable on all devices
           Expanded(
             child: _currentOrder!.items.isEmpty
                 ? _buildEmptyOrder()
@@ -1388,8 +1427,15 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   }
 
   Widget _buildOrderItems() {
+    // Get responsive padding based on device type
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    
+    final padding = isPhone ? 12.0 : isTablet ? 14.0 : 16.0;
+    
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       itemCount: _currentOrder!.items.length,
       itemBuilder: (context, index) {
         final item = _currentOrder!.items[index];
@@ -1404,8 +1450,20 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     final bool isSentToKitchen = item.sentToKitchen;
     final bool hasNotes = hasChefNotes || hasSpecialInstructions;
 
+    // Get responsive sizing based on device type
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    
+    // Responsive padding and font sizes
+    final cardPadding = isPhone ? 8.0 : isTablet ? 10.0 : 12.0;
+    final itemNameFontSize = isPhone ? 12.0 : isTablet ? 13.0 : 14.0;
+    final priceFontSize = isPhone ? 10.0 : isTablet ? 11.0 : 12.0;
+    final sentFontSize = isPhone ? 7.0 : isTablet ? 7.5 : 8.0;
+    final cardMargin = isPhone ? 4.0 : isTablet ? 5.0 : 6.0;
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: EdgeInsets.only(bottom: cardMargin),
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
@@ -1415,7 +1473,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: cardPadding, vertical: cardPadding * 0.7),
         child: Row(
           children: [
             // Item info - name and price (flexible to take remaining space)
@@ -1430,9 +1488,9 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                       Expanded(
                         child: Text(
                           item.menuItem.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                            fontSize: itemNameFontSize,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1450,7 +1508,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                             'SENT',
                             style: TextStyle(
                               color: Colors.green.shade700,
-                              fontSize: 8,
+                              fontSize: sentFontSize,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1461,7 +1519,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                     '\$${item.unitPrice.toStringAsFixed(2)}',
                     style: TextStyle(
                       color: Colors.grey.shade600,
-                      fontSize: 12,
+                      fontSize: priceFontSize,
                     ),
                   ),
                 ],
@@ -1897,8 +1955,20 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   }
 
   Widget _buildMenuHeader() {
+    // Get responsive sizing based on device type
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    
+    // Responsive sizing for mobile - Mobile-friendly design
+    final horizontalPadding = isPhone ? 16.0 : isTablet ? 14.0 : 16.0; // Comfortable horizontal padding
+    final verticalPadding = isPhone ? 12.0 : isTablet ? 10.0 : 12.0; // Comfortable vertical padding
+    final titleFontSize = isPhone ? 18.0 : isTablet ? 17.0 : 18.0; // Comfortable title for mobile
+    final itemCountFontSize = isPhone ? 14.0 : isTablet ? 13.0 : 14.0; // Comfortable item count for mobile
+    final spacing = isPhone ? 8.0 : isTablet ? 7.0 : 8.0; // Comfortable spacing for mobile
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
@@ -1912,24 +1982,30 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                 _menuItems.clear();
               });
             },
-            icon: const Icon(Icons.arrow_back),
+            icon: Icon(Icons.arrow_back, size: isPhone ? 24.0 : 24.0), // Comfortable icon for mobile
             tooltip: 'Back to Categories',
+            padding: EdgeInsets.all(isPhone ? 8.0 : 8.0), // Comfortable padding for mobile
+            constraints: BoxConstraints(
+              minWidth: isPhone ? 48.0 : 48.0, // Comfortable touch target for mobile
+              minHeight: isPhone ? 48.0 : 48.0, // Comfortable touch target for mobile
+            ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: spacing),
           Expanded(
             child: Text(
               _selectedCategory?.name ?? '',
-              style: const TextStyle(
-                fontSize: 18,
+              style: TextStyle(
+                fontSize: titleFontSize,
                 fontWeight: FontWeight.w600,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Text(
             '${_menuItems.length} items',
             style: TextStyle(
               color: Colors.grey.shade600,
-              fontSize: 14,
+              fontSize: itemCountFontSize,
             ),
           ),
         ],
@@ -1938,6 +2014,21 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
   }
 
   Widget _buildCategoriesView() {
+    // Get responsive sizing based on device type
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    
+    // Responsive grid configuration - Mobile-friendly design
+    final crossAxisCount = isPhone ? 2 : isTablet ? 3 : 4; // 2 columns on mobile for better readability
+    final childAspectRatio = isPhone ? 1.2 : isTablet ? 1.2 : 1.1; // Comfortable aspect ratio for mobile
+    final crossAxisSpacing = isPhone ? 12.0 : isTablet ? 10.0 : 12.0; // Comfortable spacing on mobile
+    final mainAxisSpacing = isPhone ? 12.0 : isTablet ? 10.0 : 12.0; // Comfortable spacing on mobile
+    final padding = isPhone ? 16.0 : isTablet ? 14.0 : 16.0; // Comfortable padding on mobile
+    
+    // Responsive font sizes - Mobile-friendly readability
+    final titleFontSize = isPhone ? 18.0 : isTablet ? 19.0 : 20.0; // Comfortable title for mobile
+    
     if (_categories.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -1947,11 +2038,11 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(padding),
             child: Text(
               'Select a Category',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: titleFontSize,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey.shade800,
               ),
@@ -1959,13 +2050,13 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: padding),
               child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3, // Always show 3 categories per row
-                  childAspectRatio: 1.2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  childAspectRatio: childAspectRatio,
+                  crossAxisSpacing: crossAxisSpacing,
+                  mainAxisSpacing: mainAxisSpacing,
                 ),
                 itemCount: _categories.length,
                 itemBuilder: (context, index) {
@@ -1975,16 +2066,29 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isPhone ? 12.0 : 16.0),
         ],
       ),
     );
   }
 
   Widget _buildElegantCategoryCard(pos_category.Category category) {
+    // Get responsive sizing based on device type
+    final screenSize = MediaQuery.of(context).size;
+    final isPhone = screenSize.width < 600;
+    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    
+    // Responsive sizing - Mobile-friendly design
+    final iconSize = isPhone ? 24.0 : isTablet ? 28.0 : 32.0; // Comfortable icon size for mobile
+    final iconPadding = isPhone ? 8.0 : isTablet ? 10.0 : 12.0; // Comfortable padding for mobile
+    final spacing = isPhone ? 8.0 : isTablet ? 10.0 : 12.0; // Comfortable spacing for mobile
+    final textPadding = isPhone ? 6.0 : isTablet ? 7.0 : 8.0; // Comfortable text padding for mobile
+    final fontSize = isPhone ? 12.0 : isTablet ? 13.0 : 14.0; // Comfortable font for mobile readability
+    final borderRadius = isPhone ? 12.0 : isTablet ? 14.0 : 16.0; // Comfortable border radius for mobile
+    
     return InkWell(
       onTap: () => _onCategorySelected(category),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(borderRadius),
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -1996,7 +2100,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
             ],
           ),
           border: Border.all(color: Colors.blue.shade200),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(borderRadius),
           boxShadow: [
             BoxShadow(
               color: Colors.blue.shade100.withValues(alpha: 0.5),
@@ -2009,29 +2113,29 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(iconPadding),
               decoration: BoxDecoration(
                 color: Colors.blue.shade100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.restaurant_menu,
-                size: 32,
+                size: iconSize,
                 color: Colors.blue.shade700,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: spacing),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: EdgeInsets.symmetric(horizontal: textPadding),
               child: Text(
                 category.name,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.w600,
                   color: Colors.blue.shade800,
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: isPhone ? 1 : 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -2075,21 +2179,27 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Optimized responsive grid: more columns for wider screens
-        int crossAxisCount = 3; // Default 3 columns for better item visibility
+        // Get responsive sizing based on device type
+        final screenSize = MediaQuery.of(context).size;
+        final isPhone = screenSize.width < 600;
+        final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+        
+        // Responsive grid configuration - Mobile-friendly design
+        int crossAxisCount = isPhone ? 1 : isTablet ? 2 : 3; // 1 column on mobile for better readability
         if (constraints.maxWidth > 1400) {
           crossAxisCount = 5; // 5 columns for very wide screens
         } else if (constraints.maxWidth > 1000) {
           crossAxisCount = 4; // 4 columns for wide screens
-        } else if (constraints.maxWidth < 600) {
-          crossAxisCount = 2; // 2 columns for narrow screens
         }
+        
+        final childAspectRatio = isPhone ? 0.8 : isTablet ? 0.95 : 0.85; // Comfortable aspect ratio for mobile
+        final padding = isPhone ? 12.0 : isTablet ? 7.0 : 8.0; // Comfortable padding on mobile
 
         return GridView.builder(
-          padding: const EdgeInsets.all(8), // Increased padding for better spacing
+          padding: EdgeInsets.all(padding),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.85, // Slightly taller for better text layout
+            childAspectRatio: childAspectRatio,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
           ),

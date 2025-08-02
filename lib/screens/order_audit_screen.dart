@@ -219,7 +219,15 @@ class _OrderAuditScreenState extends State<OrderAuditScreen> with TickerProvider
   }
 
   Widget _buildAllLogsTab(OrderLogService orderLogService) {
-    final filteredLogs = _getFilteredLogs(orderLogService.recentLogs);
+    final logs = widget.orderId != null 
+        ? orderLogService.getLogsForOrder(widget.orderId!)
+        : orderLogService.recentLogs;
+    final filteredLogs = _getFilteredLogs(logs);
+    
+    debugPrint('🔍 Audit Debug: orderId=${widget.orderId}, totalLogs=${logs.length}, filteredLogs=${filteredLogs.length}');
+    if (widget.orderId != null) {
+      debugPrint('🔍 Order-specific logs: ${logs.map((l) => '${l.action}: ${l.description}').join(', ')}');
+    }
     
     if (filteredLogs.isEmpty) {
       return _buildEmptyState(
@@ -241,7 +249,10 @@ class _OrderAuditScreenState extends State<OrderAuditScreen> with TickerProvider
   }
 
   Widget _buildFinancialLogsTab(OrderLogService orderLogService) {
-    final financialLogs = _getFilteredLogs(orderLogService.financialLogs);
+    final logs = widget.orderId != null 
+        ? orderLogService.getLogsForOrder(widget.orderId!)
+        : orderLogService.financialLogs;
+    final financialLogs = _getFilteredLogs(logs);
     
     if (financialLogs.isEmpty) {
       return _buildEmptyState(
@@ -262,7 +273,10 @@ class _OrderAuditScreenState extends State<OrderAuditScreen> with TickerProvider
   }
 
   Widget _buildKitchenLogsTab(OrderLogService orderLogService) {
-    final kitchenLogs = _getFilteredLogs(orderLogService.kitchenLogs);
+    final logs = widget.orderId != null 
+        ? orderLogService.getLogsForOrder(widget.orderId!)
+        : orderLogService.kitchenLogs;
+    final kitchenLogs = _getFilteredLogs(logs);
     
     if (kitchenLogs.isEmpty) {
       return _buildEmptyState(

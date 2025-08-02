@@ -29,7 +29,12 @@ class OrderLogService extends ChangeNotifier {
 
   /// Gets logs for a specific order
   List<OrderLog> getLogsForOrder(String orderId) {
-    return _orderLogsCache[orderId] ?? [];
+    final logs = _orderLogsCache[orderId] ?? [];
+    debugPrint('🔍 getLogsForOrder($orderId): Found ${logs.length} logs');
+    for (final log in logs) {
+      debugPrint('  - ${log.action}: ${log.description} (${log.timestamp})');
+    }
+    return logs;
   }
 
   /// Reload logs for a specific order from database
