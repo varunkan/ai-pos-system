@@ -35,6 +35,23 @@ class _OrderAuditScreenState extends State<OrderAuditScreen> with TickerProvider
         _searchQuery = _searchController.text.toLowerCase();
       });
     });
+    
+    // Reload logs for the specific order if orderId is provided
+    if (widget.orderId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _reloadOrderLogs();
+      });
+    }
+  }
+
+  Future<void> _reloadOrderLogs() async {
+    try {
+      final orderLogService = Provider.of<OrderLogService>(context, listen: false);
+      await orderLogService.reloadLogsForOrder(widget.orderId!);
+      debugPrint('✅ Reloaded logs for order ${widget.orderId}');
+    } catch (e) {
+      debugPrint('❌ Failed to reload logs for order ${widget.orderId}: $e');
+    }
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'dart:convert';
 
 /// Enum for different types of order operations that can be logged
 enum OrderLogAction {
@@ -110,15 +111,9 @@ class OrderLog {
           ? DateTime.tryParse(json['timestamp']) ?? DateTime.now()
           : DateTime.now(),
       description: json['description'] as String? ?? '',
-      beforeData: json['before_data'] is Map<String, dynamic> 
-          ? Map<String, dynamic>.from(json['before_data'])
-          : {},
-      afterData: json['after_data'] is Map<String, dynamic>
-          ? Map<String, dynamic>.from(json['after_data'])
-          : {},
-      metadata: json['metadata'] is Map<String, dynamic>
-          ? Map<String, dynamic>.from(json['metadata'])
-          : {},
+      beforeData: _parseJsonData(json['before_data']),
+      afterData: _parseJsonData(json['after_data']),
+      metadata: _parseJsonData(json['metadata']),
       notes: json['notes'] as String?,
       deviceId: json['device_id'] as String?,
       sessionId: json['session_id'] as String?,
@@ -130,6 +125,23 @@ class OrderLog {
       tableId: json['table_id'] as String?,
       customerId: json['customer_id'] as String?,
     );
+  }
+
+  /// Helper method to parse JSON data from database
+  static Map<String, dynamic> _parseJsonData(dynamic data) {
+    if (data == null) return {};
+    if (data is Map<String, dynamic>) return Map<String, dynamic>.from(data);
+    if (data is String) {
+      try {
+        final decoded = jsonDecode(data);
+        if (decoded is Map<String, dynamic>) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      } catch (e) {
+        // If JSON parsing fails, return empty map
+      }
+    }
+    return {};
   }
 
   /// Converts this OrderLog to JSON

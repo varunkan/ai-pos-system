@@ -2911,6 +2911,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
     if (_currentOrder == null) return;
     
     try {
+      debugPrint('🔍 Logging item removal: ${item.menuItem.name} (${item.quantity}x) from order ${_currentOrder!.orderNumber}');
       final orderLogService = Provider.of<OrderLogService>(context, listen: false);
       orderLogService.logItemRemoved(
         _currentOrder!,
@@ -2918,8 +2919,9 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
         widget.user.id,
         widget.user.name,
       );
+      debugPrint('✅ Item removal logged successfully');
     } catch (e) {
-      debugPrint('Failed to log item removal: $e');
+      debugPrint('❌ Failed to log item removal: $e');
     }
   }
 

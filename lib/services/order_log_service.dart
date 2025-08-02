@@ -32,6 +32,51 @@ class OrderLogService extends ChangeNotifier {
     return _orderLogsCache[orderId] ?? [];
   }
 
+  /// Reload logs for a specific order from database
+  Future<void> reloadLogsForOrder(String orderId) async {
+    try {
+      if (_databaseService.isWeb) {
+        // Web platform - use Hive storage
+        final webLogs = await _databaseService.getWebOrderLogs();
+        final orderLogs = <OrderLog>[];
+        
+        for (final row in webLogs) {
+          final log = OrderLog.fromJson(row);
+          if (log.orderId == orderId) {
+            orderLogs.add(log);
+          }
+        }
+        
+        _orderLogsCache[orderId] = orderLogs;
+        debugPrint('✅ Reloaded ${orderLogs.length} logs for order $orderId from web storage');
+      } else {
+        // Mobile/Desktop platform - use SQLite
+        final db = await _databaseService.database;
+        if (db == null) return;
+        
+        final results = await db.query(
+          'order_logs',
+          where: 'order_id = ?',
+          whereArgs: [orderId],
+          orderBy: 'timestamp DESC',
+        );
+
+        final orderLogs = <OrderLog>[];
+        for (final row in results) {
+          final log = OrderLog.fromJson(row);
+          orderLogs.add(log);
+        }
+        
+        _orderLogsCache[orderId] = orderLogs;
+        debugPrint('✅ Reloaded ${orderLogs.length} logs for order $orderId from database');
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Failed to reload logs for order $orderId: $e');
+    }
+  }
+
   /// Gets recent logs (last 100)
   List<OrderLog> get recentLogs {
     final sorted = List<OrderLog>.from(_logs);
