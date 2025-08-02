@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:async';
-import 'dart:typed_data';
+
 import 'database_service.dart';
 import '../models/printer_configuration.dart';
 
