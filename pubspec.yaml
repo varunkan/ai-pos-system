@@ -71,6 +71,9 @@ dependencies:
   
   # Security and encryption
   crypto: ^3.0.3
+  
+  # Collection utilities (required by multiple services)
+  collection: ^1.18.0
 
 dev_dependencies:
   flutter_test:

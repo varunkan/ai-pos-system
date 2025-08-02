@@ -683,7 +683,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
 
   Future<void> _editMenuItem(MenuItem item) async {
     final TextEditingController nameController = TextEditingController(text: item.name);
-    final TextEditingController descriptionController = TextEditingController(text: item.description ?? '');
+    final TextEditingController descriptionController = TextEditingController(text: item.description);
     final TextEditingController priceController = TextEditingController(text: item.price.toString());
     String? selectedCategoryId = item.categoryId;
 
@@ -1445,7 +1445,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: category.color.withOpacity(0.3),
+                            color: category.color.withValues(alpha: 0.3),
                             width: 1.5,
                           ),
                         ),
@@ -1454,9 +1454,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                             width: 50,
                             height: 50,
                             decoration: BoxDecoration(
-                              color: category.color.withOpacity(0.1),
+                              color: category.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(25),
-                              border: Border.all(color: category.color.withOpacity(0.3)),
+                              border: Border.all(color: category.color.withValues(alpha: 0.3)),
                             ),
                             child: Icon(
                               category.icon,
@@ -1471,7 +1471,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
-                                  color: category.color.withOpacity(0.8),
+                                  color: category.color.withValues(alpha: 0.8),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -1513,7 +1513,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: category.color.withOpacity(0.1),
+                                      color: category.color.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -1623,9 +1623,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: category.color.withOpacity(0.1),
+                          color: category.color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: category.color.withOpacity(0.3)),
+                          border: Border.all(color: category.color.withValues(alpha: 0.3)),
                         ),
                         child: Icon(
                           category.icon,
@@ -1639,16 +1639,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                             category.name,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: category.color.withOpacity(0.8),
+                              color: category.color.withValues(alpha: 0.8),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: category.color.withOpacity(0.1),
+                              color: category.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: category.color.withOpacity(0.3)),
+                              border: Border.all(color: category.color.withValues(alpha: 0.3)),
                             ),
                             child: Text(
                               '${items.length} item${items.length == 1 ? '' : 's'}',
@@ -1699,16 +1699,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: category.color.withOpacity(0.2)),
+          border: Border.all(color: category.color.withValues(alpha: 0.2)),
         ),
         child: ListTile(
           leading: Container(
             width: 45,
             height: 45,
             decoration: BoxDecoration(
-              color: category.color.withOpacity(0.1),
+              color: category.color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(22.5),
-              border: Border.all(color: category.color.withOpacity(0.3)),
+              border: Border.all(color: category.color.withValues(alpha: 0.3)),
             ),
             child: Stack(
               children: [
@@ -1784,7 +1784,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: category.color.withOpacity(0.1),
+                      color: category.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -1883,9 +1883,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -2137,9 +2137,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -2188,17 +2188,17 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            color.withOpacity(0.15),
-            color.withOpacity(0.05),
+            color.withValues(alpha: 0.15),
+            color.withValues(alpha: 0.05),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.4), width: 1.5),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -2620,7 +2620,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         gradient: LinearGradient(
           colors: [
             Theme.of(context).colorScheme.surface,
-            Theme.of(context).colorScheme.surface.withOpacity(0.9),
+            Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -2633,7 +2633,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

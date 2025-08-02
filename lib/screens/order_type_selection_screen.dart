@@ -561,8 +561,8 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Colors.white.withOpacity(0.1),
-                              Colors.white.withOpacity(0.05),
+                              Colors.white.withValues(alpha: 0.1),
+                              Colors.white.withValues(alpha: 0.05),
                             ],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
@@ -870,9 +870,9 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
@@ -890,7 +890,7 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
               subtitle,
               style: TextStyle(
                 fontSize: 12,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -1088,7 +1088,7 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: Colors.orange.shade300,
@@ -1211,9 +1211,9 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: statusColor.withOpacity(0.1),
+          color: statusColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: statusColor.withOpacity(0.3)),
+          border: Border.all(color: statusColor.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -1375,12 +1375,12 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
+            color: statusColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: statusColor.withOpacity(0.3)),
+            border: Border.all(color: statusColor.withValues(alpha: 0.3)),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 spreadRadius: 1,
                 blurRadius: 3,
                 offset: const Offset(0, 2),
@@ -1592,9 +1592,9 @@ class _OrderTypeSelectionScreenState extends State<OrderTypeSelectionScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [

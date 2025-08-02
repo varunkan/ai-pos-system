@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/order.dart';
 import '../models/user.dart';
 import '../services/order_service.dart';
-import '../services/user_service.dart';
+
 import '../screens/edit_active_order_screen.dart';
 
 class ServerOrdersScreen extends StatefulWidget {

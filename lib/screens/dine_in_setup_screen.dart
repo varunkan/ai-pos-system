@@ -360,9 +360,9 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
           children: [
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
               ),
               child: IconButton(
                 onPressed: () => Navigator.pop(context),
@@ -387,7 +387,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                   Text(
                     'Configure your dining experience',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: math.min(constraints.maxHeight * 0.018, 14),
                     ),
                   ),
@@ -402,9 +402,9 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                   child: Container(
                     padding: EdgeInsets.all(constraints.maxHeight * 0.015),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                     ),
                     child: Icon(
                       Icons.restaurant,
@@ -446,7 +446,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                               borderRadius: BorderRadius.circular(2),
                               color: isActive
                                   ? Colors.white
-                                  : Colors.white.withOpacity(0.3),
+                                  : Colors.white.withValues(alpha: 0.3),
                             ),
                           ),
                         ),
@@ -476,7 +476,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
     return AnimatedDefaultTextStyle(
       duration: const Duration(milliseconds: 300),
       style: TextStyle(
-        color: isActive ? Colors.white : Colors.white.withOpacity(0.6),
+        color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.6),
         fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
         fontSize: math.min(constraints.maxHeight * 0.015, 12),
       ),
@@ -513,7 +513,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                   Text(
                     'Select from our available tables or create a custom seating arrangement',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: math.min(constraints.maxHeight * 0.018, 14),
                     ),
                   ),
@@ -526,9 +526,9 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
               flex: 3,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                 ),
                 child: _tables.isEmpty
                     ? const Center(
@@ -545,9 +545,9 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
               height: constraints.maxHeight * 0.12,
               padding: EdgeInsets.all(constraints.maxWidth * 0.02),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -825,13 +825,13 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
           fontSize: textSize,
         ),
-        prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7), size: iconSize),
+        prefixIcon: Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: iconSize),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -850,7 +850,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
           fontSize: textSize * 0.8,
         ),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
+        fillColor: Colors.white.withValues(alpha: 0.1),
         contentPadding: EdgeInsets.symmetric(
           horizontal: constraints != null ? constraints.maxWidth * 0.02 : 12,
           vertical: constraints != null ? constraints.maxHeight * 0.015 : 12,
@@ -888,7 +888,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                   Text(
                     'Set the number of guests for your dining experience',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: math.min(constraints.maxHeight * 0.018, 14),
                     ),
                   ),
@@ -903,17 +903,17 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                 padding: EdgeInsets.all(constraints.maxWidth * 0.02),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.white.withOpacity(0.2), Colors.white.withOpacity(0.1)],
+                    colors: [Colors.white.withValues(alpha: 0.2), Colors.white.withValues(alpha: 0.1)],
                   ),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: EdgeInsets.all(constraints.maxHeight * 0.02),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -939,7 +939,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                           Text(
                             'Capacity: ${_selectedTable!.capacity} guests',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: math.min(constraints.maxHeight * 0.02, 16),
                             ),
                           ),
@@ -952,9 +952,9 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                         vertical: constraints.maxHeight * 0.008,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.3),
+                        color: Colors.green.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.green.withOpacity(0.5)),
+                        border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
                       ),
                       child: Text(
                         'Selected',
@@ -976,9 +976,9 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
               child: Container(
                 padding: EdgeInsets.all(constraints.maxWidth * 0.02),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                 ),
                 child: LayoutBuilder(
                   builder: (context, innerConstraints) {
@@ -1021,7 +1021,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                                       shape: BoxShape.circle,
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.blue.withOpacity(0.4),
+                                          color: Colors.blue.withValues(alpha: 0.4),
                                           blurRadius: circleSize * 0.15,
                                           spreadRadius: circleSize * 0.05,
                                         ),
@@ -1049,7 +1049,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                                           Text(
                                             _numberOfPeople == 1 ? 'Guest' : 'Guests',
                                             style: TextStyle(
-                                              color: Colors.white.withOpacity(0.8),
+                                              color: Colors.white.withValues(alpha: 0.8),
                                               fontSize: circleSize * 0.08,
                                             ),
                                           ),
@@ -1069,9 +1069,9 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                           child: SliderTheme(
                             data: SliderTheme.of(context).copyWith(
                               activeTrackColor: Colors.white,
-                              inactiveTrackColor: Colors.white.withOpacity(0.3),
+                              inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
                               thumbColor: Colors.white,
-                              overlayColor: Colors.white.withOpacity(0.2),
+                              overlayColor: Colors.white.withValues(alpha: 0.2),
                               valueIndicatorColor: Colors.white,
                               valueIndicatorTextStyle: const TextStyle(color: Colors.black),
                             ),
@@ -1115,13 +1115,13 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                                   height: buttonSize * 0.6,
                                   decoration: BoxDecoration(
                                     color: isSelected
-                                        ? Colors.white.withOpacity(0.3)
-                                        : Colors.white.withOpacity(0.1),
+                                        ? Colors.white.withValues(alpha: 0.3)
+                                        : Colors.white.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: isSelected
                                           ? Colors.white
-                                          : Colors.white.withOpacity(0.3),
+                                          : Colors.white.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: Center(
@@ -1155,7 +1155,7 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.green.withOpacity(0.3),
+                                color: Colors.green.withValues(alpha: 0.3),
                                 blurRadius: 8,
                               ),
                             ],
@@ -1219,9 +1219,9 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
               child: Container(
                 height: constraints.maxHeight * 0.06,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: TextButton(
                   onPressed: _previousStep,
@@ -1256,12 +1256,12 @@ class _DineInSetupScreenState extends State<DineInSetupScreen>
               height: constraints.maxHeight * 0.06,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.white, Colors.white.withOpacity(0.9)],
+                  colors: [Colors.white, Colors.white.withValues(alpha: 0.9)],
                 ),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),

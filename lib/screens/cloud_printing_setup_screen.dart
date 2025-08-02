@@ -150,10 +150,10 @@ class _CloudPrintingSetupScreenState extends State<CloudPrintingSetupScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(15),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       width: 1,
                     ),
                   ),
@@ -190,7 +190,7 @@ class _CloudPrintingSetupScreenState extends State<CloudPrintingSetupScreen> {
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -316,7 +316,7 @@ class _CloudPrintingSetupScreenState extends State<CloudPrintingSetupScreen> {
                           Container(
                             padding: const EdgeInsets.all(15),
                             decoration: BoxDecoration(
-                              color: _testSuccess ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                              color: _testSuccess ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: _testSuccess ? Colors.green : Colors.red,
@@ -440,10 +440,10 @@ class _CloudPrintingSetupScreenState extends State<CloudPrintingSetupScreen> {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -452,7 +452,7 @@ class _CloudPrintingSetupScreenState extends State<CloudPrintingSetupScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(

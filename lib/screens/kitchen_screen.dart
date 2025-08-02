@@ -44,57 +44,6 @@ class _KitchenScreenState extends State<KitchenScreen> with TickerProviderStateM
   ];
 
   /// Enhanced text styles for better prominence and visual appeal
-  static const _headerTextStyle = TextStyle(
-    fontSize: 26,
-    fontWeight: FontWeight.w900,
-    color: Color(0xFF1F2937),
-    letterSpacing: 0.8,
-  );
-
-  static const _orderNumberStyle = TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.w900,
-    color: Color(0xFF1F2937),
-    letterSpacing: 0.5,
-  );
-
-  static const _statusBadgeStyle = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w800,
-    letterSpacing: 1.0,
-  );
-
-  static const _tabLabelStyle = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.3,
-  );
-
-  static const _timeStyle = TextStyle(
-    fontSize: 13,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.2,
-  );
-
-  static const _itemNameStyle = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w700,
-    color: Color(0xFF1F2937),
-    letterSpacing: 0.3,
-  );
-
-  static const _quantityStyle = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w800,
-    color: Color(0xFF059669),
-    letterSpacing: 0.2,
-  );
-
-  static const _buttonTextStyle = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.5,
-  );
 
   @override
   void initState() {

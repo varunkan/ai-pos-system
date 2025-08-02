@@ -161,7 +161,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                     end: Alignment.bottomRight,
                     colors: [
                       Theme.of(context).colorScheme.primaryContainer,
-                      Theme.of(context).colorScheme.primaryContainer.withOpacity(0.7),
+                      Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.7),
                     ],
                   ),
                 ),
@@ -191,7 +191,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         Text(
                           category.description!,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.8),
+                            color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 2,
@@ -338,7 +338,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                   width: double.infinity,
                                   decoration: BoxDecoration(
                                     borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                                    color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
                                   ),
                                   child: Icon(
                                     Icons.restaurant,

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:ai_pos_system/models/reservation.dart';
 import 'package:ai_pos_system/services/reservation_service.dart';
 import 'package:ai_pos_system/services/table_service.dart';
-import 'package:ai_pos_system/services/user_service.dart';
+
 import '../widgets/back_button.dart';
 
 class ReservationsScreen extends StatefulWidget {

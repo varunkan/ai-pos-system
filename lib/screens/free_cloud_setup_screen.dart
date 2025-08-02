@@ -94,9 +94,9 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,7 +121,7 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
           Text(
             'Print from anywhere to your restaurant printers\nZero monthly cost - completely free!',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 16,
             ),
           ),
@@ -167,9 +167,9 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,10 +224,10 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
       child: Container(
         padding: EdgeInsets.all(15),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
+          color: isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? Colors.white : Colors.white.withOpacity(0.3),
+            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -235,7 +235,7 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
+              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.7),
               size: 24,
             ),
             SizedBox(width: 15),
@@ -254,14 +254,14 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                   ),
                   Text(
                     limits,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                   ),
@@ -284,9 +284,9 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Form(
         key: _formKey,
@@ -328,9 +328,9 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
               Container(
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
+                  color: Colors.red.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.withOpacity(0.5)),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   children: [
@@ -349,9 +349,9 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
               Container(
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.2),
+                  color: Colors.green.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withOpacity(0.5)),
+                  border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   children: [
@@ -397,17 +397,17 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
           style: TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-            prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+            prefixIcon: Icon(icon, color: Colors.white.withValues(alpha: 0.7)),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
+            fillColor: Colors.white.withValues(alpha: 0.1),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -476,9 +476,9 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,7 +561,7 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
                 Text(
                   description,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 14,
                   ),
                 ),
@@ -577,9 +577,9 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -640,7 +640,7 @@ class _FreeCloudSetupScreenState extends State<FreeCloudSetupScreen> {
           Text(
             answer,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               fontSize: 13,
             ),
           ),

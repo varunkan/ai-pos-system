@@ -11,6 +11,10 @@
 -keep class com.google.android.play.core.** { *; }
 -dontwarn com.google.android.play.core.**
 
+# Fix for Flutter Play Store deferred components issue
+-keep class io.flutter.embedding.engine.deferredcomponents.** { *; }
+-dontwarn io.flutter.embedding.engine.deferredcomponents.**
+
 # Keep printer-related classes
 -keep class net.posprinter.** { *; }
 -keep class com.dantsu.escposprinter.** { *; }

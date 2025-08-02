@@ -246,7 +246,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
           Icon(
             Icons.store,
             size: 80,
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withValues(alpha: 0.9),
           ),
           const SizedBox(height: 16),
           Text(
@@ -262,7 +262,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
             'Select your restaurant to continue',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -274,10 +274,10 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: Colors.white.withValues(alpha: 0.3),
         ),
       ),
       child: TextField(
@@ -286,8 +286,8 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           hintText: 'Search restaurants...',
-          hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-          prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.8)),
+          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+          prefixIcon: Icon(Icons.search, color: Colors.white.withValues(alpha: 0.8)),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
@@ -352,7 +352,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF667eea).withOpacity(0.1),
+                      color: const Color(0xFF667eea).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Icon(
@@ -381,7 +381,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF667eea).withOpacity(0.1),
+                      color: const Color(0xFF667eea).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -413,7 +413,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
+                        color: Colors.green.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -453,14 +453,14 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
           Icon(
             Icons.search_off,
             size: 80,
-            color: Colors.white.withOpacity(0.6),
+            color: Colors.white.withValues(alpha: 0.6),
           ),
           const SizedBox(height: 16),
           Text(
             'No restaurants found',
             style: TextStyle(
               fontSize: 20,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 8),
@@ -468,7 +468,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
             'Try adjusting your search',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -483,7 +483,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
         'Multi-Restaurant POS System v1.0',
         style: TextStyle(
           fontSize: 12,
-          color: Colors.white.withOpacity(0.6),
+          color: Colors.white.withValues(alpha: 0.6),
         ),
         textAlign: TextAlign.center,
       ),
@@ -519,7 +519,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
                       _selectedStore?.code ?? '',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -553,7 +553,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen>
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF667eea).withOpacity(0.1),
+                            color: const Color(0xFF667eea).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(40),
                           ),
                           child: const Icon(

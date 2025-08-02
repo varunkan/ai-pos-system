@@ -9,8 +9,7 @@ import '../widgets/error_dialog.dart';
 import '../widgets/universal_navigation.dart';
 import 'categories_screen.dart';
 import 'tables_screen.dart';
-import 'add_menu_item_screen.dart';
-import 'add_category_screen.dart';
+
 import 'manage_menu_items_screen.dart';
 import 'settings_screen.dart';
 import 'users_screen.dart';
@@ -20,7 +19,7 @@ import 'admin_orders_screen.dart';
 import 'kitchen_screen.dart';
 import 'reports_screen.dart';
 import 'inventory_screen.dart';
-import 'restaurant_auth_screen.dart'; // Import for RestaurantAuthScreen
+
 
 /// Main screen that displays user actions and navigation options.
 /// 
