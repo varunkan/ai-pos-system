@@ -8,8 +8,9 @@ import '../widgets/loading_overlay.dart';
 
 class ReportsScreen extends StatefulWidget {
   final User user;
+  final bool showAppBar;
 
-  const ReportsScreen({super.key, required this.user});
+  const ReportsScreen({super.key, required this.user, this.showAppBar = true});
 
   @override
   _ReportsScreenState createState() => _ReportsScreenState();
@@ -214,6 +215,85 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final reportsControls = Column(
+      children: [
+        // Period selector
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: periodOptions.map((period) {
+              final isSelected = _selectedPeriod == period;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(period.toUpperCase()),
+                  selected: isSelected,
+                  onSelected: (selected) async {
+                    if (period == 'custom') {
+                      await _showCustomDatePicker();
+                    } else {
+                      setState(() {
+                        _selectedPeriod = period;
+                      });
+                      await _updateFilteredOrders();
+                      setState(() {});
+                    }
+                  },
+                  selectedColor: Theme.of(context).primaryColor,
+                  checkmarkColor: Colors.white,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        // Tab bar
+        TabBar(
+          controller: _tabController,
+          labelColor: Theme.of(context).primaryColor,
+          unselectedLabelColor: Colors.grey.shade600,
+          indicatorColor: Theme.of(context).primaryColor,
+          tabs: const [
+            Tab(icon: Icon(Icons.analytics), text: 'Overview'),
+            Tab(icon: Icon(Icons.trending_up), text: 'Sales'),
+            Tab(icon: Icon(Icons.restaurant_menu), text: 'Items'),
+            Tab(icon: Icon(Icons.access_time), text: 'Peak Hours'),
+            Tab(icon: Icon(Icons.people), text: 'Customers'),
+          ],
+        ),
+      ],
+    );
+
+    final body = _error != null
+        ? _buildErrorState(_error!)
+        : TabBarView(
+            controller: _tabController,
+            children: [
+              _buildOverviewTab(),
+              _buildSalesTab(),
+              _buildItemsTab(),
+              _buildPeakHoursTab(),
+              _buildCustomersTab(),
+            ],
+          );
+
+    if (!widget.showAppBar) {
+      // When used as a tab in AdminPanelScreen, just return the body content
+      return LoadingOverlay(
+        isLoading: _isLoading,
+        child: Container(
+          color: Colors.grey.shade50,
+          child: Column(
+            children: [
+              reportsControls,
+              Expanded(child: body),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // When used as a standalone screen, show the full Scaffold with AppBar
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
@@ -230,68 +310,10 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(80),
-            child: Column(
-              children: [
-                // Period selector
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: periodOptions.map((period) {
-                      final isSelected = _selectedPeriod == period;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(period.toUpperCase()),
-                          selected: isSelected,
-                          onSelected: (selected) async {
-                            if (period == 'custom') {
-                              await _showCustomDatePicker();
-                            } else {
-                              setState(() {
-                                _selectedPeriod = period;
-                              });
-                              await _updateFilteredOrders();
-                              setState(() {});
-                            }
-                          },
-                          selectedColor: Theme.of(context).primaryColor,
-                          checkmarkColor: Colors.white,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                // Tab bar
-                TabBar(
-                  controller: _tabController,
-                  labelColor: Theme.of(context).primaryColor,
-                  unselectedLabelColor: Colors.grey.shade600,
-                  indicatorColor: Theme.of(context).primaryColor,
-                  tabs: const [
-                    Tab(icon: Icon(Icons.analytics), text: 'Overview'),
-                    Tab(icon: Icon(Icons.trending_up), text: 'Sales'),
-                    Tab(icon: Icon(Icons.restaurant_menu), text: 'Items'),
-                    Tab(icon: Icon(Icons.access_time), text: 'Peak Hours'),
-                    Tab(icon: Icon(Icons.people), text: 'Customers'),
-                  ],
-                ),
-              ],
-            ),
+            child: reportsControls,
           ),
         ),
-        body: _error != null
-            ? _buildErrorState(_error!)
-            : TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildOverviewTab(),
-                  _buildSalesTab(),
-                  _buildItemsTab(),
-                  _buildPeakHoursTab(),
-                  _buildCustomersTab(),
-                ],
-              ),
+        body: body,
       ),
     );
   }

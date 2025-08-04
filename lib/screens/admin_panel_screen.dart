@@ -2461,23 +2461,23 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
   }
 
   Widget _buildOrdersTab() {
-    return AdminOrdersScreen(user: widget.user);
+    return AdminOrdersScreen(user: widget.user, showAppBar: false);
   }
 
   Widget _buildKitchenTab() {
-    return KitchenScreen(user: widget.user);
+    return KitchenScreen(user: widget.user, showAppBar: false);
   }
 
   Widget _buildReportsTab() {
-    return ReportsScreen(user: widget.user);
+    return ReportsScreen(user: widget.user, showAppBar: false);
   }
 
   Widget _buildInventoryTab() {
-    return const InventoryScreen();
+    return const InventoryScreen(showAppBar: false);
   }
 
   Widget _buildTablesTab() {
-    return TablesScreen(user: widget.user);
+    return TablesScreen(user: widget.user, showAppBar: false);
   }
 
   Widget _buildSettingsTab() {
@@ -2836,7 +2836,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
   }
 
   Widget _buildActivityMonitoringTab() {
-    return UserActivityMonitoringScreen(user: widget.user);
+    return UserActivityMonitoringScreen(user: widget.user, showAppBar: false);
   }
 
   Widget _buildTabHeader({

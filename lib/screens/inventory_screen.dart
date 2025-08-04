@@ -9,7 +9,9 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 
 class InventoryScreen extends StatefulWidget {
-  const InventoryScreen({super.key});
+  final bool showAppBar;
+  
+  const InventoryScreen({super.key, this.showAppBar = true});
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
@@ -95,6 +97,48 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   @override
   Widget build(BuildContext context) {
+    final body = LoadingOverlay(
+      isLoading: _isLoading,
+      child: Column(
+        children: [
+          // Add tabs manually when not showing app bar
+          if (!widget.showAppBar)
+            Container(
+              color: Theme.of(context).colorScheme.primary,
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: Colors.white,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
+                tabs: const [
+                  Tab(text: 'Overview', icon: Icon(Icons.dashboard)),
+                  Tab(text: 'Items', icon: Icon(Icons.inventory)),
+                  Tab(text: 'Transactions', icon: Icon(Icons.receipt_long)),
+                  Tab(text: 'Analytics', icon: Icon(Icons.analytics)),
+                ],
+              ),
+            ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildOverviewTab(),
+                _buildItemsTab(),
+                _buildTransactionsTab(),
+                _buildAnalyticsTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!widget.showAppBar) {
+      // When used as a tab in AdminPanelScreen, just return the body content
+      return body;
+    }
+
+    // When used as a standalone screen, show the full Scaffold with AppBar
     return Scaffold(
       appBar: UniversalAppBar(
         currentUser: null, // This screen doesn't have user context
@@ -1070,37 +1114,433 @@ class _InventoryScreenState extends State<InventoryScreen>
   // Dialog Methods
 
   void _showAddItemDialog() {
-    // TODO: Implement add item dialog
+    _showItemDialog();
+  }
+
+  void _showEditItemDialog(InventoryItem item) {
+    _showItemDialog(item: item);
+  }
+
+  void _showItemDialog({InventoryItem? item}) {
+    final isEditing = item != null;
+    final formKey = GlobalKey<FormState>();
+    
+    // Controllers for form fields
+    final nameController = TextEditingController(text: item?.name ?? '');
+    final descriptionController = TextEditingController(text: item?.description ?? '');
+    final currentStockController = TextEditingController(text: item?.currentStock.toString() ?? '0');
+    final minimumStockController = TextEditingController(text: item?.minimumStock.toString() ?? '5');
+    final maximumStockController = TextEditingController(text: item?.maximumStock.toString() ?? '100');
+    final costPerUnitController = TextEditingController(text: item?.costPerUnit.toString() ?? '0.00');
+    final supplierController = TextEditingController(text: item?.supplier ?? '');
+    final supplierContactController = TextEditingController(text: item?.supplierContact ?? '');
+    
+    // Selected values
+    InventoryCategory selectedCategory = item?.category ?? InventoryCategory.other;
+    InventoryUnit selectedUnit = item?.unit ?? InventoryUnit.pieces;
+    DateTime? selectedExpiryDate = item?.expiryDate;
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Item'),
-        content: const Text('Add item functionality will be implemented next.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(isEditing ? 'Edit Inventory Item' : 'Add Inventory Item'),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: Form(
+              key: formKey,
+              child: ListView(
+                children: [
+                  // Basic Information
+                  Text(
+                    'Basic Information',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Item Name
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Item Name *',
+                      hintText: 'Enter inventory item name',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.inventory_2),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Item name is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Description
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      hintText: 'Enter item description (optional)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.description),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Category and Unit
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<InventoryCategory>(
+                          value: selectedCategory,
+                          decoration: const InputDecoration(
+                            labelText: 'Category *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.category),
+                          ),
+                          items: InventoryCategory.values.map((category) {
+                            return DropdownMenuItem(
+                              value: category,
+                              child: Text(category.categoryDisplay),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedCategory = value!;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonFormField<InventoryUnit>(
+                          value: selectedUnit,
+                          decoration: const InputDecoration(
+                            labelText: 'Unit *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.straighten),
+                          ),
+                          items: InventoryUnit.values.map((unit) {
+                            return DropdownMenuItem(
+                              value: unit,
+                              child: Text(_getUnitDisplay(unit)),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedUnit = value!;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Stock Information
+                  Text(
+                    'Stock Information',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: currentStockController,
+                          decoration: const InputDecoration(
+                            labelText: 'Current Stock *',
+                            hintText: '0',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.inventory),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Current stock is required';
+                            }
+                            final stock = double.tryParse(value);
+                            if (stock == null || stock < 0) {
+                              return 'Enter valid stock amount';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: minimumStockController,
+                          decoration: const InputDecoration(
+                            labelText: 'Minimum Stock *',
+                            hintText: '5',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.warning_amber),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Minimum stock is required';
+                            }
+                            final stock = double.tryParse(value);
+                            if (stock == null || stock < 0) {
+                              return 'Enter valid minimum stock';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: maximumStockController,
+                          decoration: const InputDecoration(
+                            labelText: 'Maximum Stock *',
+                            hintText: '100',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.trending_up),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Maximum stock is required';
+                            }
+                            final maxStock = double.tryParse(value);
+                            if (maxStock == null || maxStock <= 0) {
+                              return 'Enter valid maximum stock';
+                            }
+                            final minStock = double.tryParse(minimumStockController.text) ?? 0;
+                            if (maxStock <= minStock) {
+                              return 'Maximum must be greater than minimum';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: costPerUnitController,
+                          decoration: const InputDecoration(
+                            labelText: 'Cost per Unit *',
+                            hintText: '0.00',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.attach_money),
+                          ),
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Cost per unit is required';
+                            }
+                            final cost = double.tryParse(value);
+                            if (cost == null || cost < 0) {
+                              return 'Enter valid cost';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Supplier Information
+                  Text(
+                    'Supplier Information',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  TextFormField(
+                    controller: supplierController,
+                    decoration: const InputDecoration(
+                      labelText: 'Supplier',
+                      hintText: 'Enter supplier name (optional)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.business),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  TextFormField(
+                    controller: supplierContactController,
+                    decoration: const InputDecoration(
+                      labelText: 'Supplier Contact',
+                      hintText: 'Enter supplier contact (optional)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.contact_phone),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Expiry Date
+                  GestureDetector(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: selectedExpiryDate ?? DateTime.now().add(const Duration(days: 30)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          selectedExpiryDate = date;
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today, color: Colors.grey),
+                          const SizedBox(width: 12),
+                          Text(
+                            selectedExpiryDate != null
+                                ? 'Expiry Date: ${DateFormat('MMM dd, yyyy').format(selectedExpiryDate!)}'
+                                : 'Set Expiry Date (Optional)',
+                            style: TextStyle(
+                              color: selectedExpiryDate != null ? Colors.black87 : Colors.grey.shade600,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (selectedExpiryDate != null)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedExpiryDate = null;
+                                });
+                              },
+                              child: Icon(Icons.clear, color: Colors.grey.shade600),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  // Create or update inventory item
+                  final inventoryItem = InventoryItem(
+                    id: item?.id, // Keep existing ID for edits
+                    name: nameController.text.trim(),
+                    description: descriptionController.text.trim().isEmpty 
+                        ? null 
+                        : descriptionController.text.trim(),
+                    category: selectedCategory,
+                    unit: selectedUnit,
+                    currentStock: double.parse(currentStockController.text),
+                    minimumStock: double.parse(minimumStockController.text),
+                    maximumStock: double.parse(maximumStockController.text),
+                    costPerUnit: double.parse(costPerUnitController.text),
+                    supplier: supplierController.text.trim().isEmpty 
+                        ? null 
+                        : supplierController.text.trim(),
+                    supplierContact: supplierContactController.text.trim().isEmpty 
+                        ? null 
+                        : supplierContactController.text.trim(),
+                    expiryDate: selectedExpiryDate,
+                    createdAt: item?.createdAt ?? DateTime.now(),
+                    updatedAt: DateTime.now(),
+                  );
+
+                  bool success;
+                  if (isEditing) {
+                    success = await _inventoryService.updateItem(inventoryItem);
+                  } else {
+                    success = await _inventoryService.addItem(inventoryItem);
+                  }
+
+                  if (success) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isEditing 
+                              ? '✅ Item "${inventoryItem.name}" updated successfully'
+                              : '✅ Item "${inventoryItem.name}" added successfully',
+                        ),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    _loadData(); // Refresh the data
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isEditing 
+                              ? '❌ Failed to update item. Name might already exist.'
+                              : '❌ Failed to add item. Name might already exist.',
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isEditing ? Colors.orange : Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(isEditing ? 'Update Item' : 'Add Item'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showEditItemDialog(InventoryItem item) {
-    // TODO: Implement edit item dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Item'),
-        content: Text('Edit ${item.name} functionality will be implemented next.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  String _getUnitDisplay(InventoryUnit unit) {
+    switch (unit) {
+      case InventoryUnit.pieces:
+        return 'Pieces (pcs)';
+      case InventoryUnit.grams:
+        return 'Grams (g)';
+      case InventoryUnit.kilograms:
+        return 'Kilograms (kg)';
+      case InventoryUnit.liters:
+        return 'Liters (L)';
+      case InventoryUnit.milliliters:
+        return 'Milliliters (mL)';
+      case InventoryUnit.ounces:
+        return 'Ounces (oz)';
+      case InventoryUnit.pounds:
+        return 'Pounds (lbs)';
+      case InventoryUnit.units:
+        return 'Units';
+    }
   }
 
   void _showRestockDialog(InventoryItem item) {

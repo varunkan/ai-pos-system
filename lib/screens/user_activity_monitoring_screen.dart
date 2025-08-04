@@ -9,8 +9,9 @@ import 'package:ai_pos_system/widgets/universal_navigation.dart';
 
 class UserActivityMonitoringScreen extends StatefulWidget {
   final User user;
+  final bool showAppBar;
   
-  const UserActivityMonitoringScreen({super.key, required this.user});
+  const UserActivityMonitoringScreen({super.key, required this.user, this.showAppBar = true});
 
   @override
   State<UserActivityMonitoringScreen> createState() => _UserActivityMonitoringScreenState();
@@ -50,6 +51,36 @@ class _UserActivityMonitoringScreenState extends State<UserActivityMonitoringScr
 
   @override
   Widget build(BuildContext context) {
+    final body = Consumer<ActivityLogService>(
+      builder: (context, activityLogService, child) {
+        return Column(
+          children: [
+            _buildSearchAndFilters(activityLogService),
+            _buildTabs(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildAllActivitiesTab(activityLogService),
+                  _buildUserActivitiesTab(activityLogService),
+                  _buildFinancialActivitiesTab(activityLogService),
+                  _buildSensitiveActivitiesTab(activityLogService),
+                  _buildErrorsTab(activityLogService),
+                  _buildAnalyticsTab(activityLogService),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!widget.showAppBar) {
+      // When used as a tab in AdminPanelScreen, just return the body content
+      return body;
+    }
+
+    // When used as a standalone screen, show the full Scaffold with AppBar
     return Scaffold(
       appBar: UniversalAppBar(
         title: 'User Activity Monitor',
@@ -68,29 +99,7 @@ class _UserActivityMonitoringScreenState extends State<UserActivityMonitoringScr
           ),
         ],
       ),
-      body: Consumer<ActivityLogService>(
-        builder: (context, activityLogService, child) {
-          return Column(
-            children: [
-              _buildSearchAndFilters(activityLogService),
-              _buildTabs(),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildAllActivitiesTab(activityLogService),
-                    _buildUserActivitiesTab(activityLogService),
-                    _buildFinancialActivitiesTab(activityLogService),
-                    _buildSensitiveActivitiesTab(activityLogService),
-                    _buildErrorsTab(activityLogService),
-                    _buildAnalyticsTab(activityLogService),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+      body: body,
     );
   }
 

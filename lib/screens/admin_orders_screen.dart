@@ -15,8 +15,9 @@ import '../services/order_log_service.dart'; // Added import for OrderLogService
 
 class AdminOrdersScreen extends StatefulWidget {
   final User user;
+  final bool showAppBar;
 
-  const AdminOrdersScreen({super.key, required this.user});
+  const AdminOrdersScreen({super.key, required this.user, this.showAppBar = true});
 
   @override
   State<AdminOrdersScreen> createState() => _AdminOrdersScreenState();
@@ -408,6 +409,29 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final body = _error != null
+        ? _buildErrorState(_error!)
+        : Column(
+            children: [
+              _buildFilters(),
+              Expanded(
+                child: _buildOrdersList(),
+              ),
+            ],
+          );
+
+    if (!widget.showAppBar) {
+      // When used as a tab in AdminPanelScreen, just return the body content
+      return LoadingOverlay(
+        isLoading: _isLoading,
+        child: Container(
+          color: Colors.grey.shade50,
+          child: body,
+        ),
+      );
+    }
+
+    // When used as a standalone screen, show the full Scaffold with AppBar
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
@@ -427,16 +451,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
           ],
           leading: const CustomBackButton(),
         ),
-        body: _error != null
-            ? _buildErrorState(_error!)
-            : Column(
-                children: [
-                  _buildFilters(),
-                  Expanded(
-                    child: _buildOrdersList(),
-                  ),
-                ],
-              ),
+        body: body,
       ),
     );
   }

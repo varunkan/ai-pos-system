@@ -670,8 +670,14 @@ class OrderService extends ChangeNotifier {
       _currentOrderStreamController.add(order);
     }
     
-    // Notify listeners
-    notifyListeners();
+    // Safe notification to prevent crashes
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      try {
+        notifyListeners();
+      } catch (e) {
+        debugPrint('❌ Error notifying listeners: $e');
+      }
+    });
     _ordersStreamController.add(_allOrders);
   }
 
@@ -743,7 +749,14 @@ class OrderService extends ChangeNotifier {
       
       debugPrint('✅ Loaded ${orders.length} orders (${_activeOrders.length} active, ${_completedOrders.length} completed)');
       
-      notifyListeners();
+      // Safe notification to prevent crashes
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        try {
+          notifyListeners();
+        } catch (e) {
+          debugPrint('❌ Error notifying listeners: $e');
+        }
+      });
       _ordersStreamController.add(_allOrders);
     } catch (e) {
       debugPrint('❌ Error loading orders: $e');
@@ -934,7 +947,14 @@ class OrderService extends ChangeNotifier {
         description: 'Order deleted',
       );
 
-      notifyListeners();
+      // Safe notification to prevent crashes
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        try {
+          notifyListeners();
+        } catch (e) {
+          debugPrint('❌ Error notifying listeners: $e');
+        }
+      });
       _ordersStreamController.add(_allOrders);
       
       debugPrint('✅ Order deleted successfully');
@@ -994,13 +1014,27 @@ class OrderService extends ChangeNotifier {
     if (order != null) {
       _currentOrderStreamController.add(order);
     }
-    notifyListeners();
+    // Safe notification to prevent crashes
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      try {
+        notifyListeners();
+      } catch (e) {
+        debugPrint('❌ Error notifying listeners: $e');
+      }
+    });
   }
 
   /// Clear current order
   void clearCurrentOrder() {
     _currentOrder = null;
-    notifyListeners();
+    // Safe notification to prevent crashes
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      try {
+        notifyListeners();
+      } catch (e) {
+        debugPrint('❌ Error notifying listeners: $e');
+      }
+    });
   }
 
   /// Parse string status to OrderStatus enum
@@ -1030,7 +1064,14 @@ class OrderService extends ChangeNotifier {
   /// Set loading state
   void _setLoading(bool loading) {
     _isLoading = loading;
-    notifyListeners();
+    // Safe notification to prevent crashes
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      try {
+        notifyListeners();
+      } catch (e) {
+        debugPrint('❌ Error notifying listeners: $e');
+      }
+    });
   }
 
   /// Save orders to cache
@@ -1057,7 +1098,14 @@ class OrderService extends ChangeNotifier {
       _completedOrders.clear();
       _currentOrder = null;
       
-      notifyListeners();
+      // Safe notification to prevent crashes
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        try {
+          notifyListeners();
+        } catch (e) {
+          debugPrint('❌ Error notifying listeners: $e');
+        }
+      });
       _ordersStreamController.add(_allOrders);
       
       debugPrint('✅ All orders cleared');
@@ -1102,7 +1150,14 @@ class OrderService extends ChangeNotifier {
       _menuItemCache.clear();
       
       debugPrint('✅ All orders deleted successfully - users and menu items preserved');
-      notifyListeners();
+      // Safe notification to prevent crashes
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        try {
+          notifyListeners();
+        } catch (e) {
+          debugPrint('❌ Error notifying listeners: $e');
+        }
+      });
       
       // Notify streams
       _ordersStreamController.add([]);
@@ -1253,6 +1308,14 @@ class OrderService extends ChangeNotifier {
       });
       
       notifyListeners();
+      // Safe notification to prevent crashes
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        try {
+          notifyListeners();
+        } catch (e) {
+          debugPrint('❌ Error notifying listeners: $e');
+        }
+      });
       debugPrint('✅ Fixed ${orphanedOrders.length} truly orphaned orders with empty userIds');
       
     } catch (e) {

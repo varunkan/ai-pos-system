@@ -332,6 +332,8 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
     // Guard to prevent multiple simultaneous operations
     if (_isLoading) return;
     
+    debugPrint('🚀 Starting send to kitchen process...');
+    
     // GUARANTEE: Set loading state
     if (mounted) {
       setState(() {
@@ -339,11 +341,19 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       });
     }
 
+    // Get all providers synchronously BEFORE any async operations
+    final databaseService = Provider.of<DatabaseService>(context, listen: false);
+    final printingService = Provider.of<PrintingService?>(context, listen: false);
+    final activityLogService = Provider.of<ActivityLogService>(context, listen: false);
+
     try {
       // Step 1: Get items that haven't been sent to kitchen yet
       final newItems = _currentOrder.items.where((item) => !item.sentToKitchen).toList();
       
+      debugPrint('🔍 Found ${newItems.length} new items to send to kitchen');
+      
       if (newItems.isEmpty) {
+        debugPrint('⚠️ No new items to send to kitchen');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -357,14 +367,14 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         return;
       }
       
-
-      
       // Step 2: Update items to mark as sent to kitchen
+      debugPrint('📝 Updating items to mark as sent to kitchen...');
       final updatedItems = _currentOrder.items.map((item) =>
         item.sentToKitchen ? item : item.copyWith(sentToKitchen: true)
       ).toList();
       
       // Step 3: Update order
+      debugPrint('📋 Creating updated order...');
       final updatedOrder = _currentOrder.copyWith(
         items: updatedItems,
         userId: widget.user.id,
@@ -372,7 +382,7 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       );
       
       // Step 4: Save to database with timeout protection
-      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      debugPrint('💾 Saving order to database...');
       
       // Use Future.timeout to prevent hanging
       await _saveOrderDirectly(updatedOrder, databaseService).timeout(
@@ -380,12 +390,16 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         onTimeout: () => throw TimeoutException('Database save timeout', const Duration(seconds: 10)),
       );
       
+      debugPrint('✅ Order saved successfully to database');
+      
       // Step 5: Update UI state
       if (mounted) {
         setState(() {
           _currentOrder = updatedOrder;
         });
       }
+      
+      debugPrint('✅ UI state updated successfully');
       
       // Step 6: Show success message IMMEDIATELY
       if (mounted) {
@@ -399,11 +413,39 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
         );
       }
       
-      // Step 7: Try printing in background (don't await it)
-      _tryPrintingInBackground(updatedOrder);
+      debugPrint('✅ Success message displayed');
+      
+      // Step 7: Log activity (synchronously)
+      try {
+        await activityLogService.logActivity(
+          action: ActivityAction.sentToKitchen,
+          description: 'Order ${updatedOrder.orderNumber} sent to kitchen',
+          targetId: updatedOrder.id,
+          targetType: 'order',
+          metadata: {
+            'order_number': updatedOrder.orderNumber,
+            'items_count': newItems.length,
+            'sent_by': widget.user.name,
+            'sent_at': DateTime.now().toIso8601String(),
+          },
+        );
+        debugPrint('✅ Activity logged successfully');
+      } catch (e) {
+        debugPrint('⚠️ Failed to log activity: $e');
+        // Don't fail the send to kitchen if logging fails
+      }
+      
+      // Step 8: Try printing in background (don't await it)
+      debugPrint('🖨️ Starting background printing...');
+      _tryPrintingInBackground(updatedOrder, printingService);
+      
+      debugPrint('🎉 Send to kitchen process completed successfully!');
 
     } catch (e) {
       debugPrint('❌ Error sending to kitchen: $e');
+      debugPrint('❌ Error type: ${e.runtimeType}');
+      debugPrint('❌ Error stack trace: ${StackTrace.current}');
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -416,23 +458,21 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
       }
     } finally {
       // GUARANTEE: Always clear loading state no matter what happens
+      debugPrint('🧹 Clearing loading state...');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-
+      debugPrint('✅ Loading state cleared');
     }
   }
   
   /// Try printing in background without blocking main flow
-  void _tryPrintingInBackground(Order order) {
+  void _tryPrintingInBackground(Order order, PrintingService? printingService) {
     // Fire and forget - don't block the main UI flow
     () async {
       try {
-
-        
-        final printingService = Provider.of<PrintingService?>(context, listen: false);
         if (printingService != null) {
           // Try printing with short timeout
           await printingService.printKitchenTicket(order).timeout(
@@ -452,93 +492,112 @@ class _EditActiveOrderScreenState extends State<EditActiveOrderScreen> {
   /// Saves order directly to database without triggering OrderService listeners
   Future<void> _saveOrderDirectly(Order order, DatabaseService databaseService) async {
     try {
+      debugPrint('💾 Starting direct database save for order: ${order.orderNumber}');
+      
       final orderData = _orderToMap(order);
+      debugPrint('📋 Order data prepared, items count: ${order.items.length}');
       
       // Save order in a transaction
       final db = await databaseService.database;
       if (db != null) {
+        debugPrint('🗄️ Database connection established');
+        
         await db.transaction((txn) async {
-        // Use INSERT OR REPLACE to handle potential ID conflicts
-        await txn.rawInsert('''
-          INSERT OR REPLACE INTO orders (
-            id, order_number, status, type, table_id, user_id, customer_name,
-            customer_phone, customer_email, customer_address, special_instructions,
-            subtotal, tax_amount, tip_amount, hst_amount, discount_amount, gratuity_amount, total_amount, payment_method,
-            payment_status, payment_transaction_id, order_time, estimated_ready_time,
-            actual_ready_time, served_time, completed_time, is_urgent, priority,
-            assigned_to, custom_fields, metadata, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', [
-          orderData['id'],
-          orderData['order_number'],
-          orderData['status'],
-          orderData['type'],
-          orderData['table_id'],
-          orderData['user_id'],
-          orderData['customer_name'],
-          orderData['customer_phone'],
-          orderData['customer_email'],
-          orderData['customer_address'],
-          orderData['special_instructions'],
-          orderData['subtotal'],
-          orderData['tax_amount'],
-          orderData['tip_amount'],
-          orderData['hst_amount'],
-          orderData['discount_amount'],
-          orderData['gratuity_amount'],
-          orderData['total_amount'],
-          orderData['payment_method'],
-          orderData['payment_status'],
-          orderData['payment_transaction_id'],
-          orderData['order_time'],
-          orderData['estimated_ready_time'],
-          orderData['actual_ready_time'],
-          orderData['served_time'],
-          orderData['completed_time'],
-          orderData['is_urgent'],
-          orderData['priority'],
-          orderData['assigned_to'],
-          orderData['custom_fields'],
-          orderData['metadata'],
-          orderData['created_at'],
-          orderData['updated_at'],
-        ]);
-        
-        // Delete existing order items first to avoid duplicates
-        await txn.delete('order_items', where: 'order_id = ?', whereArgs: [order.id]);
-        
-        // Save order items
-        for (final item in order.items) {
-          final itemData = _orderItemToMap(item, order.id);
+          debugPrint('🔄 Starting database transaction');
+          
+          // Use INSERT OR REPLACE to handle potential ID conflicts
           await txn.rawInsert('''
-            INSERT OR REPLACE INTO order_items (
-              id, order_id, menu_item_id, quantity, unit_price, total_price,
-              selected_variant, selected_modifiers, special_instructions,
-              custom_properties, is_available, sent_to_kitchen, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO orders (
+              id, order_number, status, type, table_id, user_id, customer_name,
+              customer_phone, customer_email, customer_address, special_instructions,
+              subtotal, tax_amount, tip_amount, hst_amount, discount_amount, gratuity_amount, total_amount, payment_method,
+              payment_status, payment_transaction_id, order_time, estimated_ready_time,
+              actual_ready_time, served_time, completed_time, is_urgent, priority,
+              assigned_to, custom_fields, metadata, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ''', [
-            itemData['id'],
-            itemData['order_id'],
-            itemData['menu_item_id'],
-            itemData['quantity'],
-            itemData['unit_price'],
-            itemData['total_price'],
-            itemData['selected_variant'],
-            itemData['selected_modifiers'],
-            itemData['special_instructions'],
-            itemData['custom_properties'],
-            itemData['is_available'],
-            itemData['sent_to_kitchen'],
-            itemData['created_at'],
+            orderData['id'],
+            orderData['order_number'],
+            orderData['status'],
+            orderData['type'],
+            orderData['table_id'],
+            orderData['user_id'],
+            orderData['customer_name'],
+            orderData['customer_phone'],
+            orderData['customer_email'],
+            orderData['customer_address'],
+            orderData['special_instructions'],
+            orderData['subtotal'],
+            orderData['tax_amount'],
+            orderData['tip_amount'],
+            orderData['hst_amount'],
+            orderData['discount_amount'],
+            orderData['gratuity_amount'],
+            orderData['total_amount'],
+            orderData['payment_method'],
+            orderData['payment_status'],
+            orderData['payment_transaction_id'],
+            orderData['order_time'],
+            orderData['estimated_ready_time'],
+            orderData['actual_ready_time'],
+            orderData['served_time'],
+            orderData['completed_time'],
+            orderData['is_urgent'],
+            orderData['priority'],
+            orderData['assigned_to'],
+            orderData['custom_fields'],
+            orderData['metadata'],
+            orderData['created_at'],
+            orderData['updated_at'],
           ]);
-        }
+          
+          debugPrint('✅ Order saved to database');
+          
+          // Delete existing order items first to avoid duplicates
+          await txn.delete('order_items', where: 'order_id = ?', whereArgs: [order.id]);
+          debugPrint('🗑️ Existing order items deleted');
+          
+          // Save order items
+          for (int i = 0; i < order.items.length; i++) {
+            final item = order.items[i];
+            final itemData = _orderItemToMap(item, order.id);
+            
+            debugPrint('📝 Saving order item ${i + 1}/${order.items.length}: ${item.menuItem.name}');
+            
+            await txn.rawInsert('''
+              INSERT OR REPLACE INTO order_items (
+                id, order_id, menu_item_id, quantity, unit_price, total_price,
+                selected_variant, selected_modifiers, special_instructions,
+                custom_properties, is_available, sent_to_kitchen, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', [
+              itemData['id'],
+              itemData['order_id'],
+              itemData['menu_item_id'],
+              itemData['quantity'],
+              itemData['unit_price'],
+              itemData['total_price'],
+              itemData['selected_variant'],
+              itemData['selected_modifiers'],
+              itemData['special_instructions'],
+              itemData['custom_properties'],
+              itemData['is_available'],
+              itemData['sent_to_kitchen'],
+              itemData['created_at'],
+            ]);
+          }
+          
+          debugPrint('✅ All order items saved successfully');
+        });
         
-      });
-    } else {
-      throw Exception('Database is not available');
-    }
+        debugPrint('✅ Database transaction completed successfully');
+      } else {
+        throw Exception('Database is not available');
+      }
     } catch (e) {
       debugPrint('❌ Database save error: $e');
+      debugPrint('❌ Error type: ${e.runtimeType}');
+      debugPrint('❌ Error stack trace: ${StackTrace.current}');
       rethrow;
     }
   }

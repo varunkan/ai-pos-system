@@ -16,8 +16,9 @@ import '../widgets/form_field.dart';
 /// users to interact with tables based on their role.
 class TablesScreen extends StatefulWidget {
   final User? user;
+  final bool showAppBar;
 
-  const TablesScreen({super.key, this.user});
+  const TablesScreen({super.key, this.user, this.showAppBar = true});
 
   @override
   _TablesScreenState createState() => _TablesScreenState();
@@ -610,6 +611,135 @@ class _TablesScreenState extends State<TablesScreen> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final tablesControls = Column(
+      children: [
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search tables...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+        ),
+        // Filter chips
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: filterOptions.map((filter) {
+              final isSelected = _selectedFilter == filter;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(filter.toUpperCase()),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedFilter = filter;
+                    });
+                  },
+                  selectedColor: Theme.of(context).primaryColor,
+                  checkmarkColor: Colors.white,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        // Tab bar
+        TabBar(
+          controller: _tabController,
+          labelColor: Theme.of(context).primaryColor,
+          unselectedLabelColor: Colors.grey.shade600,
+          indicatorColor: Theme.of(context).primaryColor,
+          tabs: [
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_circle, size: 16),
+                  const SizedBox(width: 4),
+                  Text('Available (${_availableTables.length})'),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.people, size: 16),
+                  const SizedBox(width: 4),
+                  Text('Occupied (${_occupiedTables.length})'),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.schedule, size: 16),
+                  const SizedBox(width: 4),
+                  Text('Reserved (${_reservedTables.length})'),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.cleaning_services, size: 16),
+                  const SizedBox(width: 4),
+                  Text('Cleaning (${_cleaningTables.length})'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final body = TabBarView(
+      controller: _tabController,
+      children: [
+        _buildTableList(_availableTables, 'available'),
+        _buildTableList(_occupiedTables, 'occupied'),
+        _buildTableList(_reservedTables, 'reserved'),
+        _buildTableList(_cleaningTables, 'cleaning'),
+      ],
+    );
+
+    if (!widget.showAppBar) {
+      // When used as a tab in AdminPanelScreen, just return the body content
+      return LoadingOverlay(
+        isLoading: _isLoading,
+        child: Column(
+          children: [
+            tablesControls,
+            Expanded(child: body),
+          ],
+        ),
+      );
+    }
+
+    // When used as a standalone screen, show the full Scaffold with AppBar
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
@@ -627,121 +757,10 @@ class _TablesScreenState extends State<TablesScreen> with TickerProviderStateMix
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(120),
-            child: Column(
-              children: [
-                // Search bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search tables...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _searchQuery = '';
-                                });
-                              },
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                  ),
-                ),
-                // Filter chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: filterOptions.map((filter) {
-                      final isSelected = _selectedFilter == filter;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(filter.toUpperCase()),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(() {
-                              _selectedFilter = filter;
-                            });
-                          },
-                          selectedColor: Theme.of(context).primaryColor,
-                          checkmarkColor: Colors.white,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                // Tab bar
-                TabBar(
-                  controller: _tabController,
-                  labelColor: Theme.of(context).primaryColor,
-                  unselectedLabelColor: Colors.grey.shade600,
-                  indicatorColor: Theme.of(context).primaryColor,
-                  tabs: [
-                    Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.check_circle, size: 16),
-                          const SizedBox(width: 4),
-                          Text('Available (${_availableTables.length})'),
-                        ],
-                      ),
-                    ),
-                    Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.people, size: 16),
-                          const SizedBox(width: 4),
-                          Text('Occupied (${_occupiedTables.length})'),
-                        ],
-                      ),
-                    ),
-                    Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.schedule, size: 16),
-                          const SizedBox(width: 4),
-                          Text('Reserved (${_reservedTables.length})'),
-                        ],
-                      ),
-                    ),
-                    Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.cleaning_services, size: 16),
-                          const SizedBox(width: 4),
-                          Text('Cleaning (${_cleaningTables.length})'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            child: tablesControls,
           ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildTableList(_availableTables, 'available'),
-            _buildTableList(_occupiedTables, 'occupied'),
-            _buildTableList(_reservedTables, 'reserved'),
-            _buildTableList(_cleaningTables, 'cleaning'),
-          ],
-        ),
+        body: body,
         floatingActionButton: FloatingActionButton(
           onPressed: _showCreateTableDialog,
           child: const Icon(Icons.add),

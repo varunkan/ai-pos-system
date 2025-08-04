@@ -13,8 +13,9 @@ import 'package:audioplayers/audioplayers.dart';
 
 class KitchenScreen extends StatefulWidget {
   final User user;
+  final bool showAppBar;
 
-  const KitchenScreen({super.key, required this.user});
+  const KitchenScreen({super.key, required this.user, this.showAppBar = true});
 
   @override
   _KitchenScreenState createState() => _KitchenScreenState();
@@ -289,7 +290,7 @@ class _KitchenScreenState extends State<KitchenScreen> with TickerProviderStateM
       isLoading: _isLoading,
       child: Scaffold(
         backgroundColor: Colors.grey.shade50,
-        appBar: _isFullscreen
+        appBar: (_isFullscreen || !widget.showAppBar)
             ? null
             : UniversalAppBar(
                 currentUser: widget.user,
@@ -455,14 +456,168 @@ class _KitchenScreenState extends State<KitchenScreen> with TickerProviderStateM
               ),
         body: _error != null
             ? _buildErrorState(_error!)
-            : TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildOrderList(_pendingOrders, 'pending'),
-                  _buildOrderList(_preparingOrders, 'preparing'),
-                  _buildOrderList(_readyOrders, 'ready'),
-                ],
-              ),
+            : !widget.showAppBar
+                ? Column(
+                    children: [
+                      // Include kitchen controls when not showing AppBar
+                      if (_bannerMessage != null)
+                        GestureDetector(
+                          onTap: () => setState(() => _bannerMessage = null),
+                          child: Container(
+                            width: double.infinity,
+                            color: _bannerColor ?? Colors.blue,
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.notifications, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _bannerMessage!,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.close, color: Colors.white, size: 18),
+                              ],
+                            ),
+                          ),
+                        ),
+                      // Analytics Bar
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildStatTile('Pending', pendingCount, Colors.orange),
+                            _buildStatTile('Preparing', preparingCount, Colors.indigo),
+                            _buildStatTile('Ready', readyCount, Colors.green),
+                            _buildStatTile('Urgent', urgentCount, Colors.red),
+                            _buildStatTile('Overdue', overdueCount, Colors.yellow.shade900),
+                            Column(
+                              children: [
+                                const Text('Avg Prep', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                Text('$avgPrepTime min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Search bar
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search orders, customers, or items...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchQuery = '';
+                                      });
+                                    },
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value;
+                            });
+                          },
+                        ),
+                      ),
+                      // Filter chips
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: filterOptions.map((filter) {
+                            final isSelected = _selectedFilter == filter;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: FilterChip(
+                                label: Text(filter.toUpperCase()),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _selectedFilter = filter;
+                                  });
+                                },
+                                selectedColor: Theme.of(context).primaryColor,
+                                checkmarkColor: Colors.white,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      // Tab bar
+                      TabBar(
+                        controller: _tabController,
+                        labelColor: Theme.of(context).primaryColor,
+                        unselectedLabelColor: Colors.grey.shade600,
+                        indicatorColor: Theme.of(context).primaryColor,
+                        tabs: [
+                          Tab(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.schedule, size: 16),
+                                const SizedBox(width: 4),
+                                Text('Pending ([38;5;2m${_pendingOrders.length}[0m)'),
+                              ],
+                            ),
+                          ),
+                          Tab(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.restaurant, size: 16),
+                                const SizedBox(width: 4),
+                                Text('Preparing ([38;5;2m${_preparingOrders.length}[0m)'),
+                              ],
+                            ),
+                          ),
+                          Tab(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.check_circle, size: 16),
+                                const SizedBox(width: 4),
+                                Text('Ready ([38;5;2m${_readyOrders.length}[0m)'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildOrderList(_pendingOrders, 'pending'),
+                            _buildOrderList(_preparingOrders, 'preparing'),
+                            _buildOrderList(_readyOrders, 'ready'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildOrderList(_pendingOrders, 'pending'),
+                      _buildOrderList(_preparingOrders, 'preparing'),
+                      _buildOrderList(_readyOrders, 'ready'),
+                    ],
+                  ),
         floatingActionButton: _isFullscreen
             ? FloatingActionButton.extended(
                 onPressed: _toggleFullscreen,
