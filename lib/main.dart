@@ -32,6 +32,9 @@ import 'services/free_cloud_printing_service.dart';
 import 'services/cross_platform_database_service.dart';
 // Removed redundant printer services for streamlined architecture
 import 'services/enhanced_printer_manager.dart';
+// Cloud sync services for real-time updates across devices
+import 'services/cloud_sync_service.dart';
+import 'services/cloud_sync_integration_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -489,6 +492,40 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       await _crossPlatformDatabaseService!.initialize();
       debugPrint('✅ CrossPlatformDatabaseService initialized - data sync across devices enabled');
       
+      // Initialize cloud sync service for real-time updates across devices
+      widget.progressService.addMessage('☁️ Setting up cloud synchronization...');
+      final currentRestaurant = widget.authService.currentRestaurant;
+      final currentSession = widget.authService.currentSession;
+      
+      if (currentRestaurant != null) {
+        try {
+          // Initialize cloud sync service
+          await CloudSyncManager.initialize(
+            restaurantId: currentRestaurant.id,
+            userId: currentSession?.userId,
+            serverUrl: 'wss://ai-pos-sync.herokuapp.com/ws',
+            apiUrl: 'https://ai-pos-sync.herokuapp.com/api',
+          );
+          
+          // Initialize cloud sync integration service
+          await CloudSyncIntegrationManager.initialize(
+            cloudSyncService: CloudSyncManager.instance,
+            orderService: _orderService,
+            menuService: _menuService,
+            inventoryService: _inventoryService,
+            tableService: _tableService,
+            userService: _userService,
+            printerManager: _enhancedPrinterManager,
+          );
+          
+          debugPrint('✅ Cloud sync services initialized - real-time updates enabled');
+        } catch (e) {
+          debugPrint('⚠️ Cloud sync initialization failed, continuing without real-time sync: $e');
+        }
+      } else {
+        debugPrint('⚠️ No restaurant available for cloud sync initialization');
+      }
+      
       // Initialize auto printer discovery service (requires printing service, printer config service, and multi printer manager)
       widget.progressService.addMessage('🔍 Setting up automatic printer discovery...');
       if (_printingService != null && _printerConfigurationService != null && _enhancedPrinterAssignmentService != null) {
@@ -637,6 +674,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     providers.add(ChangeNotifierProvider<RobustKitchenService?>.value(value: _robustKitchenService));
     providers.add(ChangeNotifierProvider<FreeCloudPrintingService?>.value(value: _freeCloudPrintingService));
     providers.add(ChangeNotifierProvider<CrossPlatformDatabaseService?>.value(value: _crossPlatformDatabaseService));
+    
+    // Add cloud sync services
+    providers.add(ChangeNotifierProvider<CloudSyncService?>.value(value: CloudSyncManager.instance));
+    providers.add(ChangeNotifierProvider<CloudSyncIntegrationService?>.value(value: CloudSyncIntegrationManager.instance));
     
     return MultiProvider(
       providers: [
