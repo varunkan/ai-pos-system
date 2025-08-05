@@ -379,8 +379,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       
       widget.progressService.addMessage('🔧 Setting up printer configurations...');
       _printerConfigurationService = PrinterConfigurationService(tenantDatabase);
-      await _printerConfigurationService!.initializeTable();
-      debugPrint('✅ PrinterConfigurationService initialized');
+      // FIXED: Add timeout to prevent hanging during initialization
+      try {
+        await _printerConfigurationService!.initializeTable().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            debugPrint('⚠️ PrinterConfigurationService initialization timed out, continuing...');
+            return;
+          },
+        );
+        debugPrint('✅ PrinterConfigurationService initialized');
+      } catch (e) {
+        debugPrint('⚠️ PrinterConfigurationService initialization failed, continuing: $e');
+      }
       
       widget.progressService.addMessage('🎛️ Setting up printer assignments...');
       
@@ -414,9 +425,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           assignmentService: _enhancedPrinterAssignmentService!,
         );
         
-        // Initialize enhanced printer manager (this will discover, configure, and connect all printers)
-        await _enhancedPrinterManager!.initialize();
-        debugPrint('✅ EnhancedPrinterManager initialized - comprehensive printer system ready');
+        // Initialize enhanced printer manager (no automatic discovery)
+        try {
+          await _enhancedPrinterManager!.initialize().timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint('⚠️ EnhancedPrinterManager initialization timed out, continuing...');
+              return;
+            },
+          );
+          debugPrint('✅ EnhancedPrinterManager initialized - manual discovery only');
+        } catch (e) {
+          debugPrint('⚠️ EnhancedPrinterManager initialization failed, continuing: $e');
+        }
       } else {
         debugPrint('⚠️ Could not initialize EnhancedPrinterManager - required services not available');
       }

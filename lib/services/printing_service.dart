@@ -168,24 +168,16 @@ class PrintingService with ChangeNotifier {
     _loadConnectedPrinter();
     _loadActivePrinters();
     
-    // Start automatic printer discovery immediately
-    _startAutomaticDiscovery();
+    // FIXED: Don't start automatic printer discovery immediately to prevent hanging
+    // _startAutomaticDiscovery();
+    debugPrint('🔄 Automatic printer discovery disabled during initialization to prevent hanging');
   }
   
   /// Start automatic printer discovery
+  /// FIXED: Removed automatic discovery - only manual discovery available
   void _startAutomaticDiscovery() {
-    // Start discovery after a short delay to allow initialization
-    Timer(const Duration(seconds: 3), () async {
-      if (_isManualScanningEnabled) {
-        debugPrint('🔍 Starting automatic WiFi printer discovery...');
-        try {
-          await _scanWiFiPrinters();
-          debugPrint('✅ Automatic printer discovery completed');
-        } catch (e) {
-          debugPrint('❌ Automatic printer discovery failed: $e');
-        }
-      }
-    });
+    debugPrint('🔄 Automatic printer discovery disabled - only manual discovery available');
+    // No automatic discovery - only manual discovery on user request
   }
 
   // Getters
@@ -332,6 +324,9 @@ class PrintingService with ChangeNotifier {
   Future<List<PrinterDevice>> _scanWiFiPrinters() async {
     final List<PrinterDevice> printers = [];
     
+    // FIXED: Move stopwatch declaration to outer scope
+    final stopwatch = Stopwatch()..start();
+    
     try {
       debugPrint('Starting comprehensive WiFi printer scan...');
       
@@ -357,41 +352,38 @@ class PrintingService with ChangeNotifier {
         // Common printer ports
         final printerPorts = [9100, 515, 631, 9101, 9102];
         
-        // More comprehensive IP ranges for printers
-        final commonPrinterIPs = <String>[];
+        // FIXED: Use a more efficient scanning approach with timeout
+        final scanTimeout = const Duration(seconds: 30);
         
-        // Add common printer IP ranges
-        for (int i = 1; i <= 254; i++) {
-          // Skip broadcast and network addresses
-          if (i == 0 || i == 255) continue;
-          
-          // Priority IPs (common printer ranges)
-          if ((i >= 100 && i <= 120) ||  // 192.168.x.100-120
-              (i >= 200 && i <= 220) ||  // 192.168.x.200-220
-              (i >= 50 && i <= 70) ||    // 192.168.x.50-70
-              (i >= 150 && i <= 170) ||  // 192.168.x.150-170
-              (i >= 10 && i <= 30)) {    // 192.168.x.10-30
-            commonPrinterIPs.insert(0, '$subnet.$i'); // Insert at beginning for priority
-          } else {
-            commonPrinterIPs.add('$subnet.$i'); // Add at end for full scan
-          }
-        }
+        // Priority IPs (most likely printer locations)
+        final priorityIPs = <String>[];
+        for (int i = 100; i <= 120; i++) priorityIPs.add('$subnet.$i');
+        for (int i = 200; i <= 220; i++) priorityIPs.add('$subnet.$i');
+        for (int i = 50; i <= 70; i++) priorityIPs.add('$subnet.$i');
+        for (int i = 150; i <= 170; i++) priorityIPs.add('$subnet.$i');
+        for (int i = 10; i <= 30; i++) priorityIPs.add('$subnet.$i');
         
         // Skip your own IP to avoid self-connection
         final yourIP = parts[3];
-        commonPrinterIPs.removeWhere((ip) => ip.endsWith('.$yourIP'));
+        priorityIPs.removeWhere((ip) => ip.endsWith('.$yourIP'));
         
-        debugPrint('Scanning ${commonPrinterIPs.length} IPs on ${printerPorts.length} ports...');
+        debugPrint('Scanning ${priorityIPs.length} priority IPs on ${printerPorts.length} ports...');
         
-        // Process IPs in small batches to avoid network overload
-        for (int i = 0; i < commonPrinterIPs.length; i += 5) {
+        // Scan priority IPs first
+        for (int i = 0; i < priorityIPs.length; i += 5) {
+          // Check timeout
+          if (stopwatch.elapsed > scanTimeout) {
+            debugPrint('⏰ WiFi scan timeout reached, stopping scan');
+            break;
+          }
+          
           // Check if scanning is still enabled
           if (!_isManualScanningEnabled) {
             debugPrint('WiFi scanning stopped - manual scanning disabled during scan');
             break;
           }
           
-          final batch = commonPrinterIPs.skip(i).take(5);
+          final batch = priorityIPs.skip(i).take(5);
           final futures = <Future<PrinterDevice?>>[];
           
           // Test each IP on each port
@@ -420,17 +412,56 @@ class PrintingService with ChangeNotifier {
           
           // Progress update every 25 IPs
           if ((i + 5) % 25 == 0) {
-            debugPrint('Scanned ${i + 5}/${commonPrinterIPs.length} IPs... Found ${printers.length} printers so far');
+            debugPrint('Scanned ${i + 5}/${priorityIPs.length} IPs... Found ${printers.length} printers so far');
           }
           
           // Small delay between batches to be network-friendly
-          if (i + 5 < commonPrinterIPs.length) {
-            await Future.delayed(const Duration(milliseconds: 50));
+          if (i + 5 < priorityIPs.length) {
+            await Future.delayed(const Duration(milliseconds: 25));
+          }
+        }
+        
+        // If we found printers, don't do a full scan
+        if (printers.isNotEmpty) {
+          debugPrint('✅ Quick scan found ${printers.length} WiFi printers');
+        } else {
+          // Do a limited full scan only if no printers found
+          debugPrint('🔍 No printers found in priority IPs, doing limited full scan...');
+          
+          // Scan only first 50 IPs to avoid hanging
+          for (int i = 1; i <= 50; i++) {
+            if (stopwatch.elapsed > scanTimeout) {
+              debugPrint('⏰ Full scan timeout reached');
+              break;
+            }
+            
+            final ip = '$subnet.$i';
+            if (ip.endsWith('.$yourIP')) continue; // Skip your own IP
+            
+            for (final port in printerPorts) {
+              try {
+                final printer = await _testAndCreatePrinterDevice(ip, port);
+                if (printer != null) {
+                  // Avoid duplicates
+                  final existingPrinter = printers.where((p) => 
+                    p.address.split(':')[0] == printer.address.split(':')[0]
+                  ).firstOrNull;
+                  
+                  if (existingPrinter == null) {
+                    printers.add(printer);
+                    debugPrint('Found WiFi printer: ${printer.name} at ${printer.address}');
+                  }
+                }
+              } catch (e) {
+                // Continue scanning
+              }
+            }
           }
         }
       }
       
-      debugPrint('Comprehensive WiFi scan completed - found ${printers.length} WiFi printers');
+      stopwatch.stop();
+      debugPrint('Comprehensive WiFi scan completed in ${stopwatch.elapsedMilliseconds}ms - found ${printers.length} WiFi printers');
       
     } catch (e) {
       debugPrint('Error in comprehensive WiFi printer scan: $e');

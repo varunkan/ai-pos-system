@@ -129,8 +129,7 @@ class UnifiedPrinterService extends ChangeNotifier {
       // Build assignment maps for performance
       _rebuildAssignmentMaps();
       
-      // Start discovery and health monitoring
-      await _startPrinterDiscovery();
+      // Start health monitoring only (no automatic discovery)
       _startHealthMonitoring();
       
       // Start cloud sync if enabled
@@ -324,24 +323,13 @@ class UnifiedPrinterService extends ChangeNotifier {
   }
   
   /// Start printer discovery
+  /// FIXED: Removed automatic discovery - only manual discovery available
   Future<void> _startPrinterDiscovery() async {
-    try {
-      debugPrint('$_logTag 🔍 Starting comprehensive printer discovery...');
-      
-      // Discover network printers
-      await _discoverNetworkPrinters();
-      
-      // Start periodic discovery
-      _discoveryTimer = Timer.periodic(const Duration(minutes: 5), (_) {
-        _discoverNetworkPrinters();
-      });
-      
-    } catch (e) {
-      debugPrint('$_logTag ❌ Error starting discovery: $e');
-    }
+    debugPrint('$_logTag 🔄 Automatic discovery disabled - only manual discovery available');
+    // No automatic discovery - only manual discovery on user request
   }
   
-  /// Discover network printers
+  /// Discover network printers (quick scan only)
   Future<void> _discoverNetworkPrinters() async {
     if (_isScanning) return;
     
@@ -358,24 +346,44 @@ class UnifiedPrinterService extends ChangeNotifier {
       }
       
       final subnet = wifiIP.split('.').take(3).join('.');
-      debugPrint('$_logTag 🌐 Scanning subnet: $subnet.x');
+      debugPrint('$_logTag 🌐 Quick scanning subnet: $subnet.x');
       
       // Common printer ports
       const ports = [9100, 515, 631];
       final discovered = <PrinterConfiguration>[];
       
-      // Scan common printer IP ranges
-      final futures = <Future>[];
-      for (int i = 1; i <= 254; i++) {
-        final ip = '$subnet.$i';
+      // Quick scan of common printer IP ranges only
+      final commonIPs = <String>[];
+      for (int i = 100; i <= 120; i++) commonIPs.add('$subnet.$i');
+      for (int i = 200; i <= 220; i++) commonIPs.add('$subnet.$i');
+      for (int i = 50; i <= 70; i++) commonIPs.add('$subnet.$i');
+      for (int i = 150; i <= 170; i++) commonIPs.add('$subnet.$i');
+      for (int i = 10; i <= 30; i++) commonIPs.add('$subnet.$i');
+      
+      debugPrint('$_logTag 🔍 Scanning ${commonIPs.length} common printer IPs...');
+      
+      // Scan with timeout
+      final scanTimeout = const Duration(seconds: 15);
+      final stopwatch = Stopwatch()..start();
+      
+      for (final ip in commonIPs) {
+        if (stopwatch.elapsed > scanTimeout) {
+          debugPrint('$_logTag ⏰ Scan timeout reached');
+          break;
+        }
+        
         for (final port in ports) {
-          futures.add(_checkPrinterAt(ip, port).then((config) {
-            if (config != null) discovered.add(config);
-          }));
+          try {
+            final config = await _checkPrinterAt(ip, port);
+            if (config != null) {
+              discovered.add(config);
+              debugPrint('$_logTag 🖨️ Found printer: ${config.name} at ${config.ipAddress}:${config.port}');
+            }
+          } catch (e) {
+            // Continue scanning
+          }
         }
       }
-      
-      await Future.wait(futures);
       
       // Auto-add discovered printers
       for (final config in discovered) {
@@ -384,7 +392,8 @@ class UnifiedPrinterService extends ChangeNotifier {
         }
       }
       
-      debugPrint('$_logTag ✅ Discovery complete. Found ${discovered.length} new printers');
+      stopwatch.stop();
+      debugPrint('$_logTag ✅ Quick scan completed in ${stopwatch.elapsedMilliseconds}ms. Found ${discovered.length} new printers');
       
     } catch (e) {
       debugPrint('$_logTag ❌ Discovery error: $e');

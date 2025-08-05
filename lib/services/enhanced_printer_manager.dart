@@ -45,6 +45,26 @@ class EnhancedPrinterManager extends ChangeNotifier {
   Map<String, String> get menuItemAssignments => Map.unmodifiable(_menuItemAssignments);
   // Removed: ComprehensivePrinterSystem getter (redundant service)
   
+  /// Manual printer discovery - called from UI
+  Future<List<PrinterConfiguration>> discoverPrinters() async {
+    debugPrint('$_logTag 🔍 Manual printer discovery triggered by user');
+    
+    try {
+      // Use printer configuration service for discovery
+      await _printerConfigService.manualDiscovery();
+      
+      // Refresh available printers
+      await _loadAvailablePrinters();
+      
+      debugPrint('$_logTag ✅ Manual discovery completed - found ${_availablePrinters.length} printers');
+      return _availablePrinters;
+      
+    } catch (e) {
+      debugPrint('$_logTag ❌ Manual discovery failed: $e');
+      return _availablePrinters;
+    }
+  }
+  
   /// Initialize the enhanced printer manager
   Future<void> initialize() async {
     debugPrint('$_logTag 🚀 Initializing Enhanced Printer Manager...');
@@ -53,13 +73,10 @@ class EnhancedPrinterManager extends ChangeNotifier {
       // Step 1: Initialize printer services
       await _printerConfigService.initialize();
       
-      // Step 2: Force printer discovery and configuration
-      await _forceDiscoverAndConfigurePrinters();
-      
-      // Step 3: Load available printers
+      // Step 2: Load available printers (no automatic discovery)
       await _loadAvailablePrinters();
       
-      // Step 4: Load assignments
+      // Step 3: Load assignments
       await _loadMenuItemAssignments();
       
       _isInitialized = true;
@@ -75,68 +92,17 @@ class EnhancedPrinterManager extends ChangeNotifier {
   }
   
   /// Force discovery and configuration of all network printers
+  /// FIXED: Removed automatic discovery - only manual discovery available
   Future<void> _forceDiscoverAndConfigurePrinters() async {
-    debugPrint('$_logTag 🔍 Force discovering network printers...');
-    
-    try {
-      // Use printer configuration service for discovery
-      await _printerConfigService.manualDiscovery();
-      
-      // Also manually scan and save any printers we find
-      await _manualNetworkScan();
-      
-      // Refresh printer configuration service
-      await _printerConfigService.refreshConfigurations();
-      
-      debugPrint('$_logTag ✅ Force discovery completed');
-      
-    } catch (e) {
-      debugPrint('$_logTag ❌ Force discovery failed: $e');
-    }
+    debugPrint('$_logTag 🔄 Automatic discovery disabled - only manual discovery available');
+    // No automatic discovery - only manual discovery on user request
   }
   
   /// Manual network scan with immediate database saving
+  /// FIXED: Removed automatic scanning - only manual discovery available
   Future<void> _manualNetworkScan() async {
-    final networkRange = await _getNetworkRange();
-    final foundPrinters = <Map<String, dynamic>>[];
-    
-    debugPrint('$_logTag 🌐 Manual scan of $networkRange.x network...');
-    
-    // Quick scan of common printer IPs
-    final commonIPs = [
-      '$networkRange.141', '$networkRange.147', '$networkRange.233', // From logs
-      '$networkRange.100', '$networkRange.101', '$networkRange.102',
-      '$networkRange.150', '$networkRange.151', '$networkRange.152',
-      '$networkRange.200', '$networkRange.201', '$networkRange.202',
-    ];
-    
-    for (final ip in commonIPs) {
-      for (final port in [9100, 515, 631]) {
-        try {
-          final socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 2));
-          
-          // Found a printer - immediately save it
-          await socket.close();
-          
-          final printerData = {
-            'ip': ip,
-            'port': port,
-            'name': 'Network Printer ($ip:$port)',
-            'model': 'ESC/POS',
-          };
-          
-          foundPrinters.add(printerData);
-          await _saveDiscoveredPrinter(printerData);
-          
-          debugPrint('$_logTag ✅ Found and saved: $ip:$port');
-          
-        } catch (e) {
-          // Not a printer - continue
-        }
-      }
-    }
-    
-    debugPrint('$_logTag 📊 Manual scan found ${foundPrinters.length} printers');
+    debugPrint('$_logTag 🔄 Manual network scan disabled - only manual discovery available');
+    // No automatic scanning - only manual discovery on user request
   }
   
   /// Immediately save discovered printer to database

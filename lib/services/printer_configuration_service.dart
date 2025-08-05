@@ -50,8 +50,9 @@ class PrinterConfigurationService extends ChangeNotifier {
       await _createPrinterConfigurationsTable();
       await _loadSavedConfigurations();
       
-      // Start automatic printer discovery
-      await _startAutomaticDiscovery();
+      // FIXED: Don't start automatic printer discovery immediately to prevent hanging
+      // await _startAutomaticDiscovery();
+      debugPrint('$_logTag 🔄 Automatic printer discovery disabled during initialization to prevent hanging');
       
       _isInitialized = true;
       notifyListeners();
@@ -206,72 +207,75 @@ class PrinterConfigurationService extends ChangeNotifier {
   /// Manually trigger printer discovery (can be called from UI)
   Future<void> manualDiscovery() async {
     debugPrint('$_logTag 🔍 Manual printer discovery triggered by user');
-    await _scanForPrinters();
-  }
-  
-  /// Start automatic printer discovery on local network
-  Future<void> _startAutomaticDiscovery() async {
-    debugPrint('$_logTag 🔍 Starting automatic printer discovery...');
     
-    // Start discovery in background
-    Timer.periodic(const Duration(minutes: 5), (timer) {
-      if (_isInitialized) {
-        _scanForPrinters();
-      }
-    });
-    
-    // Initial scan immediately
-    Timer(const Duration(seconds: 2), () async {
-      if (_isInitialized) {
-        debugPrint('$_logTag 🔍 Starting immediate initial printer scan...');
-        await _scanForPrinters();
-      }
-    });
-  }
-  
-  /// Scan for thermal printers on the network
-  Future<void> _scanForPrinters() async {
-    if (_isScanning) return;
-    
-    _isScanning = true;
+    // Clear previous discoveries
     _discoveredPrinters.clear();
     notifyListeners();
     
-    debugPrint('$_logTag 🔍 Scanning network for Epson thermal printers...');
+    // Perform quick scan of common printer IPs only
+    await _quickScanForPrinters();
+  }
+  
+  /// Start automatic printer discovery on local network
+  /// FIXED: Removed automatic discovery - only manual discovery available
+  Future<void> _startAutomaticDiscovery() async {
+    debugPrint('$_logTag 🔄 Automatic discovery disabled - only manual discovery available');
+    // No automatic discovery - only manual discovery on user request
+  }
+  
+  /// Quick scan for thermal printers on the network (manual discovery only)
+  Future<void> _quickScanForPrinters() async {
+    if (_isScanning) return;
+    
+    _isScanning = true;
+    notifyListeners();
+    
+    debugPrint('$_logTag 🔍 Quick scanning for thermal printers...');
     
     try {
       // Get local network range
       final networkRange = await _getNetworkRange();
       debugPrint('$_logTag 🌐 Scanning network range: $networkRange');
       
-      // Scan each IP in the range
-      final List<Future<DiscoveredPrinter?>> scanTasks = [];
+      // Quick scan of common printer IPs only
+      final commonIPs = <String>[];
+      for (int i = 100; i <= 120; i++) commonIPs.add('$networkRange.$i');
+      for (int i = 200; i <= 220; i++) commonIPs.add('$networkRange.$i');
+      for (int i = 50; i <= 70; i++) commonIPs.add('$networkRange.$i');
+      for (int i = 150; i <= 170; i++) commonIPs.add('$networkRange.$i');
+      for (int i = 10; i <= 30; i++) commonIPs.add('$networkRange.$i');
       
-      for (int i = 1; i <= 254; i++) {
-        final ip = '${networkRange}.$i';
+      debugPrint('$_logTag 🔍 Scanning ${commonIPs.length} common printer IPs...');
+      
+      // Scan with timeout
+      final scanTimeout = const Duration(seconds: 15);
+      final stopwatch = Stopwatch()..start();
+      
+      for (final ip in commonIPs) {
+        if (stopwatch.elapsed > scanTimeout) {
+          debugPrint('$_logTag ⏰ Scan timeout reached');
+          break;
+        }
+        
         for (int port in _commonPorts) {
-          scanTasks.add(_testPrinterConnection(ip, port));
+          try {
+            final printer = await _testPrinterConnection(ip, port);
+            if (printer != null) {
+              _discoveredPrinters.add(printer);
+              debugPrint('$_logTag 🖨️ Found printer: ${printer.name} at ${printer.ipAddress}:${printer.port}');
+              await _autoAddDiscoveredPrinter(printer);
+            }
+          } catch (e) {
+            // Continue scanning
+          }
         }
       }
       
-      // Wait for all scans to complete
-      final results = await Future.wait(scanTasks);
-      
-      // Filter out null results and add discovered printers
-      for (final result in results) {
-        if (result != null) {
-          _discoveredPrinters.add(result);
-          debugPrint('$_logTag 🖨️ Found printer: ${result.name} at ${result.ipAddress}:${result.port}');
-          
-          // FIXED: Automatically convert discovered printers to configurations
-          await _autoAddDiscoveredPrinter(result);
-        }
-      }
-      
-      debugPrint('$_logTag ✅ Discovery complete. Found ${_discoveredPrinters.length} printers');
+      stopwatch.stop();
+      debugPrint('$_logTag ✅ Quick scan completed in ${stopwatch.elapsedMilliseconds}ms. Found ${_discoveredPrinters.length} printers');
       
     } catch (e) {
-      debugPrint('$_logTag ❌ Error during printer discovery: $e');
+      debugPrint('$_logTag ❌ Error during quick printer scan: $e');
     } finally {
       _isScanning = false;
       notifyListeners();
