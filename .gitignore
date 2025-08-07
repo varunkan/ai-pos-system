@@ -104,6 +104,10 @@ firebase_options.dart
 *.sqlite
 *.sqlite3
 
+# APK files (too large for GitHub)
+*.apk
+releases/*.apk
+
 # Logs
 logs/
 *.log
