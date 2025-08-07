@@ -51,11 +51,11 @@ dependencies:
   path: ^1.8.3
   audioplayers: ^5.2.1
   
-  # Cloud synchronization and cross-platform storage (temporarily disabled due to build issues)
-  # firebase_core: ^2.24.2
-  # cloud_firestore: ^4.13.6
-  # firebase_auth: ^4.15.3
-  # firebase_storage: ^11.6.0
+  # Cloud synchronization and cross-platform storage
+  firebase_core: ^2.24.2
+  cloud_firestore: ^4.13.6
+  firebase_auth: ^4.15.3
+  firebase_storage: ^11.6.0
   
   # Cross-platform local storage
   hive: ^2.2.3
@@ -71,6 +71,7 @@ dependencies:
   
   # Security and encryption
   crypto: ^3.0.3
+  encrypt: ^5.0.3
   
   # Collection utilities (required by multiple services)
   collection: ^1.18.0
@@ -80,7 +81,6 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-  sqflite_common_ffi: ^2.3.0
   
   # Code generation for Hive
   hive_generator: ^2.0.1

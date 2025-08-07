@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ai_pos_system/models/inventory_item.dart';
+
 import 'package:ai_pos_system/models/order.dart';
 import 'package:ai_pos_system/models/menu_item.dart';
 import 'package:ai_pos_system/services/inventory_service.dart';

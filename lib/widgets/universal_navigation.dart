@@ -16,8 +16,7 @@ import '../screens/reservations_screen.dart';
 
 // Printer selection now handled by UnifiedPrinterDashboard
 import '../screens/unified_printer_dashboard.dart';
-import '../main.dart';
-import '../services/multi_tenant_auth_service.dart';
+
 import '../screens/restaurant_auth_screen.dart';
 
 /// Universal navigation widget that provides consistent navigation across all screens

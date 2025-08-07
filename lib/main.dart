@@ -32,9 +32,8 @@ import 'services/free_cloud_printing_service.dart';
 import 'services/cross_platform_database_service.dart';
 // Removed redundant printer services for streamlined architecture
 import 'services/enhanced_printer_manager.dart';
-// Cloud sync services for real-time updates across devices
-import 'services/cloud_sync_service.dart';
-import 'services/cloud_sync_integration_service.dart';
+import 'services/multidevice_sync_manager.dart';
+import 'services/firebase_realtime_sync_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -495,35 +494,65 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       // Initialize cloud sync service for real-time updates across devices
       widget.progressService.addMessage('☁️ Setting up cloud synchronization...');
       final currentRestaurant = widget.authService.currentRestaurant;
-      final currentSession = widget.authService.currentSession;
+      final currentUserSession = widget.authService.currentSession;
       
       if (currentRestaurant != null) {
         try {
-          // Initialize cloud sync service
-          await CloudSyncManager.initialize(
-            restaurantId: currentRestaurant.id,
-            userId: currentSession?.userId,
-            serverUrl: 'wss://ai-pos-sync.herokuapp.com/ws',
-            apiUrl: 'https://ai-pos-sync.herokuapp.com/api',
-          );
+          // Initialize multidevice sync manager
+          final multideviceSyncManager = MultideviceSyncManager();
+          await multideviceSyncManager.initialize();
           
-          // Initialize cloud sync integration service
-          await CloudSyncIntegrationManager.initialize(
-            cloudSyncService: CloudSyncManager.instance,
-            orderService: _orderService,
-            menuService: _menuService,
-            inventoryService: _inventoryService,
-            tableService: _tableService,
-            userService: _userService,
-            printerManager: _enhancedPrinterManager,
-          );
+          // Initialize enhanced Firebase realtime sync service
+          final firebaseRealtimeSync = FirebaseRealtimeSyncService();
+          await firebaseRealtimeSync.initialize();
           
-          debugPrint('✅ Cloud sync services initialized - real-time updates enabled');
+          // Connect to restaurant for multi-device sync
+          if (currentUserSession != null) {
+            await multideviceSyncManager.connectToRestaurant(currentRestaurant, currentUserSession);
+            await firebaseRealtimeSync.connectToRestaurant(currentRestaurant, currentUserSession);
+            
+            // Set up callbacks for real-time updates
+            firebaseRealtimeSync.setCallbacks(
+              onOrdersUpdated: () {
+                debugPrint('🔄 Orders updated from cloud');
+                // Trigger UI refresh for orders
+                widget.progressService.addMessage('📋 Orders synchronized');
+              },
+              onInventoryUpdated: () {
+                debugPrint('🔄 Inventory updated from cloud');
+                // Trigger UI refresh for inventory
+                widget.progressService.addMessage('📦 Inventory synchronized');
+              },
+              onMenuItemsUpdated: () {
+                debugPrint('🔄 Menu items updated from cloud');
+                // Trigger UI refresh for menu
+                widget.progressService.addMessage('🍽️ Menu synchronized');
+              },
+              onKitchenOrdersUpdated: () {
+                debugPrint('🔄 Kitchen orders updated from cloud');
+                // Trigger kitchen display updates
+                widget.progressService.addMessage('👨‍🍳 Kitchen orders synchronized');
+              },
+              onTableStatusUpdated: () {
+                debugPrint('🔄 Table status updated from cloud');
+                // Trigger table management updates
+                widget.progressService.addMessage('🪑 Table status synchronized');
+              },
+            );
+            
+            debugPrint('✅ Multi-device sync initialized successfully');
+            widget.progressService.addMessage('✅ Real-time synchronization active');
+          } else {
+            debugPrint('⚠️ No user session available for multi-device sync');
+            widget.progressService.addMessage('⚠️ Multi-device sync requires user session');
+          }
         } catch (e) {
-          debugPrint('⚠️ Cloud sync initialization failed, continuing without real-time sync: $e');
+          debugPrint('❌ Failed to initialize multi-device sync: $e');
+          widget.progressService.addMessage('⚠️ Multi-device sync unavailable - continuing in local mode');
         }
       } else {
-        debugPrint('⚠️ No restaurant available for cloud sync initialization');
+        debugPrint('⚠️ No restaurant available for multi-device sync initialization');
+        widget.progressService.addMessage('⚠️ Multi-device sync requires restaurant selection');
       }
       
       // Initialize auto printer discovery service (requires printing service, printer config service, and multi printer manager)
@@ -674,10 +703,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     providers.add(ChangeNotifierProvider<RobustKitchenService?>.value(value: _robustKitchenService));
     providers.add(ChangeNotifierProvider<FreeCloudPrintingService?>.value(value: _freeCloudPrintingService));
     providers.add(ChangeNotifierProvider<CrossPlatformDatabaseService?>.value(value: _crossPlatformDatabaseService));
-    
-    // Add cloud sync services
-    providers.add(ChangeNotifierProvider<CloudSyncService?>.value(value: CloudSyncManager.instance));
-    providers.add(ChangeNotifierProvider<CloudSyncIntegrationService?>.value(value: CloudSyncIntegrationManager.instance));
     
     return MultiProvider(
       providers: [

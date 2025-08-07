@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'package:ai_pos_system/models/store.dart';
-import 'package:ai_pos_system/services/database_service.dart';
+
 
 /// Multi-tenant store management service
 class StoreService with ChangeNotifier {

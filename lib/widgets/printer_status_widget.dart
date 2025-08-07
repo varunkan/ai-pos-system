@@ -240,14 +240,19 @@ class PrinterStatusWidget extends StatelessWidget {
                       const SizedBox(width: 8),
                       OutlinedButton.icon(
                         onPressed: () {
-                          // Simplified: Discovery is always enabled
-                          // Toggle functionality removed since discovery is always on
+                          // Auto-discovery is always enabled
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Auto-discovery is always enabled'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
                         },
-                        icon: Icon(
-                          isEnabled ? Icons.pause : Icons.play_arrow,
+                        icon: const Icon(
+                          Icons.info_outline,
                           size: 16,
                         ),
-                        label: Text(isEnabled ? 'Pause' : 'Resume'),
+                        label: const Text('Info'),
                         style: OutlinedButton.styleFrom(
                           textStyle: const TextStyle(fontSize: 12),
                         ),

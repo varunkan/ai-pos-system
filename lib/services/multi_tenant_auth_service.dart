@@ -471,7 +471,7 @@ class MultiTenantAuthService extends ChangeNotifier {
       'updated_at': restaurant.updatedAt.toIso8601String(),
       'is_active': restaurant.isActive ? 1 : 0, // Convert boolean to integer for SQLite
       'database_name': restaurant.databaseName,
-      'settings': jsonEncode(restaurant.settings ?? {}),
+      'settings': jsonEncode(restaurant.settings),
     };
     
     await db.insert('restaurants', restaurantData, conflictAlgorithm: ConflictAlgorithm.replace);

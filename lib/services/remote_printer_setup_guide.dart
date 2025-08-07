@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+
 import '../models/printer_configuration.dart';
 import '../services/printer_configuration_service.dart';
 // import '../services/auto_printer_discovery_service.dart'; // Temporarily disabled
@@ -567,67 +566,8 @@ class _RemotePrinterSetupScreenState extends State<RemotePrinterSetupScreen> {
   }
 
   Future<void> _scanForLocalPrinters() async {
-            // final discoveryService = Provider.of<AutoPrinterDiscoveryService?>(context, listen: false); // Temporarily disabled
-    
     // Temporarily disabled auto discovery
     _showError('Auto discovery service temporarily disabled');
-    return;
-
-    // Show scanning dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Scanning for local printers...'),
-            SizedBox(height: 8),
-            Text(
-              'This may take a few moments',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      // Temporarily disabled
-      // await discoveryService.manualDiscovery();
-      
-      if (mounted) {
-        Navigator.pop(context); // Close scanning dialog
-        
-        // Show result
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.search, color: Colors.green),
-                SizedBox(width: 8),
-                Text('Local Printer Scan'),
-              ],
-            ),
-            content: const Text('Local printer scan completed!\n\nCheck the Printer Assignment screen to see discovered printers.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close scanning dialog
-        _showError('Printer scan failed: $e');
-      }
-    }
   }
 
   void _showError(String message) {

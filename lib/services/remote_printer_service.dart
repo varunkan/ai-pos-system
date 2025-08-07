@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/order.dart';
-import '../models/printer_configuration.dart';
+
 import 'printing_service.dart';
 
 /// Remote Printer Service for Internet-based printing

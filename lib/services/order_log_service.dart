@@ -2,12 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+
 import 'package:ai_pos_system/models/order_log.dart';
 import 'package:ai_pos_system/models/order.dart';
-import 'package:ai_pos_system/models/user.dart';
 import 'package:ai_pos_system/services/database_service.dart';
-import 'package:ai_pos_system/services/user_service.dart';
 
 /// Service for comprehensive order operation logging and audit trail
 class OrderLogService extends ChangeNotifier {

@@ -1,8 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ai_pos_system/services/user_service.dart';
-import 'package:ai_pos_system/services/store_service.dart';
-import 'package:ai_pos_system/models/user.dart';
-import 'package:ai_pos_system/models/store.dart';
+
 
 /// Critical Issues Test Suite
 /// Tests to prevent regression of critical security and functionality issues

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/order.dart';
 import '../models/printer_configuration.dart';
-import '../models/printer_assignment.dart';
+
 import 'database_service.dart';
 import 'printer_configuration_service.dart';
 import 'enhanced_printer_assignment_service.dart';

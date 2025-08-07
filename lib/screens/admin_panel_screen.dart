@@ -2950,6 +2950,85 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       ),
     );
   }
+
+  /// Load popular Indian restaurant menu for all tenant instances
+  Future<void> _loadPopularIndianMenu() async {
+    setState(() { _isLoading = true; });
+    
+    try {
+      debugPrint('🍽️ Admin: Loading Oh Bombay menu...');
+      final menuService = Provider.of<MenuService>(context, listen: false);
+      
+      // Clear existing data first to avoid conflicts
+      debugPrint('🗑️ Admin: Clearing existing menu data');
+      await menuService.clearAllData();
+      
+      // Load Oh Bombay menu
+      debugPrint('📥 Admin: Loading Oh Bombay menu data');
+      await menuService.loadOhBombayMenu();
+      debugPrint('✅ Admin: Oh Bombay menu loaded to database');
+      
+      // Reload local data
+      await _loadData();
+      debugPrint('✅ Admin: UI data refreshed');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Oh Bombay menu loaded successfully! 🇮🇳\n${_categories.length} categories, ${_menuItems.length} items'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Admin: Error loading Oh Bombay menu: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      if (mounted) {
+        await ErrorDialogHelper.showError(
+          context,
+          title: 'Error Loading Oh Bombay Menu',
+          message: 'Failed to load Oh Bombay menu:\n\nError: $e\n\nPlease check the console for more details.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Show a status dialog with the given message
+  Future<void> _showStatusDialog(String title, String message, {bool isError = false}) async {
+    if (!mounted) return;
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade50 : Colors.green.shade50,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Set loading state for the admin panel
+  void _setLoading(bool loading) {
+    if (mounted) {
+      setState(() {
+        _isLoading = loading;
+      });
+    }
+  }
 }
 
 class _AddUserView extends StatefulWidget {
@@ -3125,6 +3204,35 @@ class _ExistingUsersViewState extends State<_ExistingUsersView> {
     super.initState();
     debugPrint('ADMIN FLOW: _ExistingUsersView initState');
     _loadUsers();
+  }
+
+  /// Set loading state for the admin panel
+  void _setLoading(bool loading) {
+    if (mounted) {
+      setState(() {
+        _isLoading = loading;
+      });
+    }
+  }
+
+  /// Show a status dialog with the given message
+  Future<void> _showStatusDialog(String title, String message, {bool isError = false}) async {
+    if (!mounted) return;
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade50 : Colors.green.shade50,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadUsers() async {

@@ -185,15 +185,20 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
               elevation: 0,
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  // Calculate responsive dimensions based on screen size
+                  // Calculate responsive dimensions based on screen size and orientation
                   final screenWidth = MediaQuery.of(context).size.width;
                   final screenHeight = MediaQuery.of(context).size.height;
+                  final isLandscape = screenWidth > screenHeight;
                   
-                  // Responsive width: 80% of screen width, but between 400-600px
-                  final dialogWidth = (screenWidth * 0.8).clamp(400.0, 600.0);
+                  // Responsive width: adapt to orientation and screen size
+                  final dialogWidth = isLandscape 
+                    ? (screenWidth * 0.6).clamp(500.0, 800.0)  // Wider in landscape
+                    : (screenWidth * 0.9).clamp(350.0, 500.0); // Narrower in portrait
                   
-                  // Responsive height: 85% of screen height, but max 650px
-                  final maxDialogHeight = (screenHeight * 0.85).clamp(500.0, 650.0);
+                  // Responsive height: adapt to orientation
+                  final maxDialogHeight = isLandscape
+                    ? (screenHeight * 0.9).clamp(400.0, 600.0)  // Taller in landscape
+                    : (screenHeight * 0.8).clamp(450.0, 700.0); // Shorter in portrait
                   
                   return Container(
                     width: dialogWidth,
@@ -229,10 +234,10 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Elegant Header (Fixed height)
+                          // Elegant Header (Responsive height)
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(24),
+                            padding: EdgeInsets.all(isLandscape ? 16 : 24),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
@@ -249,18 +254,18 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                 Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.all(12),
+                                      padding: EdgeInsets.all(isLandscape ? 8 : 12),
                                       decoration: BoxDecoration(
                                         color: Colors.white.withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.restaurant,
                                         color: Colors.white,
-                                        size: 24,
+                                        size: isLandscape ? 20 : 24,
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
+                                    SizedBox(width: isLandscape ? 12 : 16),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,19 +274,19 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                             'Configure Item',
                                             style: TextStyle(
                                               color: Colors.white.withValues(alpha: 0.9),
-                                              fontSize: 14,
+                                              fontSize: isLandscape ? 12 : 14,
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
-                                          const SizedBox(height: 4),
+                                          SizedBox(height: isLandscape ? 2 : 4),
                                           Text(
                                             item.name,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               color: Colors.white,
-                                              fontSize: 20, // Reduced for better fit
+                                              fontSize: isLandscape ? 16 : 20,
                                               fontWeight: FontWeight.bold,
                                             ),
-                                            maxLines: 2,
+                                            maxLines: isLandscape ? 1 : 2,
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
@@ -289,9 +294,12 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 16),
+                                SizedBox(height: isLandscape ? 12 : 16),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isLandscape ? 12 : 16, 
+                                    vertical: isLandscape ? 6 : 8
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(20),
@@ -302,9 +310,9 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                   ),
                                   child: Text(
                                     '\$${item.price.toStringAsFixed(2)}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 18,
+                                      fontSize: isLandscape ? 14 : 18,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -320,9 +328,9 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Responsive layout based on screen width
-                                  if (dialogWidth > 500) ...[
-                                    // Wide screen: Two column layout
+                                  // Responsive layout based on screen width and orientation
+                                  if (dialogWidth > 500 && !isLandscape) ...[
+                                    // Wide screen in portrait: Two column layout
                                     Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
@@ -388,16 +396,21 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                             'Spice Level',
                                             Icons.local_fire_department,
                                             Colors.orange,
-                                            Row(
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 8,
                                               children: ['Regular', 'Mild', 'Spicy'].map((level) {
                                                 final isSelected = selectedSpiceLevel == level;
                                                 final color = level == 'Spicy' ? Colors.red :
                                                              level == 'Mild' ? Colors.green :
                                                              Colors.grey;
                                                 
-                                                return Expanded(
+                                                return Flexible(
                                                   child: Container(
-                                                    margin: const EdgeInsets.only(right: 8),
+                                                    constraints: BoxConstraints(
+                                                      minWidth: isLandscape ? 100 : 80,
+                                                      maxWidth: isLandscape ? 150 : 120,
+                                                    ),
                                                     child: InkWell(
                                                       onTap: () {
                                                         setDialogState(() {
@@ -406,7 +419,10 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                                       },
                                                       borderRadius: BorderRadius.circular(12),
                                                       child: Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                                        padding: EdgeInsets.symmetric(
+                                                          horizontal: isLandscape ? 8 : 6, 
+                                                          vertical: 10
+                                                        ),
                                                         decoration: BoxDecoration(
                                                           color: isSelected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
                                                           borderRadius: BorderRadius.circular(12),
@@ -416,10 +432,11 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                                           ),
                                                         ),
                                                         child: Column(
+                                                          mainAxisSize: MainAxisSize.min,
                                                           children: [
                                                             Container(
-                                                              width: 20,
-                                                              height: 20,
+                                                              width: 18,
+                                                              height: 18,
                                                               decoration: BoxDecoration(
                                                                 color: isSelected ? color : Colors.transparent,
                                                                 shape: BoxShape.circle,
@@ -432,26 +449,28 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                                                   ? const Icon(
                                                                       Icons.check,
                                                                       color: Colors.white,
-                                                                      size: 14,
+                                                                      size: 12,
                                                                     )
                                                                   : null,
                                                             ),
-                                                            const SizedBox(height: 8),
+                                                            const SizedBox(height: 6),
                                                             Text(
                                                               level,
                                                               style: TextStyle(
-                                                                fontSize: 14,
+                                                                fontSize: isLandscape ? 13 : 12,
                                                                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                                                                 color: isSelected ? color : Colors.grey.shade700,
                                                               ),
                                                               textAlign: TextAlign.center,
+                                                              maxLines: 1,
+                                                              overflow: TextOverflow.ellipsis,
                                                             ),
                                                             if (level == 'Spicy') ...[
-                                                              const SizedBox(height: 4),
+                                                              const SizedBox(height: 2),
                                                               Icon(
                                                                 Icons.local_fire_department,
                                                                 color: Colors.red.shade400,
-                                                                size: 16,
+                                                                size: 14,
                                                               ),
                                                             ],
                                                           ],
@@ -467,7 +486,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                       ],
                                     ),
                                   ] else ...[
-                                    // Narrow screen: Single column layout
+                                    // Narrow screen or landscape: Single column layout with improved spacing
                                     _buildElegantSection(
                                       'Quantity',
                                       Icons.add_circle_outline,
@@ -480,6 +499,7 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
                                             _buildQuantityButton(
                                               Icons.remove,
@@ -516,89 +536,172 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 20),
+                                    SizedBox(height: isLandscape ? 16 : 20),
                                     _buildElegantSection(
                                       'Spice Level',
                                       Icons.local_fire_department,
                                       Colors.orange,
-                                      Column(
-                                        children: ['Regular', 'Mild', 'Spicy'].map((level) {
-                                          final isSelected = selectedSpiceLevel == level;
-                                          final color = level == 'Spicy' ? Colors.red :
-                                                       level == 'Mild' ? Colors.green :
-                                                       Colors.grey;
-                                          
-                                          return Container(
-                                            margin: const EdgeInsets.only(bottom: 8),
-                                            child: InkWell(
-                                              onTap: () {
-                                                setDialogState(() {
-                                                  selectedSpiceLevel = level;
-                                                });
-                                              },
-                                              borderRadius: BorderRadius.circular(12),
-                                              child: Container(
-                                                width: double.infinity,
-                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                                decoration: BoxDecoration(
-                                                  color: isSelected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
+                                      isLandscape 
+                                        ? Wrap(
+                                            spacing: 12,
+                                            runSpacing: 8,
+                                            alignment: WrapAlignment.center,
+                                            children: ['Regular', 'Mild', 'Spicy'].map((level) {
+                                              final isSelected = selectedSpiceLevel == level;
+                                              final color = level == 'Spicy' ? Colors.red :
+                                                           level == 'Mild' ? Colors.green :
+                                                           Colors.grey;
+                                              
+                                              return Container(
+                                                constraints: const BoxConstraints(
+                                                  minWidth: 100,
+                                                  maxWidth: 140,
+                                                ),
+                                                child: InkWell(
+                                                  onTap: () {
+                                                    setDialogState(() {
+                                                      selectedSpiceLevel = level;
+                                                    });
+                                                  },
                                                   borderRadius: BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color: isSelected ? color : Colors.grey.shade300,
-                                                    width: isSelected ? 2 : 1,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      border: Border.all(
+                                                        color: isSelected ? color : Colors.grey.shade300,
+                                                        width: isSelected ? 2 : 1,
+                                                      ),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Container(
+                                                          width: 16,
+                                                          height: 16,
+                                                          decoration: BoxDecoration(
+                                                            color: isSelected ? color : Colors.transparent,
+                                                            shape: BoxShape.circle,
+                                                            border: Border.all(
+                                                              color: color,
+                                                              width: 2,
+                                                            ),
+                                                          ),
+                                                          child: isSelected
+                                                              ? const Icon(
+                                                                  Icons.check,
+                                                                  color: Colors.white,
+                                                                  size: 10,
+                                                                )
+                                                              : null,
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Text(
+                                                            level,
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                                              color: isSelected ? color : Colors.grey.shade700,
+                                                            ),
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                        if (level == 'Spicy') ...[
+                                                          Icon(
+                                                            Icons.local_fire_department,
+                                                            color: Colors.red.shade400,
+                                                            size: 14,
+                                                          ),
+                                                        ],
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
-                                                child: Row(
-                                                  children: [
-                                                    Container(
-                                                      width: 20,
-                                                      height: 20,
-                                                      decoration: BoxDecoration(
-                                                        color: isSelected ? color : Colors.transparent,
-                                                        shape: BoxShape.circle,
-                                                        border: Border.all(
-                                                          color: color,
-                                                          width: 2,
+                                              );
+                                            }).toList(),
+                                          )
+                                        : Column(
+                                            children: ['Regular', 'Mild', 'Spicy'].map((level) {
+                                              final isSelected = selectedSpiceLevel == level;
+                                              final color = level == 'Spicy' ? Colors.red :
+                                                           level == 'Mild' ? Colors.green :
+                                                           Colors.grey;
+                                              
+                                              return Container(
+                                                margin: const EdgeInsets.only(bottom: 8),
+                                                child: InkWell(
+                                                  onTap: () {
+                                                    setDialogState(() {
+                                                      selectedSpiceLevel = level;
+                                                    });
+                                                  },
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  child: Container(
+                                                    width: double.infinity,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      border: Border.all(
+                                                        color: isSelected ? color : Colors.grey.shade300,
+                                                        width: isSelected ? 2 : 1,
+                                                      ),
+                                                    ),
+                                                    child: Row(
+                                                      children: [
+                                                        Container(
+                                                          width: 18,
+                                                          height: 18,
+                                                          decoration: BoxDecoration(
+                                                            color: isSelected ? color : Colors.transparent,
+                                                            shape: BoxShape.circle,
+                                                            border: Border.all(
+                                                              color: color,
+                                                              width: 2,
+                                                            ),
+                                                          ),
+                                                          child: isSelected
+                                                              ? const Icon(
+                                                                  Icons.check,
+                                                                  color: Colors.white,
+                                                                  size: 12,
+                                                                )
+                                                              : null,
                                                         ),
-                                                      ),
-                                                      child: isSelected
-                                                          ? const Icon(
-                                                              Icons.check,
-                                                              color: Colors.white,
-                                                              size: 14,
-                                                            )
-                                                          : null,
+                                                        const SizedBox(width: 10),
+                                                        Expanded(
+                                                          child: Text(
+                                                            level,
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                                              color: isSelected ? color : Colors.grey.shade700,
+                                                            ),
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                        if (level == 'Spicy') ...[
+                                                          Icon(
+                                                            Icons.local_fire_department,
+                                                            color: Colors.red.shade400,
+                                                            size: 16,
+                                                          ),
+                                                        ],
+                                                      ],
                                                     ),
-                                                    const SizedBox(width: 12),
-                                                    Text(
-                                                      level,
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                                        color: isSelected ? color : Colors.grey.shade700,
-                                                      ),
-                                                    ),
-                                                    if (level == 'Spicy') ...[
-                                                      const Spacer(),
-                                                      Icon(
-                                                        Icons.local_fire_department,
-                                                        color: Colors.red.shade400,
-                                                        size: 18,
-                                                      ),
-                                                    ],
-                                                  ],
+                                                  ),
                                                 ),
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
+                                              );
+                                            }).toList(),
+                                          ),
                                     ),
                                   ],
                                   
                                   const SizedBox(height: 20),
                                   
-                                  // Special Instructions Section - Always full width
+                                  // Special Instructions Section - Always full width with improved responsive design
                                   _buildElegantSection(
                                     'Special Instructions',
                                     Icons.edit_note,
@@ -612,16 +715,18 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                       ),
                                       child: TextField(
                                         maxLength: 30,
-                                        maxLines: 2,
-                                        style: const TextStyle(fontSize: 16),
+                                        maxLines: isLandscape ? 1 : 2,
+                                        style: TextStyle(
+                                          fontSize: isLandscape ? 14 : 16,
+                                        ),
                                         decoration: InputDecoration(
-                                          hintText: 'e.g., No onions, extra sauce...',
+                                          hintText: isLandscape ? 'e.g., No onions...' : 'e.g., No onions, extra sauce...',
                                           hintStyle: TextStyle(
                                             color: Colors.grey.shade500,
-                                            fontSize: 14,
+                                            fontSize: isLandscape ? 12 : 14,
                                           ),
                                           border: InputBorder.none,
-                                          contentPadding: const EdgeInsets.all(16),
+                                          contentPadding: EdgeInsets.all(isLandscape ? 12 : 16),
                                           counterText: '',
                                         ),
                                         onChanged: (value) {
@@ -632,12 +737,15 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                   ),
                                   
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 8, left: 4),
+                                    padding: EdgeInsets.only(
+                                      top: isLandscape ? 4 : 8, 
+                                      left: 4
+                                    ),
                                     child: Text(
                                       '${specialInstructions.length}/30 characters',
                                       style: TextStyle(
                                         color: Colors.grey.shade600,
-                                        fontSize: 12,
+                                        fontSize: isLandscape ? 10 : 12,
                                       ),
                                     ),
                                   ),
@@ -646,9 +754,9 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                             ),
                           ),
                           
-                          // Action Buttons (Fixed at bottom)
+                          // Action Buttons (Fixed at bottom with improved responsive design)
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: EdgeInsets.all(isLandscape ? 16 : 20),
                             decoration: BoxDecoration(
                               color: Colors.grey.shade50,
                               border: Border(
@@ -665,9 +773,9 @@ class _OrderCreationScreenState extends State<OrderCreationScreen> {
                                     () => Navigator.of(dialogContext).pop(),
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: isLandscape ? 12 : 16),
                                 Expanded(
-                                  flex: 2,
+                                  flex: isLandscape ? 1 : 2,
                                   child: _buildActionButton(
                                     'Add to Order',
                                     Colors.white,

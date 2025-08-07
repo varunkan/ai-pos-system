@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+
 import '../models/order.dart';
 import '../models/printer_configuration.dart';
-import '../models/printer_assignment.dart';
+
 import '../services/database_service.dart';
 import '../services/printing_service.dart' as printing_service;
 import '../services/enhanced_printer_assignment_service.dart';
@@ -65,7 +65,6 @@ class RobustKitchenService extends ChangeNotifier {
     required Order order,
     required String userId,
     required String userName,
-    required BuildContext context,
   }) async {
     final orderId = order.id;
     

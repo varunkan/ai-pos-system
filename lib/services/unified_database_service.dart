@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
+
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as path;
 import 'package:hive_flutter/hive_flutter.dart';
@@ -11,7 +11,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/order.dart';
 import '../models/menu_item.dart';
 import '../models/user.dart';
-import '../models/table.dart';
+
 import 'database_service.dart';
 import 'cross_platform_database_service.dart';
 

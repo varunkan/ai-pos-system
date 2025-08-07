@@ -1,17 +1,16 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+
 import 'package:collection/collection.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:http/http.dart' as http;
 import '../models/printer_configuration.dart';
 import '../models/printer_assignment.dart';
 import '../models/order.dart';
-import '../models/menu_item.dart';
-import '../models/category.dart';
+
 import 'database_service.dart';
 
 /// 🚀 UNIFIED PRINTER SERVICE - World's Most Advanced Restaurant Printing System
